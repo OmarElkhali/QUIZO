@@ -41,7 +41,7 @@ export interface QuizContextType {
     timeLimit?: number, 
     additionalInfo?: string, 
     apiKey?: string,
-    modelType?: 'qwen' | 'gemini',
+    modelType?: 'chatgpt' | 'gemini',
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;
