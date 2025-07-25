@@ -16,7 +16,9 @@ import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { initializeBucket } from '@/integrations/supabase/client';
 
-const DEFAULT_API_KEY = "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";
+
+// With this:
+const DEFAULT_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || "";
 
 export const CreateQuizForm = () => {
   const navigate = useNavigate();
