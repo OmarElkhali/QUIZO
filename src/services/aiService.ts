@@ -8,7 +8,7 @@ import { extractTextFromFile } from './fileService';
 // const FLASK_API_URL = 'http://localhost:5000/api';
 
 // URL de l'API Flask (production)
-const FLASK_API_URL = 'https://quizo-uasd.onrender.com/api';
+const FLASK_API_URL = 'https://quizo-nued.onrender.com/api';
 
 // Exporter la fonction pour pouvoir l'utiliser directement
 export const getFirebaseBackupQuestions = async (): Promise<Question[]> => {
@@ -265,7 +265,7 @@ export const generateQuestionsWithAI = async (
       progressCallback?.(0.2);
       console.log('Vérification de l\'état du serveur Flask...');
       const healthCheck = await axios.get(`${FLASK_API_URL}/health`, { timeout: 5000 });
-      console.log('Statut du serveur Flask:', healthCheck.data);
+console.log('Statut du serveur Flask:', healthCheck.data);
     } catch (healthError) {
       console.error('Le serveur Flask est inaccessible:', healthError);
       console.log('Utilisation automatique du mode de secours Firebase sans notification...');
