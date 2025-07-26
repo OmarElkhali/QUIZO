@@ -5,7 +5,10 @@ import { collection, getDocs } from 'firebase/firestore';
 import { extractTextFromFile } from './fileService';
 
 // URL de l'API Flask (local)
-const FLASK_API_URL = 'http://localhost:5000/api';
+// const FLASK_API_URL = 'http://localhost:5000/api';
+
+// URL de l'API Flask (production)
+const FLASK_API_URL = 'https://quizo-uasd.onrender.com/api';
 
 // Exporter la fonction pour pouvoir l'utiliser directement
 export const getFirebaseBackupQuestions = async (): Promise<Question[]> => {

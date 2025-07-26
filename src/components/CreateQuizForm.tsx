@@ -16,7 +16,8 @@ import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { initializeBucket } from '@/integrations/supabase/client';
 
-const DEFAULT_API_KEY = "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";
+// Remove this line with the hardcoded API key
+// const DEFAULT_API_KEY = "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";
 
 export const CreateQuizForm = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export const CreateQuizForm = () => {
   const [numQuestions, setNumQuestions] = useState(10);
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [selectedAI, setSelectedAI] = useState<'chatgpt' | 'local'>('chatgpt');
-  const [apiKey, setApiKey] = useState(DEFAULT_API_KEY);
+  const [apiKey, setApiKey] = useState(''); // Initialize with empty string instead of DEFAULT_API_KEY
   const [isInitializing, setIsInitializing] = useState(false);
   const [bucketInitialized, setBucketInitialized] = useState(false);
   const [initializationAttempts, setInitializationAttempts] = useState(0);

@@ -12,6 +12,10 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+# 2. Vérifier que le CORS est correctement configuré
+
+# Votre configuration CORS dans `app.py` est déjà correcte, car elle autorise les requêtes depuis `https://quizo-beige.vercel.app` :
+CORS(app, resources={r"/*": {"origins": ["https://quizo-beige.vercel.app", "http://localhost:5173"]}}) 
 
 # Configuration du logging améliorée
 logging.basicConfig(
