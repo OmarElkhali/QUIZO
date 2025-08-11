@@ -59,3 +59,65 @@ export interface QuizResult {
   score: number;
   completedAt: string;
 }
+
+
+// Types existants...
+
+// Nouveaux types pour le mode manuel
+export interface ManualQuestion {
+  id: string;
+  text: string;
+  options: {
+    id: string;
+    text: string;
+    isCorrect: boolean;
+  }[];
+  explanation?: string;
+  points: number;
+}
+
+export interface ManualQuiz {
+  id: string;
+  title: string;
+  description: string;
+  questions: ManualQuestion[];
+  createdAt: string;
+  creatorId: string;
+  isPublic: boolean;
+  timeLimit?: number;
+  shareCode?: string;
+}
+
+export interface Competition {
+  id: string;
+  quizId: string;
+  creatorId: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  shareCode: string;
+  isActive: boolean;
+  participantsCount: number;
+}
+
+export interface Participant {
+  id: string;
+  competitionId: string;
+  userId: string;
+  name: string;
+  joinedAt: string;
+  score?: number;
+  completedAt?: string;
+  rank?: number;
+}
+
+export interface Attempt {
+  id: string;
+  competitionId: string;
+  participantId: string;
+  startedAt: string;
+  completedAt?: string;
+  score?: number;
+  answers: Record<string, string>;
+}

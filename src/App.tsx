@@ -17,6 +17,12 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Contact from './pages/Contact';
 import { QuizProvider } from '@/context/index';
+import JoinByCode from './pages/JoinByCode';
+import CreateManualQuiz from './pages/CreateManualQuiz';
+import ManualQuizBuilder from './pages/ManualQuizBuilder';
+import CompetitionPlay from './pages/Competition';
+import Leaderboard from './pages/Leaderboard';
+import CreatorDashboard from './pages/CreatorDashboard';
 
 const queryClient = new QueryClient()
 
@@ -32,6 +38,19 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/create-quiz" element={<CreateQuiz />} />
+                    <Route path="/create-manual-quiz" element={<CreateManualQuiz />} />
+                    <Route path="/manual-quiz-builder/:id" element={<ManualQuizBuilder />} />
+                    // Ajoutez ces imports
+                    import CompetitionPlay from './pages/Competition';
+                    import Leaderboard from './pages/Leaderboard';
+                    import CreatorDashboard from './pages/CreatorDashboard';
+                    import JoinByCode from './pages/JoinByCode';
+                    
+                    // Dans votre configuration de routes, ajoutez :
+                    <Route path="/join" element={<JoinByCode />} />
+                    <Route path="/competition/:id" element={<CompetitionPlay />} />
+                    <Route path="/leaderboard/:id" element={<Leaderboard />} />
+                    <Route path="/creator-dashboard/:id" element={<CreatorDashboard />} />
                     <Route path="/quiz-preview/:id" element={<QuizPreview />} />
                     <Route path="/quiz/:id" element={<Quiz />} />
                     <Route path="/results/:quizId/:submissionId" element={<Results />} />

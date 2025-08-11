@@ -78,9 +78,17 @@ export const Navbar = () => {
               Accueil
             </Link>
             {user && (
-              <Link to="/create-quiz" className="font-medium underline-animation">
-                Créer un Quiz
-              </Link>
+              <>
+                <Link to="/create-quiz" className="font-medium underline-animation">
+                  Créer un Quiz IA
+                </Link>
+                <Link to="/create-manual-quiz" className="font-medium underline-animation">
+                  Créer un Quiz Manuel
+                </Link>
+                <Link to="/join-by-code" className="font-medium underline-animation">
+                  Rejoindre par Code
+                </Link>
+              </>
             )}
             <Link to="/history" className="font-medium underline-animation">
               Historique
@@ -164,13 +172,29 @@ export const Navbar = () => {
               Accueil
             </Link>
             {user && (
-              <Link 
-                to="/create-quiz" 
-                className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Créer un Quiz
-              </Link>
+              <>
+                <Link 
+                  to="/create-quiz" 
+                  className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Créer un Quiz IA
+                </Link>
+                <Link 
+                  to="/create-manual-quiz" 
+                  className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Créer un Quiz Manuel
+                </Link>
+                <Link 
+                  to="/join-by-code" 
+                  className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Rejoindre par Code
+                </Link>
+              </>
             )}
             <Link 
               to="/history" 

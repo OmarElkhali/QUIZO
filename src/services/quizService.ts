@@ -398,8 +398,10 @@ export const submitQuizAnswers = async (
 
   const submissionRef = await addDoc(collection(db, 'submissions'), submissionData);
 
+  // Mettre à jour le quiz avec le nombre de participants et le taux de complétion
   await updateDoc(quizDocRef, {
     participants: (quizData.participants || 0) + 1,
+    completionRate: 100, // Marquer le quiz comme terminé (100%)
   });
 
   return {
@@ -448,12 +450,14 @@ export const shareQuiz = async (
 ): Promise<void> => {
   const docRef = doc(db, 'quizzes', quizId);
   
-  const simulatedUserId = `user_${Math.random().toString(36).substring(2, 11)}`;
-  
+  // Utiliser l'email comme identifiant du collaborateur au lieu d'un ID aléatoire
   await updateDoc(docRef, {
-    collaborators: arrayUnion(simulatedUserId),
+    collaborators: arrayUnion(collaboratorEmail),
     isShared: true,
   });
+  
+  // Vous pourriez également ajouter ici une logique pour envoyer un email d'invitation
+  // si vous avez un service d'envoi d'emails configuré
 };
 
 export const removeCollaborator = async (
