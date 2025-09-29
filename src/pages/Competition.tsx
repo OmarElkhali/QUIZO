@@ -30,8 +30,15 @@ const CompetitionPlay = () => {
       if (!id || !participantId) return;
       
       try {
-        // Récupérer la compétition
-        const competitionData = await getCompetitionByShareCode(id);
+        let competitionData: Competition | null = null;
+        
+        // Si l'URL contient shareCode, utiliser getCompetitionByShareCode
+        if (location.pathname.includes('/competition/') && id.length === 6) {
+          competitionData = await getCompetitionByShareCode(id);
+        } else {
+          // Sinon, utiliser getCompetitionById
+          competitionData = await getCompetitionByShareCode(id);
+        }
         
         if (!competitionData) {
           toast.error('Compétition non trouvée');

@@ -40,15 +40,11 @@ function App() {
                     <Route path="/create-quiz" element={<CreateQuiz />} />
                     <Route path="/create-manual-quiz" element={<CreateManualQuiz />} />
                     <Route path="/manual-quiz-builder/:id" element={<ManualQuizBuilder />} />
-                    // Ajoutez ces imports
-                    import CompetitionPlay from './pages/Competition';
-                    import Leaderboard from './pages/Leaderboard';
-                    import CreatorDashboard from './pages/CreatorDashboard';
-                    import JoinByCode from './pages/JoinByCode';
-                    
-                    // Dans votre configuration de routes, ajoutez :
                     <Route path="/join" element={<JoinByCode />} />
-                    <Route path="/competition/:id" element={<CompetitionPlay />} />
+                    <Route path="/join-by-code" element={<JoinByCode />} />
+                    // Clarifier les routes de compétition
+                    <Route path="/competition/share/:shareCode" element={<CompetitionPlay />} />
+                    <Route path="/competition/:competitionId" element={<CompetitionPlay />} />
                     <Route path="/leaderboard/:id" element={<Leaderboard />} />
                     <Route path="/creator-dashboard/:id" element={<CreatorDashboard />} />
                     <Route path="/quiz-preview/:id" element={<QuizPreview />} />

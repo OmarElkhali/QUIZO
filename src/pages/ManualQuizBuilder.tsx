@@ -55,7 +55,11 @@ const ManualQuizBuilder = () => {
   
   useEffect(() => {
     const fetchQuiz = async () => {
-      if (!id) return;
+      if (!id || !user) {
+        toast.error('Utilisateur non connecté ou ID de quiz manquant');
+        navigate('/');
+        return;
+      }
       
       try {
         const quizData = await getManualQuiz(id);

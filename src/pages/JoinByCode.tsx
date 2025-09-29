@@ -1,14 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, ArrowRight } from 'lucide-react';
+import { Users, ArrowRight, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { getCompetitionByShareCode, addParticipantToCompetition } from '@/services/manualQuizService';
+import { Competition } from '@/types/quiz'; // Importation du type Competition manquant
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+const REGEXP_ONLY_ALPHANUMERIC = /^[a-zA-Z0-9]+$/;
+
+// Interface pour les compétitions récentes
+interface RecentCompetition {
+  code: string;
+  title: string;
+  joinedAt: string;
+}
 
 const JoinByCode = () => {
   const { user } = useAuth();
@@ -17,12 +31,92 @@ const JoinByCode = () => {
   const [shareCode, setShareCode] = useState('');
   const [participantName, setParticipantName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [competition, setCompetition] = useState<Competition | null>(null);
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
+  const [recentCompetitions, setRecentCompetitions] = useState<RecentCompetition[]>([]);
+  
+  // Vérifier le code après un délai d'inactivité
+  useEffect(() => {
+    if (shareCode.length === 6) {
+      const timer = setTimeout(() => {
+        checkCompetition();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setCompetition(null);
+    }
+  }, [shareCode]);
+  
+  // Fonction pour vérifier le code sans rejoindre
+  const checkCompetition = async () => {
+    const formattedCode = shareCode;
+    
+    if (!formattedCode || formattedCode.length !== 6) {
+      return;
+    }
+    
+    setIsCheckingCode(true);
+    
+    try {
+      const competitionData = await getCompetitionByShareCode(formattedCode);
+      setCompetition(competitionData);
+    } catch (error) {
+      console.error('Erreur lors de la vérification du code:', error);
+    } finally {
+      setIsCheckingCode(false);
+    }
+  };
+  
+  // Charger les compétitions récentes depuis le localStorage
+  useEffect(() => {
+    const storedCompetitions = localStorage.getItem('recentCompetitions');
+    if (storedCompetitions) {
+      try {
+        setRecentCompetitions(JSON.parse(storedCompetitions));
+      } catch (e) {
+        console.error('Erreur lors du chargement des compétitions récentes:', e);
+        localStorage.removeItem('recentCompetitions');
+      }
+    }
+  }, []);
+  
+  // Ajouter une compétition à l'historique
+  const addToRecentCompetitions = (code: string, title: string) => {
+    const newCompetition: RecentCompetition = {
+      code,
+      title,
+      joinedAt: new Date().toISOString()
+    };
+    
+    const updatedCompetitions = [
+      newCompetition,
+      ...recentCompetitions.filter(c => c.code !== code).slice(0, 4) // Garder max 5 compétitions
+    ];
+    
+    setRecentCompetitions(updatedCompetitions);
+    localStorage.setItem('recentCompetitions', JSON.stringify(updatedCompetitions));
+  };
+  
+  // Supprimer une compétition de l'historique
+  const removeFromRecentCompetitions = (code: string) => {
+    const updatedCompetitions = recentCompetitions.filter(c => c.code !== code);
+    setRecentCompetitions(updatedCompetitions);
+    localStorage.setItem('recentCompetitions', JSON.stringify(updatedCompetitions));
+  };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!shareCode.trim()) {
+    const formattedCode = shareCode;
+    
+    if (!formattedCode) {
       toast.error('Veuillez saisir un code de partage');
+      return;
+    }
+    
+    if (formattedCode.length !== 6) {
+      toast.error('Le code de partage doit contenir 6 caractères');
       return;
     }
     
@@ -35,7 +129,7 @@ const JoinByCode = () => {
     
     try {
       // Récupérer la compétition par code de partage
-      const competition = await getCompetitionByShareCode(shareCode.toUpperCase());
+      const competition = await getCompetitionByShareCode(formattedCode);
       
       if (!competition) {
         toast.error('Code de partage invalide ou compétition expirée');
@@ -71,6 +165,9 @@ const JoinByCode = () => {
       
       // Rediriger vers la page de la compétition
       navigate(`/competition/${competition.id}?participant=${participantId}`);
+      
+      // Ajouter à l'historique
+      addToRecentCompetitions(formattedCode, competition.title);
     } catch (error: any) {
       console.error('Erreur lors de la tentative de rejoindre la compétition:', error);
       toast.error(error.message || 'Une erreur est survenue');
@@ -108,16 +205,59 @@ const JoinByCode = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="share-code">Code de partage</Label>
-                <Input
-                  id="share-code"
-                  placeholder="Entrez le code à 6 caractères"
-                  value={shareCode}
-                  onChange={(e) => setShareCode(e.target.value.toUpperCase())}
-                  maxLength={6}
-                  className="text-center text-lg tracking-wider uppercase"
-                  required
-                />
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={shareCode}
+                    onChange={(value) => setShareCode(value.toUpperCase())}
+                    pattern={REGEXP_ONLY_ALPHANUMERIC.source}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <p className="text-center text-xs text-muted-foreground">Le code contient 6 caractères alphanumériques</p>
               </div>
+              
+              {isCheckingCode && (
+                <div className="flex justify-center py-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              )}
+              
+              {competition && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-muted/50 p-4 rounded-lg border border-muted"
+                >
+                  <h3 className="font-medium text-lg mb-2">{competition.title}</h3>
+                  {competition.description && (
+                    <p className="text-sm text-muted-foreground mb-2">{competition.description}</p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Début:</span>
+                      <div>{new Date(competition.startDate).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Fin:</span>
+                      <div>{new Date(competition.endDate).toLocaleString()}</div>
+                    </div>
+                    <div className="col-span-2 mt-2">
+                      <span className="text-muted-foreground">Participants:</span>
+                      <div>{competition.participantsCount}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="participant-name">Votre nom</Label>
@@ -133,12 +273,55 @@ const JoinByCode = () => {
               <Button 
                 type="submit" 
                 className="w-full"
-                disabled={isLoading}
+                disabled={isLoading || !shareCode || shareCode.length !== 6}
               >
                 {isLoading ? 'Chargement...' : 'Rejoindre la compétition'}
                 {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
             </form>
+            
+            {recentCompetitions.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-muted">
+                <h3 className="text-sm font-medium text-muted-foreground mb-4">Compétitions récentes</h3>
+                <div className="space-y-2">
+                  {recentCompetitions.map((comp) => (
+                    <div 
+                      key={comp.code} 
+                      className="flex items-center justify-between p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 text-muted-foreground mr-3" />
+                        <div>
+                          <p className="font-medium">{comp.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Code: {comp.code} · {new Date(comp.joinedAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setShareCode(comp.code)}
+                        >
+                          Utiliser
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFromRecentCompetitions(comp.code)}
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       </main>

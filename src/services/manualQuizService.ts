@@ -51,14 +51,18 @@ export const createManualQuiz = async (userId: string, title: string, descriptio
 // Récupération d'un quiz manuel
 export const getManualQuiz = async (quizId: string): Promise<ManualQuiz | null> => {
   try {
+    console.log('Tentative de récupération du quiz avec ID:', quizId);
     const docRef = doc(db, 'quizzes', quizId);
+    console.log('Référence du document créée');
     const docSnap = await getDoc(docRef);
+    console.log('Document récupéré, existe:', docSnap.exists());
     
     if (!docSnap.exists()) {
       return null;
     }
     
     const data = docSnap.data();
+    console.log('Données du quiz:', data);
     return {
       id: docSnap.id,
       title: data.title || 'Quiz sans titre',
@@ -71,7 +75,7 @@ export const getManualQuiz = async (quizId: string): Promise<ManualQuiz | null> 
       shareCode: data.shareCode
     };
   } catch (error) {
-    console.error('Erreur lors de la récupération du quiz manuel:', error);
+    console.error('Erreur détaillée lors de la récupération du quiz manuel:', error);
     throw new Error(`Échec de la récupération du quiz manuel: ${error.message}`);
   }
 };
@@ -226,6 +230,36 @@ export const getCompetitionByShareCode = async (shareCode: string): Promise<Comp
     
     return {
       id: doc.id,
+      quizId: data.quizId,
+      creatorId: data.creatorId,
+      title: data.title,
+      description: data.description || '',
+      startDate: data.startDate.toDate().toISOString(),
+      endDate: data.endDate.toDate().toISOString(),
+      shareCode: data.shareCode,
+      isActive: data.isActive,
+      participantsCount: data.participantsCount || 0
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la compétition:', error);
+    throw new Error(`Échec de la récupération de la compétition: ${error.message}`);
+  }
+};
+
+// Récupération d'une compétition par ID
+export const getCompetitionById = async (competitionId: string): Promise<Competition | null> => {
+  try {
+    const docRef = doc(db, 'competitions', competitionId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return null;
+    }
+    
+    const data = docSnap.data();
+    
+    return {
+      id: docSnap.id,
       quizId: data.quizId,
       creatorId: data.creatorId,
       title: data.title,

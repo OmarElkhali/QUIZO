@@ -85,7 +85,7 @@ export const Navbar = () => {
                 <Link to="/create-manual-quiz" className="font-medium underline-animation">
                   Créer un Quiz Manuel
                 </Link>
-                <Link to="/join-by-code" className="font-medium underline-animation">
+                <Link to="/join" className="font-medium underline-animation">
                   Rejoindre par Code
                 </Link>
               </>
@@ -188,7 +188,7 @@ export const Navbar = () => {
                   Créer un Quiz Manuel
                 </Link>
                 <Link 
-                  to="/join-by-code" 
+                  to="/join" 
                   className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
