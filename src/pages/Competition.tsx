@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Clock, AlertCircle } from 'lucide-react';
-import { getCompetitionByShareCode, getManualQuiz, createAttempt, submitAttemptAnswers } from '@/services/manualQuizService';
+import { getCompetitionByShareCode, getCompetitionById, getManualQuiz, createAttempt, submitAttemptAnswers } from '@/services/manualQuizService';
 import { Competition, ManualQuiz, ManualQuestion } from '@/types/quiz';
 
 const CompetitionPlay = () => {
@@ -33,11 +33,11 @@ const CompetitionPlay = () => {
         let competitionData: Competition | null = null;
         
         // Si l'URL contient shareCode, utiliser getCompetitionByShareCode
-        if (location.pathname.includes('/competition/') && id.length === 6) {
+        if (location.pathname.includes('/competition/share/') && id.length === 6) {
           competitionData = await getCompetitionByShareCode(id);
         } else {
           // Sinon, utiliser getCompetitionById
-          competitionData = await getCompetitionByShareCode(id);
+          competitionData = await getCompetitionById(id);
         }
         
         if (!competitionData) {

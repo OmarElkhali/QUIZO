@@ -13,7 +13,8 @@ import {
   orderBy,
   limit,
   Timestamp,
-  increment
+  increment,
+  onSnapshot
 } from 'firebase/firestore';
 import { ManualQuiz, ManualQuestion, Competition, Participant, Attempt } from '@/types/quiz';
 
@@ -33,7 +34,8 @@ export const createManualQuiz = async (userId: string, title: string, descriptio
     const quizData = {
       title,
       description,
-      creatorId: userId,
+      ownerId: userId,  // Ajout du champ ownerId requis par les règles
+      creatorId: userId, // Conserver creatorId pour compatibilité
       questions: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -451,4 +453,174 @@ export const getCompetitionStats = async (competitionId: string): Promise<any> =
     console.error('Erreur lors de la récupération des statistiques:', error);
     throw new Error(`Échec de la récupération des statistiques: ${error.message}`);
   }
+};
+
+// Mise à jour de la progression d'un participant
+export const updateParticipantProgress = async (
+  participantId: string, 
+  progress: number, 
+  totalTimeSec: number
+): Promise<void> => {
+  try {
+    const participantRef = doc(db, 'participants', participantId);
+    
+    await updateDoc(participantRef, {
+      progress,
+      totalTimeSec,
+      lastUpdatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la progression:', error);
+    throw new Error(`Échec de la mise à jour de la progression: ${error.message}`);
+  }
+};
+
+// Fonction pour générer un shareCode pour un quiz manuel
+export const generateAndSetShareCodeForQuiz = async (quizId: string): Promise<string> => {
+  try {
+    const shareCode = generateShareCode();
+    
+    const quizRef = doc(db, 'quizzes', quizId);
+    await updateDoc(quizRef, {
+      shareCode,
+      visibility: 'by_code',
+      updatedAt: serverTimestamp()
+    });
+    
+    return shareCode;
+  } catch (error) {
+    console.error('Erreur lors de la génération du code de partage:', error);
+    throw new Error(`Échec de la génération du code de partage: ${error.message}`);
+  }
+};
+
+// Récupération d'un quiz manuel par code de partage
+export const getManualQuizByShareCode = async (shareCode: string): Promise<ManualQuiz | null> => {
+  try {
+    const q = query(
+      collection(db, 'quizzes'),
+      where('shareCode', '==', shareCode),
+      where('visibility', '==', 'by_code'),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const doc = querySnapshot.docs[0];
+    const data = doc.data();
+    
+    // Masquer les informations sensibles (correctIndex, explanation)
+    const questions = data.questions || [];
+    const sanitizedQuestions = questions.map((q: ManualQuestion) => ({
+      ...q,
+      options: q.options.map(opt => ({
+        id: opt.id,
+        text: opt.text,
+        // Supprimer isCorrect pour les non-propriétaires
+        isCorrect: undefined
+      })),
+      explanation: undefined
+    }));
+    
+    return {
+      id: doc.id,
+      title: data.title || 'Quiz sans titre',
+      description: data.description || '',
+      questions: sanitizedQuestions,
+      createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+      creatorId: data.creatorId,
+      isPublic: data.isPublic || false,
+      timeLimit: data.timeLimit,
+      shareCode: data.shareCode
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération du quiz par code:', error);
+    throw new Error(`Échec de la récupération du quiz par code: ${error.message}`);
+  }
+};
+
+// Abonnement aux mises à jour en temps réel des participants d'une compétition
+export const subscribeToCompetitionParticipants = (
+  competitionId: string,
+  callback: (participants: Participant[]) => void
+) => {
+  const q = query(
+    collection(db, 'participants'),
+    where('competitionId', '==', competitionId),
+    orderBy('score', 'desc'),
+    orderBy('completedAt')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const participants: Participant[] = [];
+    
+    let index = 0;
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      participants.push({
+        id: doc.id,
+        competitionId: data.competitionId,
+        userId: data.userId,
+        name: data.name,
+        joinedAt: data.joinedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        score: data.score || 0,
+        completedAt: data.completedAt?.toDate?.()?.toISOString(),
+        rank: index + 1,
+        progress: data.progress || 0,
+        totalTimeSec: data.totalTimeSec || 0
+      });
+      index++;
+    });
+    
+    callback(participants);
+  });
+};
+
+// Abonnement aux statistiques en temps réel d'une compétition
+export const subscribeToCompetitionStats = (
+  competitionId: string,
+  callback: (stats: any) => void
+) => {
+  // Abonnement aux participants
+  const participantsQuery = query(
+    collection(db, 'participants'),
+    where('competitionId', '==', competitionId)
+  );
+  
+  return onSnapshot(participantsQuery, async (participantsSnapshot) => {
+    try {
+      // Récupérer les tentatives complétées
+      const attemptsQuery = query(
+        collection(db, 'attempts'),
+        where('competitionId', '==', competitionId),
+        where('completedAt', '!=', null)
+      );
+      
+      const attemptsSnapshot = await getDocs(attemptsQuery);
+      
+      const totalParticipants = participantsSnapshot.size;
+      const completedAttempts = attemptsSnapshot.size;
+      
+      let totalScore = 0;
+      attemptsSnapshot.forEach(doc => {
+        const data = doc.data();
+        totalScore += data.score || 0;
+      });
+      
+      const averageScore = completedAttempts > 0 ? totalScore / completedAttempts : 0;
+      
+      callback({
+        totalParticipants,
+        completedAttempts,
+        averageScore,
+        participationRate: totalParticipants > 0 ? (completedAttempts / totalParticipants) * 100 : 0
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques:', error);
+    }
+  });
 };
