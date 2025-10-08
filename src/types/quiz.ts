@@ -110,8 +110,6 @@ export interface Participant {
   score?: number;
   completedAt?: string;
   rank?: number;
-  progress?: number;  // Ajout du champ progress
-  totalTimeSec?: number;  // Ajout du champ totalTimeSec
 }
 
 export interface Attempt {

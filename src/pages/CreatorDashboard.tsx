@@ -7,14 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Users, BarChart, Clock, Share2, Copy, CheckCircle, XCircle } from 'lucide-react';
-import { 
-  getCompetitionByShareCode, 
-  getCompetitionById,
-  subscribeToCompetitionStats, 
-  subscribeToCompetitionParticipants 
-} from '@/services/manualQuizService';
+import { getCompetitionByShareCode, getCompetitionStats, getCompetitionLeaderboard } from '@/services/manualQuizService';
 import { Competition, Participant } from '@/types/quiz';
-import LiveLeaderboard from '@/components/LiveLeaderboard';
 
 const CreatorDashboard = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,13 +27,7 @@ const CreatorDashboard = () => {
       
       try {
         // Récupérer la compétition
-        let competitionData: Competition | null = null;
-        
-        if (id.length === 6) {
-          competitionData = await getCompetitionByShareCode(id);
-        } else {
-          competitionData = await getCompetitionById(id);
-        }
+        const competitionData = await getCompetitionByShareCode(id);
         
         if (!competitionData) {
           toast.error('Compétition non trouvée');
@@ -56,32 +44,17 @@ const CreatorDashboard = () => {
         
         setCompetition(competitionData);
         
-        // Abonnement aux statistiques en temps réel
-        const unsubscribeStats = subscribeToCompetitionStats(
-          competitionData.id,
-          (statsData) => {
-            setStats(statsData);
-          }
-        );
+        // Récupérer les statistiques
+        const statsData = await getCompetitionStats(competitionData.id);
+        setStats(statsData);
         
-        // Abonnement aux participants en temps réel
-        const unsubscribeParticipants = subscribeToCompetitionParticipants(
-          competitionData.id,
-          (participantsData) => {
-            setParticipants(participantsData);
-          }
-        );
-        
-        setIsLoading(false);
-        
-        // Nettoyer les abonnements lors du démontage
-        return () => {
-          unsubscribeStats();
-          unsubscribeParticipants();
-        };
+        // Récupérer le classement
+        const leaderboardData = await getCompetitionLeaderboard(competitionData.id);
+        setParticipants(leaderboardData);
       } catch (error: any) {
         console.error('Erreur lors du chargement des données:', error);
         toast.error(error.message || 'Une erreur est survenue');
+      } finally {
         setIsLoading(false);
       }
     };
@@ -310,11 +283,6 @@ const CreatorDashboard = () => {
               )}
             </CardContent>
           </Card>
-          
-          {/* Remplacer le tableau de participants par le LiveLeaderboard */}
-          <div className="mt-8">
-            <LiveLeaderboard competitionId={competition?.id || ''} />
-          </div>
         </div>
       </main>
     </div>

@@ -228,69 +228,39 @@ export const getQuizzes = async (userId: string): Promise<Quiz[]> => {
       throw new Error('Utilisateur non authentifié');
     }
     
-    // Modifier la requête pour utiliser ownerId ou creatorId au lieu de userId
-    const q1 = query(
+    const q = query(
       collection(db, 'quizzes'), 
-      where('ownerId', '==', userId)
+      where('userId', '==', userId)
     );
     
-    const q2 = query(
-      collection(db, 'quizzes'), 
-      where('creatorId', '==', userId)
-    );
-    
-    console.log('Exécution des requêtes Firestore...');
-    const [querySnapshot1, querySnapshot2] = await Promise.all([
-      getDocs(q1),
-      getDocs(q2)
-    ]);
-    console.log('Requêtes Firestore terminées');
+    console.log('Exécution de la requête Firestore...');
+    const querySnapshot = await getDocs(q);
+    console.log('Requête Firestore terminée');
     
     const quizzes: Quiz[] = [];
-    const processedIds = new Set();
     
-    // Traiter les résultats de la première requête (ownerId)
-    querySnapshot1.forEach((doc) => {
+    querySnapshot.forEach((doc) => {
       const data = doc.data();
-      console.log('Document trouvé (ownerId):', doc.id);
+      console.log('Document trouvé:', doc.id);
       
-      if (!processedIds.has(doc.id)) {
-        processedIds.add(doc.id);
-        quizzes.push({
-          id: doc.id,
-          title: data.title,
-          description: data.description,
-          questions: data.questions || [],
-          createdAt: data.createdAt?.toDate()?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          completionRate: data.completionRate || 0,
-          duration: data.duration || '30 min',
-          participants: data.participants || 0,
-          collaborators: data.collaborators || [],
-          isShared: data.isShared || false,
-        });
+      // Vérifier que l'utilisateur a accès à ce quiz
+      if (data.userId !== userId && !(data.collaborators || []).includes(userId)) {
+        console.log('Accès refusé au quiz:', doc.id);
+        return;
       }
-    });
-    
-    // Traiter les résultats de la deuxième requête (creatorId)
-    querySnapshot2.forEach((doc) => {
-      const data = doc.data();
-      console.log('Document trouvé (creatorId):', doc.id);
       
-      if (!processedIds.has(doc.id)) {
-        processedIds.add(doc.id);
-        quizzes.push({
-          id: doc.id,
-          title: data.title,
-          description: data.description,
-          questions: data.questions || [],
-          createdAt: data.createdAt?.toDate()?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
-          completionRate: data.completionRate || 0,
-          duration: data.duration || '30 min',
-          participants: data.participants || 0,
-          collaborators: data.collaborators || [],
-          isShared: data.isShared || false,
-        });
-      }
+      quizzes.push({
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        questions: data.questions || [],
+        createdAt: data.createdAt?.toDate()?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        completionRate: data.completionRate || 0,
+        duration: data.duration || '30 min',
+        participants: data.participants || 0,
+        collaborators: data.collaborators || [],
+        isShared: data.isShared || false,
+      });
     });
     
     console.log(`${quizzes.length} quiz récupérés pour l'utilisateur ${userId}`);
