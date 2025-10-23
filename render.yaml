@@ -1,0 +1,26 @@
+# Configuration Render.com pour le backend Python
+# Ce fichier permet un déploiement automatique depuis GitHub
+
+services:
+  - type: web
+    name: quizo-backend
+    runtime: python
+    region: frankfurt  # EU Central
+    plan: free  # ou 'starter' pour production
+    branch: main
+    rootDir: python_api
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        sync: false  # À configurer manuellement dans Render Dashboard
+      - key: GEMINI_API_KEY
+        sync: false  # À configurer manuellement (secret)
+      - key: CHATGPT_API_KEY
+        sync: false  # À configurer manuellement (secret, optionnel)
+    healthCheckPath: /api/health
+    autoDeploy: true  # Déploiement automatique sur push GitHub
