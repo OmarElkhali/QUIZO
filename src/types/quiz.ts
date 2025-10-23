@@ -86,6 +86,10 @@ export interface ManualQuiz {
   isPublic: boolean;
   timeLimit?: number;
   shareCode?: string;
+  mode?: 'realtime' | 'async'; // Mode de passage du quiz
+  status?: 'draft' | 'active' | 'completed'; // Statut du quiz
+  invitedEmails?: string[]; // Liste des emails invités
+  maxParticipants?: number; // Nombre maximum de participants
 }
 
 export interface Competition {
@@ -104,20 +108,27 @@ export interface Competition {
 export interface Participant {
   id: string;
   competitionId: string;
+  quizId?: string; // ID du quiz manuel
   userId: string;
+  email?: string;
   name: string;
   joinedAt: string;
   score?: number;
   completedAt?: string;
   rank?: number;
+  isActive?: boolean; // Pour le mode temps réel
+  currentQuestionIndex?: number; // Progression en temps réel
 }
 
 export interface Attempt {
   id: string;
-  competitionId: string;
+  competitionId?: string;
+  quizId?: string; // ID du quiz manuel
   participantId: string;
+  userId: string;
   startedAt: string;
   completedAt?: string;
   score?: number;
   answers: Record<string, string>;
+  timeSpent?: number; // Temps passé en secondes
 }

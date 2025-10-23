@@ -4,30 +4,52 @@ import json
 import logging
 import requests
 import re
-import PyPDF2
+from pypdf import PdfReader
 import docx
 import io
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+import google.generativeai as genai
+
+# Charger les variables d'environnement
+load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
-# 2. Vérifier que le CORS est correctement configuré
 
-# Votre configuration CORS dans `app.py` est déjà correcte, car elle autorise les requêtes depuis `https://quizo-ruddy.vercel.app` :
-CORS(app, resources={r"/*": {"origins": ["https://quizo-ruddy.vercel.app", "http://localhost:5173"]}}) 
+# Configuration CORS unifiée et sécurisée
+ALLOWED_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8080").split(",")
+CORS(app, resources={
+    r"/*": {
+        "origins": ALLOWED_ORIGINS,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "max_age": 3600
+    }
+})
 
-# Configuration du logging améliorée
+# Configuration du logging basée sur l'environnement
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 logging.basicConfig(
-    level=logging.DEBUG,  # Changé de INFO à DEBUG pour plus de détails
+    level=getattr(logging, LOG_LEVEL),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
 
-# Clés API
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyBxXkrsx48gwKp7r7dduLV5dX1tfpnv3N0")
-CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY", "")
+# Clés API depuis les variables d'environnement (SANS valeurs par défaut hardcodées)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
+
+# Configuration de l'API Gemini
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    logger.info("API Gemini configurée avec succès")
+else:
+    logger.warning("GEMINI_API_KEY n'est pas configurée - la génération avec Gemini sera désactivée")
+    
+if not CHATGPT_API_KEY:
+    logger.warning("CHATGPT_API_KEY n'est pas configurée - la génération avec ChatGPT sera désactivée")
 
 def extract_text_from_file(file):
     """Extrait le texte des fichiers PDF/DOCX/TXT"""
@@ -37,7 +59,7 @@ def extract_text_from_file(file):
     try:
         if filename.endswith('.pdf'):
             logger.info(f"Extraction du texte du PDF: {filename}")
-            pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+            pdf_reader = PdfReader(io.BytesIO(file.read()))
             logger.debug(f"PDF chargé avec {len(pdf_reader.pages)} pages")
             text = '\n'.join([page.extract_text() for page in pdf_reader.pages])
             logger.debug(f"Extraction PDF terminée: {len(text)} caractères extraits")
@@ -64,9 +86,13 @@ def extract_text_from_file(file):
         logger.error(f"Erreur lors de l'extraction du texte: {str(e)}")
         raise ValueError(f"Échec de l'extraction: {str(e)}")
 
-@app.route('/api/extract-text', methods=['POST'])
+@app.route('/api/extract-text', methods=['POST', 'OPTIONS'])
 def handle_text_extraction():
     """Endpoint pour l'extraction de texte depuis un fichier"""
+    # Gérer les requêtes preflight CORS
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         logger.info("Requête d'extraction de texte reçue")
         
@@ -104,33 +130,64 @@ def validate_question(question):
         return False
     return True
 
-@app.route('/api/generate', methods=['POST'])
+@app.route('/api/generate', methods=['POST', 'OPTIONS'])
 def generate_quiz():
     """Endpoint principal pour la génération de quiz"""
+    # Gérer les requêtes preflight CORS
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         logger.info("Requête de génération de quiz reçue")
         
         # Gestion des entrées multiples
+        data = {}
         if 'file' in request.files:
             file = request.files['file']
             logger.info(f"Extraction du texte à partir du fichier: {file.filename}")
             text = extract_text_from_file(file)
+            # Récupérer les paramètres depuis form-data
+            data = {
+                'numQuestions': request.form.get('numQuestions'),
+                'difficulty': request.form.get('difficulty'),
+                'modelType': request.form.get('modelType'),
+                'apiKey': request.form.get('apiKey', '')
+            }
         else:
-            data = request.get_json()
+            data = request.get_json() or {}
             text = data.get('text', '')
             logger.info(f"Texte reçu directement: {len(text)} caractères")
 
-        # Paramètres de génération
-        num_questions = int(request.form.get('numQuestions', data.get('numQuestions', 5)))
-        difficulty = request.form.get('difficulty', data.get('difficulty', 'hard'))
-        model_type = request.form.get('modelType', data.get('modelType', 'gemini'))
-        api_key = request.form.get('apiKey', data.get('apiKey', ''))
+        # Validation des paramètres
+        if not text or not text.strip():
+            logger.warning("Aucun contenu textuel fourni pour la génération")
+            return jsonify({'error': 'Aucun contenu fourni'}), 400
+
+        # Paramètres de génération avec validation
+        try:
+            num_questions = int(data.get('numQuestions', 5))
+            if num_questions < 1 or num_questions > 50:
+                return jsonify({'error': 'Le nombre de questions doit être entre 1 et 50'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Nombre de questions invalide'}), 400
+
+        difficulty = data.get('difficulty', 'medium')
+        if difficulty not in ['easy', 'medium', 'hard']:
+            difficulty = 'medium'
+
+        model_type = data.get('modelType', 'gemini')
+        if model_type not in ['gemini', 'chatgpt']:
+            model_type = 'gemini'
+
+        api_key = data.get('apiKey', '')
         
         logger.info(f"Paramètres de génération: {num_questions} questions, difficulté {difficulty}, modèle {model_type}")
 
-        if not text.strip():
-            logger.warning("Aucun contenu textuel fourni pour la génération")
-            return jsonify({'error': 'Aucun contenu fourni'}), 400
+        # Vérifier que la clé API nécessaire est disponible
+        if model_type == 'gemini' and not GEMINI_API_KEY:
+            return jsonify({'error': 'Clé API Gemini non configurée'}), 503
+        if model_type == 'chatgpt' and not api_key and not CHATGPT_API_KEY:
+            return jsonify({'error': 'Clé API ChatGPT requise'}), 400
 
         # Construction du prompt
         logger.debug(f"Construction du prompt avec {len(text[:5000])} caractères de texte")
@@ -171,28 +228,44 @@ def generate_quiz():
             logger.info("Utilisation de l'API ChatGPT")
             content = generate_with_chatgpt(prompt, api_key or CHATGPT_API_KEY)
         else:
-            # Utiliser Gemini (par défaut)
+            # Utiliser Gemini (par défaut) avec le SDK officiel
             try:
-                logger.info("Envoi de la requête à l'API Gemini")
-                response = requests.post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-                    headers={'x-goog-api-key': GEMINI_API_KEY},
-                    json={"contents": [{"parts": [{"text": prompt}]}]},
-                    timeout=30
-                )
-                response.raise_for_status()
+                logger.info("Utilisation de l'API Gemini avec le SDK officiel")
+                # Utiliser gemini-2.5-flash comme dans le test réussi
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                logger.info("Envoi de la requête à Gemini...")
+                
+                response = model.generate_content(prompt)
                 logger.info("Réponse reçue de l'API Gemini")
-                content = response.json()['candidates'][0]['content']['parts'][0]['text']
-            except requests.exceptions.RequestException as e:
+                
+                # Log de la réponse pour debug
+                logger.debug(f"Réponse Gemini reçue avec succès")
+                
+                content = response.text
+                logger.info(f"Contenu extrait de Gemini: {len(content)} caractères")
+            except Exception as e:
                 logger.error(f"Erreur lors de l'appel à l'API Gemini: {str(e)}")
-                raise ValueError("Service temporairement indisponible")
+                raise ValueError(f"Service Gemini indisponible: {str(e)}")
 
         logger.debug(f"Contenu brut reçu: {len(content)} caractères")
+        logger.debug(f"Aperçu du contenu: {content[:200]}")
         
-        json_str = re.search(r'\{.*\}', content, re.DOTALL).group()
+        # Chercher le JSON dans la réponse
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if not json_match:
+            logger.error("Aucun JSON trouvé dans la réponse")
+            logger.error(f"Contenu complet: {content}")
+            raise ValueError("Aucun JSON trouvé dans la réponse de l'IA")
+        
+        json_str = json_match.group()
         logger.debug(f"JSON extrait: {len(json_str)} caractères")
         
-        questions_data = json.loads(json_str).get('questions', [])
+        try:
+            questions_data = json.loads(json_str).get('questions', [])
+        except json.JSONDecodeError as e:
+            logger.error(f"Erreur de parsing JSON: {str(e)}")
+            logger.error(f"JSON problématique: {json_str[:500]}")
+            raise ValueError(f"Erreur de parsing JSON: {str(e)}")
         logger.info(f"{len(questions_data)} questions extraites de la réponse")
 
         # Validation et formatage

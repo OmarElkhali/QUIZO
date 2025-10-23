@@ -1,10 +1,11 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useQuiz } from '@/hooks/useQuiz';
+import { getOrCreateShareCode } from '@/services/quizService';
 import { toast } from 'sonner';
 import { Mail, Share2, Copy, Check, Users, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -19,6 +20,28 @@ export const ShareQuizDialog = ({ quizId, open, onOpenChange }: ShareQuizDialogP
   const { shareQuiz, isLoading } = useQuiz();
   const [email, setEmail] = useState('');
   const [copied, setCopied] = useState(false);
+  const [shareCode, setShareCode] = useState<string>('');
+  const [loadingCode, setLoadingCode] = useState(false);
+  
+  // Charger ou générer le shareCode quand le dialog s'ouvre
+  useEffect(() => {
+    const loadShareCode = async () => {
+      if (open && quizId) {
+        setLoadingCode(true);
+        try {
+          const code = await getOrCreateShareCode(quizId);
+          setShareCode(code);
+        } catch (error) {
+          console.error('Erreur lors du chargement du code de partage:', error);
+          toast.error('Impossible de générer le lien de partage');
+        } finally {
+          setLoadingCode(false);
+        }
+      }
+    };
+    
+    loadShareCode();
+  }, [open, quizId]);
   
   const handleShare = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +53,7 @@ export const ShareQuizDialog = ({ quizId, open, onOpenChange }: ShareQuizDialogP
     
     try {
       await shareQuiz(quizId, email);
+      toast.success(`Invitation envoyée à ${email}`);
       setEmail('');
       // Nous ne fermons pas le dialogue car l'utilisateur pourrait vouloir partager avec plusieurs personnes
     } catch (error) {
@@ -38,7 +62,7 @@ export const ShareQuizDialog = ({ quizId, open, onOpenChange }: ShareQuizDialogP
   };
   
   const copyShareLink = async () => {
-    const shareLink = `${window.location.origin}/shared-quiz/${quizId}`;
+    const shareLink = `${window.location.origin}/shared-quiz/${quizId}?code=${shareCode}`;
     
     try {
       await navigator.clipboard.writeText(shareLink);
@@ -66,19 +90,32 @@ export const ShareQuizDialog = ({ quizId, open, onOpenChange }: ShareQuizDialogP
             <Label>Lien de partage</Label>
             <div className="flex gap-2">
               <Input 
-                value={`${window.location.origin}/shared-quiz/${quizId}`} 
+                value={loadingCode ? 'Génération du lien...' : `${window.location.origin}/shared-quiz/${quizId}?code=${shareCode}`} 
                 readOnly
                 className="bg-muted/50"
+                disabled={loadingCode}
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={copyShareLink}
                 className="shrink-0"
+                disabled={loadingCode || !shareCode}
               >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {loadingCode ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
+            {shareCode && (
+              <p className="text-xs text-muted-foreground">
+                Code de partage: <span className="font-mono font-bold text-primary">{shareCode}</span>
+              </p>
+            )}
           </div>
           
           <div className="relative">

@@ -53,16 +53,17 @@ const extractTextFromPDF = async (file: File): Promise<string> => {
     }
     
     // 3. Envoyer le fichier à l'API Python pour l'extraction
-    const response = await fetch('http://localhost:5000/api/extract-pdf', {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch('http://localhost:5000/api/extract-text', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ fileUrl: urlData.publicUrl }),
+      body: formData,
     });
     
     if (!response.ok) {
-      throw new Error(`Erreur API: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Erreur API (${response.status}): ${errorText}`);
     }
     
     const responseData = await response.json();

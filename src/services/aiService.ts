@@ -4,11 +4,8 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { extractTextFromFile } from './fileService';
 
-// URL de l'API Flask (local)
-// const FLASK_API_URL = 'http://localhost:5000/api';
-
-// URL de l'API Flask (production)
-const FLASK_API_URL = 'https://quizo-nued.onrender.com/api';
+// URL de l'API Flask - utiliser variable d'environnement ou localhost par défaut
+const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
 
 // Exporter la fonction pour pouvoir l'utiliser directement
 export const getFirebaseBackupQuestions = async (): Promise<Question[]> => {
@@ -265,22 +262,15 @@ export const generateQuestionsWithAI = async (
       progressCallback?.(0.2);
       console.log('Vérification de l\'état du serveur Flask...');
       const healthCheck = await axios.get(`${FLASK_API_URL}/health`, { timeout: 5000 });
-console.log('Statut du serveur Flask:', healthCheck.data);
+      console.log('Statut du serveur Flask:', healthCheck.data);
+      
+      // Vérifier que Gemini est configuré
+      if (!healthCheck.data.services?.gemini) {
+        throw new Error('Gemini API non configurée sur le serveur');
+      }
     } catch (healthError) {
-      console.error('Le serveur Flask est inaccessible:', healthError);
-      console.log('Utilisation automatique du mode de secours Firebase sans notification...');
-      
-      // Récupération silencieuse des questions de secours depuis Firebase
-      console.log('Récupération des questions de secours depuis Firebase...');
-      const firebaseQuestions = await getFirebaseBackupQuestions();
-      console.log(`${firebaseQuestions.length} questions de secours récupérées`);
-      
-      // Limiter au nombre de questions demandé et ajuster la difficulté
-      const adjustedQuestions = firebaseQuestions
-        .slice(0, numQuestions)
-        .map(q => ({...q, difficulty}));
-      
-      return adjustedQuestions;
+      console.error('Le serveur Flask est inaccessible ou Gemini non configuré:', healthError);
+      throw new Error('Impossible de se connecter au serveur de génération. Veuillez vérifier que le serveur Flask est démarré et que la clé API Gemini est configurée.');
     }
     
     // Création de la requête vers l'API Flask
@@ -392,30 +382,10 @@ console.log('Statut du serveur Flask:', healthCheck.data);
       }
     } catch (apiError) {
       console.error('Erreur lors de l\'appel à l\'API Flask:', apiError);
-      
-      // Si c'est déjà la deuxième tentative, utiliser les questions de secours
-      if (modelType !== 'gemini') {
-        console.warn('Échec avec les deux modèles, utilisation des questions de secours...');
-        const firebaseQuestions = await getFirebaseBackupQuestions();
-        return firebaseQuestions.slice(0, numQuestions).map(q => ({...q, difficulty}));
-      }
-      
-      // Sinon, essayer avec l'autre modèle
-      console.warn('Tentative avec le modèle alternatif...');
-      return generateQuestionsWithAI(text, numQuestions, difficulty, additionalInfo, 'chatgpt', progressCallback);
+      throw new Error(`Échec de la génération avec Gemini: ${apiError.message || 'Erreur inconnue'}`);
     }
   } catch (error: any) {
     console.error('Erreur générale lors de la génération des questions:', error);
-    
-    // En cas d'erreur générale, basculer silencieusement vers le mode de secours Firebase
-    console.log('Basculement silencieux vers le mode de secours Firebase suite à une erreur générale...');
-    const firebaseQuestions = await getFirebaseBackupQuestions();
-    
-    // Limiter au nombre de questions demandé et ajuster la difficulté
-    const adjustedQuestions = firebaseQuestions
-      .slice(0, numQuestions)
-      .map(q => ({...q, difficulty}));
-    
-    return adjustedQuestions;
+    throw error; // Propager l'erreur au lieu de masquer avec des questions de secours
   }
 };

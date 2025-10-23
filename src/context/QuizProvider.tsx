@@ -285,11 +285,12 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     try {
       await quizService.deleteQuiz(id);
       setQuizzes(prev => prev.filter(quiz => quiz.id !== id));
+      setSharedQuizzes(prev => prev.filter(quiz => quiz.id !== id));
       if (currentQuiz?.id === id) setCurrentQuiz(null);
-      toast.success('Quiz supprimé avec succès');
-    } catch (error) {
+      // Ne pas afficher de toast ici, c'est géré dans le composant DeleteQuizDialog
+    } catch (error: any) {
       console.error('Error deleting quiz:', error);
-      toast.error('Impossible de supprimer le quiz');
+      // Propager l'erreur avec un message clair
       throw error;
     } finally {
       setIsLoading(false);

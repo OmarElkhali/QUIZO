@@ -1,8 +1,11 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "quizo",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Plateforme de quiz avec IA et mode manuel",
+  "author": "Omar Elkhali",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

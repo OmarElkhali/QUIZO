@@ -1,8 +1,21 @@
-flask==2.0.1
-werkzeug==2.0.3
-flask-cors==3.0.10
-requests==2.26.0
-python-dotenv==0.19.0
-PyPDF2==3.0.1
-python-docx==0.8.11
+# Flask et extensions
+flask==3.0.0
+werkzeug==3.0.1
+flask-cors==4.0.0
 gunicorn==21.2.0
+
+# HTTP et API
+requests==2.31.0
+
+# Configuration
+python-dotenv==1.0.0
+
+# Traitement de documents
+pypdf==3.17.4
+python-docx==1.1.0
+
+# API IA
+google-generativeai==0.3.2
+
+# Optionnel: rate limiting pour la sécurité
+# flask-limiter==3.5.0

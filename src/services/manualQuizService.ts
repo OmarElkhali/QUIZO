@@ -13,7 +13,8 @@ import {
   orderBy,
   limit,
   Timestamp,
-  increment
+  increment,
+  onSnapshot
 } from 'firebase/firestore';
 import { ManualQuiz, ManualQuestion, Competition, Participant, Attempt } from '@/types/quiz';
 
@@ -31,9 +32,9 @@ export const generateShareCode = (): string => {
 export const createManualQuiz = async (userId: string, title: string, description: string): Promise<string> => {
   try {
     const quizData = {
+      creatorId: userId,
       title,
       description,
-      creatorId: userId,
       questions: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -450,5 +451,306 @@ export const getCompetitionStats = async (competitionId: string): Promise<any> =
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);
     throw new Error(`Échec de la récupération des statistiques: ${error.message}`);
+  }
+};
+
+// ===== NOUVELLES FONCTIONS POUR LE MODE TEMPS RÉEL =====
+
+/**
+ * Récupérer tous les participants d'un quiz
+ */
+export const getQuizParticipants = async (quizId: string): Promise<Participant[]> => {
+  try {
+    const participantsRef = collection(db, 'quizzes', quizId, 'participants');
+    const q = query(participantsRef, orderBy('joinedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Participant));
+  } catch (error) {
+    console.error('Erreur lors de la récupération des participants:', error);
+    throw new Error(`Échec de la récupération des participants: ${error.message}`);
+  }
+};
+
+/**
+ * Récupérer toutes les tentatives d'un quiz
+ */
+export const getQuizAttempts = async (quizId: string): Promise<Attempt[]> => {
+  try {
+    const attemptsRef = collection(db, 'quizzes', quizId, 'attempts');
+    const q = query(attemptsRef, orderBy('startedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Attempt));
+  } catch (error) {
+    console.error('Erreur lors de la récupération des tentatives:', error);
+    throw new Error(`Échec de la récupération des tentatives: ${error.message}`);
+  }
+};
+
+/**
+ * Mettre à jour le statut d'un quiz
+ */
+export const updateQuizStatus = async (quizId: string, status: 'draft' | 'active' | 'completed'): Promise<void> => {
+  try {
+    const quizRef = doc(db, 'quizzes', quizId);
+    await updateDoc(quizRef, {
+      status,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du statut:', error);
+    throw new Error(`Échec de la mise à jour du statut: ${error.message}`);
+  }
+};
+
+/**
+ * Écouter les changements des participants en temps réel
+ */
+export const listenToParticipants = (quizId: string, callback: (participants: Participant[]) => void): (() => void) => {
+  const participantsRef = collection(db, 'quizzes', quizId, 'participants');
+  const q = query(participantsRef, orderBy('joinedAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const participants = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Participant));
+    
+    callback(participants);
+  });
+  
+  return unsubscribe;
+};
+
+/**
+ * Écouter les changements des tentatives en temps réel
+ */
+export const listenToAttempts = (quizId: string, callback: (attempts: Attempt[]) => void): (() => void) => {
+  const attemptsRef = collection(db, 'quizzes', quizId, 'attempts');
+  const q = query(attemptsRef, orderBy('startedAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const attempts = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Attempt));
+    
+    callback(attempts);
+  });
+  
+  return unsubscribe;
+};
+
+/**
+ * Ajouter un participant à un quiz
+ */
+export const addParticipantToQuiz = async (
+  quizId: string, 
+  userId: string, 
+  name: string, 
+  email?: string
+): Promise<string> => {
+  try {
+    const participantData = {
+      quizId,
+      userId,
+      name,
+      email: email || null,
+      joinedAt: serverTimestamp(),
+      isActive: false,
+      currentQuestionIndex: 0,
+    };
+    
+    const participantRef = await addDoc(
+      collection(db, 'quizzes', quizId, 'participants'),
+      participantData
+    );
+    
+    return participantRef.id;
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout du participant:', error);
+    throw new Error(`Échec de l'ajout du participant: ${error.message}`);
+  }
+};
+
+/**
+ * Créer une tentative pour un participant
+ */
+export const createQuizAttempt = async (
+  quizId: string,
+  participantId: string,
+  userId: string
+): Promise<string> => {
+  try {
+    const attemptData = {
+      quizId,
+      participantId,
+      userId,
+      startedAt: serverTimestamp(),
+      answers: {},
+    };
+    
+    const attemptRef = await addDoc(
+      collection(db, 'quizzes', quizId, 'attempts'),
+      attemptData
+    );
+    
+    // Mettre à jour le participant pour indiquer qu'il est actif
+    const participantRef = doc(db, 'quizzes', quizId, 'participants', participantId);
+    await updateDoc(participantRef, {
+      isActive: true
+    });
+    
+    return attemptRef.id;
+  } catch (error) {
+    console.error('Erreur lors de la création de la tentative:', error);
+    throw new Error(`Échec de la création de la tentative: ${error.message}`);
+  }
+};
+
+/**
+ * Mettre à jour la progression d'un participant
+ */
+export const updateParticipantProgress = async (
+  quizId: string,
+  participantId: string,
+  currentQuestionIndex: number
+): Promise<void> => {
+  try {
+    const participantRef = doc(db, 'quizzes', quizId, 'participants', participantId);
+    await updateDoc(participantRef, {
+      currentQuestionIndex,
+      isActive: true
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la progression:', error);
+    throw new Error(`Échec de la mise à jour de la progression: ${error.message}`);
+  }
+};
+
+/**
+ * Soumettre les réponses d'une tentative de quiz
+ */
+export const submitQuizAttempt = async (
+  quizId: string,
+  attemptId: string,
+  participantId: string,
+  answers: Record<string, string>
+): Promise<number> => {
+  try {
+    // Récupérer le quiz pour calculer le score
+    const quizRef = doc(db, 'quizzes', quizId);
+    const quizDoc = await getDoc(quizRef);
+    
+    if (!quizDoc.exists()) {
+      throw new Error('Quiz non trouvé');
+    }
+    
+    const quiz = quizDoc.data() as ManualQuiz;
+    let correctAnswers = 0;
+    const totalQuestions = quiz.questions.length;
+    
+    // Calculer le score
+    quiz.questions.forEach((question) => {
+      const userAnswer = answers[question.id];
+      const correctOption = question.options.find(opt => opt.isCorrect);
+      
+      if (correctOption && userAnswer === correctOption.id) {
+        correctAnswers++;
+      }
+    });
+    
+    const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+    
+    // Mettre à jour la tentative
+    const attemptRef = doc(db, 'quizzes', quizId, 'attempts', attemptId);
+    const attemptDoc = await getDoc(attemptRef);
+    const attemptData = attemptDoc.data();
+    const startTime = attemptData?.startedAt?.toDate?.() || new Date();
+    const endTime = new Date();
+    const timeSpent = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+    
+    await updateDoc(attemptRef, {
+      answers,
+      score,
+      completedAt: serverTimestamp(),
+      timeSpent
+    });
+    
+    // Mettre à jour le participant
+    const participantRef = doc(db, 'quizzes', quizId, 'participants', participantId);
+    await updateDoc(participantRef, {
+      score,
+      completedAt: serverTimestamp(),
+      isActive: false
+    });
+    
+    return score;
+  } catch (error) {
+    console.error('Erreur lors de la soumission des réponses:', error);
+    throw new Error(`Échec de la soumission des réponses: ${error.message}`);
+  }
+};
+
+/**
+ * Récupérer un quiz par son shareCode
+ */
+export const getQuizByShareCode = async (shareCode: string): Promise<ManualQuiz | null> => {
+  try {
+    const quizzesRef = collection(db, 'quizzes');
+    const q = query(quizzesRef, where('shareCode', '==', shareCode), limit(1));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const doc = querySnapshot.docs[0];
+    return {
+      id: doc.id,
+      ...doc.data()
+    } as ManualQuiz;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du quiz:', error);
+    throw new Error(`Échec de la récupération du quiz: ${error.message}`);
+  }
+};
+
+/**
+ * Générer et assigner un shareCode à un quiz
+ */
+export const generateAndAssignShareCode = async (quizId: string): Promise<string> => {
+  try {
+    let shareCode = generateShareCode();
+    let isUnique = false;
+    
+    // Vérifier l'unicité du code
+    while (!isUnique) {
+      const existingQuiz = await getQuizByShareCode(shareCode);
+      if (!existingQuiz) {
+        isUnique = true;
+      } else {
+        shareCode = generateShareCode();
+      }
+    }
+    
+    // Assigner le code au quiz
+    const quizRef = doc(db, 'quizzes', quizId);
+    await updateDoc(quizRef, {
+      shareCode,
+      updatedAt: serverTimestamp()
+    });
+    
+    return shareCode;
+  } catch (error) {
+    console.error('Erreur lors de la génération du code de partage:', error);
+    throw new Error(`Échec de la génération du code de partage: ${error.message}`);
   }
 };

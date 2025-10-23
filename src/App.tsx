@@ -23,6 +23,9 @@ import ManualQuizBuilder from './pages/ManualQuizBuilder';
 import CompetitionPlay from './pages/Competition';
 import Leaderboard from './pages/Leaderboard';
 import CreatorDashboard from './pages/CreatorDashboard';
+import SharedQuiz from './pages/SharedQuiz';
+import RealtimeDashboard from './pages/RealtimeDashboard';
+import JoinQuiz from './pages/JoinQuiz';
 
 const queryClient = new QueryClient()
 
@@ -41,14 +44,15 @@ function App() {
                     <Route path="/create-manual-quiz" element={<CreateManualQuiz />} />
                     <Route path="/manual-quiz-builder/:id" element={<ManualQuizBuilder />} />
                     <Route path="/join" element={<JoinByCode />} />
-                    <Route path="/join-by-code" element={<JoinByCode />} />
-                    // Clarifier les routes de compétition
                     <Route path="/competition/share/:shareCode" element={<CompetitionPlay />} />
                     <Route path="/competition/:competitionId" element={<CompetitionPlay />} />
                     <Route path="/leaderboard/:id" element={<Leaderboard />} />
                     <Route path="/creator-dashboard/:id" element={<CreatorDashboard />} />
                     <Route path="/quiz-preview/:id" element={<QuizPreview />} />
                     <Route path="/quiz/:id" element={<Quiz />} />
+                    <Route path="/shared-quiz/:quizId" element={<SharedQuiz />} />
+                    <Route path="/quiz-dashboard/:id" element={<RealtimeDashboard />} />
+                    <Route path="/join-quiz/:shareCode?" element={<JoinQuiz />} />
                     <Route path="/results/:quizId/:submissionId" element={<Results />} />
                     <Route path="/history" element={<QuizHistory />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />

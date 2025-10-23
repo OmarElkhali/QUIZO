@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { QuizCard } from '@/components/QuizCard';
 import { Navbar } from '@/components/Navbar';
 import { useQuiz } from '@/hooks/useQuiz';
-import { Search, Filter, SortDesc, SortAsc } from 'lucide-react';
+import { QuizResultsHistory } from '@/components/QuizResultsHistory';
+import { Search, Filter, SortDesc, SortAsc, History as HistoryIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const History = () => {
@@ -108,15 +109,19 @@ const History = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="w-full max-w-md mx-auto grid grid-cols-3 mb-8">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-                <TabsTrigger value="completed">Completed</TabsTrigger>
+            <Tabs defaultValue="my-quizzes" className="w-full">
+              <TabsList className="w-full max-w-2xl mx-auto grid grid-cols-4 mb-8">
+                <TabsTrigger value="my-quizzes">Mes Quiz</TabsTrigger>
+                <TabsTrigger value="results">
+                  <HistoryIcon className="h-4 w-4 mr-2" />
+                  Résultats
+                </TabsTrigger>
+                <TabsTrigger value="in-progress">En cours</TabsTrigger>
+                <TabsTrigger value="completed">Complétés</TabsTrigger>
               </TabsList>
               
-              {/* All Quizzes */}
-              <TabsContent value="all" className="mt-0">
+              {/* Mes Quiz */}
+              <TabsContent value="my-quizzes" className="mt-0">
                 {sortedQuizzes.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sortedQuizzes.map((quiz, index) => (
@@ -138,10 +143,15 @@ const History = () => {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-lg text-muted-foreground">
-                      No quizzes found matching your search.
+                      Aucun quiz trouvé correspondant à votre recherche.
                     </p>
                   </div>
                 )}
+              </TabsContent>
+              
+              {/* Historique des Résultats */}
+              <TabsContent value="results" className="mt-0">
+                <QuizResultsHistory />
               </TabsContent>
               
               {/* In Progress */}
@@ -167,7 +177,7 @@ const History = () => {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-lg text-muted-foreground">
-                      You don't have any quizzes in progress.
+                      Vous n'avez aucun quiz en cours.
                     </p>
                   </div>
                 )}
@@ -196,7 +206,7 @@ const History = () => {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-lg text-muted-foreground">
-                      You haven't completed any quizzes yet.
+                      Vous n'avez pas encore complété de quiz.
                     </p>
                   </div>
                 )}

@@ -3,7 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PenLine, Plus, Save, Trash2, Share2, Play, Clock, Settings } from 'lucide-react';
+import { PenLine, Plus, Save, Trash2, Share2, Play, Clock, Settings, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +16,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getManualQuiz, updateManualQuiz, addQuestionToManualQuiz, updateQuestionInManualQuiz, deleteQuestionFromManualQuiz, createCompetition } from '@/services/manualQuizService';
+import { getManualQuiz, updateManualQuiz, addQuestionToManualQuiz, updateQuestionInManualQuiz, deleteQuestionFromManualQuiz, createCompetition, generateAndAssignShareCode } from '@/services/manualQuizService';
 import { ManualQuiz, ManualQuestion } from '@/types/quiz';
+import { Badge } from '@/components/ui/badge';
 
 const ManualQuizBuilder = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +47,8 @@ const ManualQuizBuilder = () => {
   // États pour les paramètres du quiz
   const [timeLimit, setTimeLimit] = useState<number | undefined>(undefined);
   const [isPublic, setIsPublic] = useState(false);
+  const [quizMode, setQuizMode] = useState<'realtime' | 'async'>('async');
+  const [quizStatus, setQuizStatus] = useState<'draft' | 'active' | 'completed'>('draft');
   
   // États pour la création de compétition
   const [competitionTitle, setCompetitionTitle] = useState('');
@@ -79,6 +82,8 @@ const ManualQuizBuilder = () => {
         setQuiz(quizData);
         setTimeLimit(quizData.timeLimit);
         setIsPublic(quizData.isPublic || false);
+        setQuizMode(quizData.mode || 'async');
+        setQuizStatus(quizData.status || 'draft');
       } catch (error: any) {
         console.error('Erreur lors de la récupération du quiz:', error);
         toast.error(error.message || 'Erreur lors de la récupération du quiz');
@@ -232,13 +237,36 @@ const ManualQuizBuilder = () => {
     }
   };
   
+  const handleGenerateShareCode = async () => {
+    if (!id) return;
+    
+    try {
+      const newShareCode = await generateAndAssignShareCode(id);
+      toast.success(`Code de partage généré : ${newShareCode}`);
+      
+      // Rafraîchir le quiz
+      const updatedQuiz = await getManualQuiz(id);
+      setQuiz(updatedQuiz);
+    } catch (error: any) {
+      console.error('Erreur lors de la génération du code:', error);
+      toast.error(error.message || 'Erreur lors de la génération du code');
+    }
+  };
+  
+  const handleViewDashboard = () => {
+    if (!id) return;
+    navigate(`/quiz-dashboard/${id}`);
+  };
+  
   const handleSaveSettings = async () => {
-    if (!id || !quiz) return;
+    if (!id) return;
     
     try {
       await updateManualQuiz(id, {
         timeLimit,
-        isPublic
+        isPublic,
+        mode: quizMode,
+        status: quizStatus
       });
       
       toast.success('Paramètres enregistrés avec succès');
@@ -318,18 +346,34 @@ const ManualQuizBuilder = () => {
               <p className="text-muted-foreground">{quiz?.description || 'Aucune description'}</p>
             </div>
             
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowSettingsDialog(true)}>
+            <div className="flex flex-wrap gap-2">
+              {quiz?.shareCode && (
+                <Badge variant="outline" className="px-3 py-1 text-lg font-mono">
+                  {quiz.shareCode}
+                </Badge>
+              )}
+              
+              <Button variant="outline" size="sm" onClick={handleGenerateShareCode}>
+                <Share2 className="h-4 w-4 mr-2" />
+                {quiz?.shareCode ? 'Nouveau Code' : 'Générer Code'}
+              </Button>
+              
+              <Button variant="outline" size="sm" onClick={handleViewDashboard}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+              
+              <Button variant="outline" size="sm" onClick={() => setShowSettingsDialog(true)}>
                 <Settings className="h-4 w-4 mr-2" />
                 Paramètres
               </Button>
               
-              <Button variant="outline" onClick={() => setShowShareDialog(true)}>
+              <Button variant="outline" size="sm" onClick={() => setShowShareDialog(true)}>
                 <Share2 className="h-4 w-4 mr-2" />
-                Partager
+                Compétition
               </Button>
               
-              <Button onClick={() => navigate(`/quiz-preview/${id}`)}>
+              <Button size="sm" onClick={() => navigate(`/quiz-preview/${id}`)}>
                 <Play className="h-4 w-4 mr-2" />
                 Tester
               </Button>
@@ -566,7 +610,7 @@ const ManualQuizBuilder = () => {
       
       {/* Dialogue des paramètres */}
       <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Paramètres du Quiz</DialogTitle>
             <DialogDescription>
@@ -607,6 +651,49 @@ const ManualQuizBuilder = () => {
                   <SelectItem value="30">30 minutes</SelectItem>
                   <SelectItem value="45">45 minutes</SelectItem>
                   <SelectItem value="60">1 heure</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="quiz-mode">Mode de passage</Label>
+              <Select
+                value={quizMode}
+                onValueChange={(value: 'realtime' | 'async') => setQuizMode(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="async">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Asynchrone</span>
+                      <span className="text-xs text-muted-foreground">Les participants passent le quiz quand ils veulent</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="realtime">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Temps Réel</span>
+                      <span className="text-xs text-muted-foreground">Suivi en direct avec dashboard des participants</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="quiz-status">Statut du quiz</Label>
+              <Select
+                value={quizStatus}
+                onValueChange={(value: 'draft' | 'active' | 'completed') => setQuizStatus(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Brouillon - Non accessible aux participants</SelectItem>
+                  <SelectItem value="active">Actif - Les participants peuvent le passer</SelectItem>
+                  <SelectItem value="completed">Terminé - Plus de nouvelles participations</SelectItem>
                 </SelectContent>
               </Select>
             </div>

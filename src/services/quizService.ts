@@ -188,7 +188,7 @@ export const createQuiz = async (
     }
     
     const quizData = {
-      userId,
+      creatorId: userId,  // Au lieu de userId
       title,
       description,
       questions,
@@ -216,7 +216,7 @@ export const createQuiz = async (
 
 export const getQuizzes = async (userId: string): Promise<Quiz[]> => {
   try {
-    console.log('Récupération des quiz pour l\'utilisateur:', userId);
+    console.log('🔍 [getQuizzes] Récupération des quiz pour l\'utilisateur:', userId);
     
     if (!userId) {
       throw new Error('ID utilisateur manquant');
@@ -228,26 +228,30 @@ export const getQuizzes = async (userId: string): Promise<Quiz[]> => {
       throw new Error('Utilisateur non authentifié');
     }
     
+    console.log('🔑 [getQuizzes] Utilisateur Firebase Auth:', {
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email
+    });
+    
     const q = query(
       collection(db, 'quizzes'), 
-      where('userId', '==', userId)
+      where('creatorId', '==', userId)
     );
     
-    console.log('Exécution de la requête Firestore...');
+    console.log('🔄 [getQuizzes] Exécution de la requête Firestore avec filtre creatorId ==', userId);
     const querySnapshot = await getDocs(q);
-    console.log('Requête Firestore terminée');
+    console.log('✅ [getQuizzes] Requête Firestore terminée -', querySnapshot.size, 'documents trouvés');
     
     const quizzes: Quiz[] = [];
     
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      console.log('Document trouvé:', doc.id);
-      
-      // Vérifier que l'utilisateur a accès à ce quiz
-      if (data.userId !== userId && !(data.collaborators || []).includes(userId)) {
-        console.log('Accès refusé au quiz:', doc.id);
-        return;
-      }
+      console.log('📄 [getQuizzes] Document trouvé:', {
+        id: doc.id,
+        creatorId: data.creatorId,
+        userId: data.userId,
+        title: data.title
+      });
       
       quizzes.push({
         id: doc.id,
@@ -428,19 +432,141 @@ export const updateQuiz = async (
 export const deleteQuiz = async (quizId: string): Promise<void> => {
   try {
     console.log('Suppression du quiz:', quizId);
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      throw new Error('Utilisateur non authentifié');
+    }
+    
+    console.log('Utilisateur actuel:', currentUser.uid);
+    
     const docRef = doc(db, 'quizzes', quizId);
     
     const quizDoc = await getDoc(docRef);
     if (!quizDoc.exists()) {
-      throw new Error('Quiz not found');
+      throw new Error('Quiz introuvable');
+    }
+    
+    const quizData = quizDoc.data();
+    console.log('Données du quiz:', {
+      userId: quizData.userId,
+      creatorId: quizData.creatorId,
+      ownerId: quizData.ownerId,
+      currentUserId: currentUser.uid
+    });
+    
+    // Vérifier que l'utilisateur est propriétaire avant de tenter la suppression
+    const isOwner = quizData.userId === currentUser.uid || 
+                    quizData.creatorId === currentUser.uid || 
+                    quizData.ownerId === currentUser.uid;
+    
+    if (!isOwner) {
+      throw new Error('Vous n\'êtes pas autorisé à supprimer ce quiz');
     }
     
     await deleteDoc(docRef);
     
     console.log('Quiz supprimé avec succès de la base de données');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la suppression du quiz:', error);
+    
+    // Messages d'erreur plus spécifiques
+    if (error.code === 'permission-denied') {
+      throw new Error('Permission refusée: Vous n\'êtes pas autorisé à supprimer ce quiz');
+    }
+    
     throw new Error(`Échec de la suppression du quiz: ${error.message}`);
+  }
+};
+
+/**
+ * Générer un code de partage unique pour un quiz
+ */
+export const generateShareCode = (): string => {
+  // Génère un code de 8 caractères alphanumériques
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Sans 0, O, 1, I pour éviter confusion
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+/**
+ * Obtenir ou créer le shareCode d'un quiz
+ */
+export const getOrCreateShareCode = async (quizId: string): Promise<string> => {
+  try {
+    const docRef = doc(db, 'quizzes', quizId);
+    const quizDoc = await getDoc(docRef);
+    
+    if (!quizDoc.exists()) {
+      throw new Error('Quiz introuvable');
+    }
+    
+    const quizData = quizDoc.data();
+    
+    // Si le quiz a déjà un shareCode, le retourner
+    if (quizData.shareCode) {
+      return quizData.shareCode;
+    }
+    
+    // Sinon, générer un nouveau code unique
+    let shareCode = generateShareCode();
+    let isUnique = false;
+    
+    // Vérifier que le code est unique
+    while (!isUnique) {
+      const q = query(collection(db, 'quizzes'), where('shareCode', '==', shareCode));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
+        isUnique = true;
+      } else {
+        shareCode = generateShareCode();
+      }
+    }
+    
+    // Sauvegarder le shareCode dans le quiz
+    await updateDoc(docRef, {
+      shareCode,
+      isShared: true,
+    });
+    
+    console.log(`✅ ShareCode généré pour le quiz ${quizId}: ${shareCode}`);
+    return shareCode;
+  } catch (error) {
+    console.error('Erreur lors de la génération du shareCode:', error);
+    throw new Error(`Impossible de générer le code de partage: ${error.message}`);
+  }
+};
+
+/**
+ * Rejoindre un quiz via son shareCode
+ */
+export const joinQuizByShareCode = async (shareCode: string): Promise<string> => {
+  try {
+    console.log(`🔍 Recherche du quiz avec le code: ${shareCode}`);
+    
+    const q = query(
+      collection(db, 'quizzes'),
+      where('shareCode', '==', shareCode.toUpperCase())
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      throw new Error('Code de partage invalide ou quiz introuvable');
+    }
+    
+    const quizDoc = querySnapshot.docs[0];
+    console.log(`✅ Quiz trouvé: ${quizDoc.id}`);
+    
+    return quizDoc.id;
+  } catch (error) {
+    console.error('Erreur lors de la recherche du quiz:', error);
+    throw new Error(`Impossible de rejoindre le quiz: ${error.message}`);
   }
 };
 
@@ -448,16 +574,39 @@ export const shareQuiz = async (
   quizId: string, 
   collaboratorEmail: string
 ): Promise<void> => {
-  const docRef = doc(db, 'quizzes', quizId);
-  
-  // Utiliser l'email comme identifiant du collaborateur au lieu d'un ID aléatoire
-  await updateDoc(docRef, {
-    collaborators: arrayUnion(collaboratorEmail),
-    isShared: true,
-  });
-  
-  // Vous pourriez également ajouter ici une logique pour envoyer un email d'invitation
-  // si vous avez un service d'envoi d'emails configuré
+  try {
+    console.log(`📧 Partage du quiz ${quizId} avec ${collaboratorEmail}`);
+    
+    const docRef = doc(db, 'quizzes', quizId);
+    const quizDoc = await getDoc(docRef);
+    
+    if (!quizDoc.exists()) {
+      throw new Error('Quiz introuvable');
+    }
+    
+    // Générer ou obtenir le shareCode
+    const shareCode = await getOrCreateShareCode(quizId);
+    
+    // Ajouter l'email aux collaborateurs
+    await updateDoc(docRef, {
+      collaborators: arrayUnion(collaboratorEmail),
+      isShared: true,
+    });
+    
+    // Construire le lien de partage
+    const shareLink = `${window.location.origin}/shared-quiz/${quizId}?code=${shareCode}`;
+    
+    console.log(`✅ Quiz partagé avec ${collaboratorEmail}`);
+    console.log(`🔗 Lien de partage: ${shareLink}`);
+    
+    // TODO: Envoyer un email d'invitation avec le lien
+    // Pour l'instant, on affiche juste un message
+    // Vous pouvez intégrer un service comme SendGrid, Mailgun, ou Firebase Functions
+    
+  } catch (error) {
+    console.error('Erreur lors du partage du quiz:', error);
+    throw new Error(`Échec du partage: ${error.message}`);
+  }
 };
 
 export const removeCollaborator = async (
@@ -477,5 +626,149 @@ export const removeCollaborator = async (
     await updateDoc(docRef, {
       isShared: false,
     });
+  }
+};
+
+// ========================================
+// GESTION DES RÉSULTATS DE QUIZ
+// ========================================
+
+export interface QuizResult {
+  id?: string;
+  userId: string;
+  quizId: string;
+  quizTitle: string;
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeSpent: number; // en secondes
+  completedAt: Date;
+  answers: {
+    questionId: string;
+    selectedOptionId: string;
+    isCorrect: boolean;
+  }[];
+}
+
+export interface QuizResultInput {
+  userId: string;
+  quizId: string;
+  quizTitle: string;
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeSpent: number;
+  answers: {
+    questionId: string;
+    selectedOptionId: string;
+    isCorrect: boolean;
+  }[];
+}
+
+/**
+ * Sauvegarder les résultats d'un quiz complété
+ */
+export const saveQuizResult = async (result: QuizResultInput): Promise<string> => {
+  try {
+    console.log('Sauvegarde des résultats du quiz:', result.quizId);
+    
+    const docRef = await addDoc(collection(db, 'quizResults'), {
+      ...result,
+      completedAt: serverTimestamp(),
+    });
+    
+    console.log('Résultats sauvegardés avec succès:', docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde des résultats:', error);
+    throw new Error(`Échec de la sauvegarde des résultats: ${error.message}`);
+  }
+};
+
+/**
+ * Récupérer tous les résultats de quiz pour un utilisateur
+ */
+export const getUserQuizResults = async (userId: string): Promise<QuizResult[]> => {
+  try {
+    console.log('Récupération des résultats pour l\'utilisateur:', userId);
+    
+    if (!userId) {
+      throw new Error('ID utilisateur manquant');
+    }
+    
+    const q = query(
+      collection(db, 'quizResults'),
+      where('userId', '==', userId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const results: QuizResult[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      results.push({
+        id: doc.id,
+        userId: data.userId,
+        quizId: data.quizId,
+        quizTitle: data.quizTitle,
+        score: data.score,
+        totalQuestions: data.totalQuestions,
+        correctAnswers: data.correctAnswers,
+        timeSpent: data.timeSpent,
+        completedAt: data.completedAt?.toDate() || new Date(),
+        answers: data.answers || [],
+      });
+    });
+    
+    // Trier par date de complétion (plus récent en premier)
+    results.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
+    
+    console.log(`${results.length} résultats récupérés`);
+    return results;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résultats:', error);
+    throw new Error(`Impossible de récupérer les résultats: ${error.message}`);
+  }
+};
+
+/**
+ * Récupérer tous les résultats pour un quiz spécifique
+ */
+export const getQuizResults = async (quizId: string, userId: string): Promise<QuizResult[]> => {
+  try {
+    console.log('Récupération des résultats pour le quiz:', quizId);
+    
+    const q = query(
+      collection(db, 'quizResults'),
+      where('quizId', '==', quizId),
+      where('userId', '==', userId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const results: QuizResult[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      results.push({
+        id: doc.id,
+        userId: data.userId,
+        quizId: data.quizId,
+        quizTitle: data.quizTitle,
+        score: data.score,
+        totalQuestions: data.totalQuestions,
+        correctAnswers: data.correctAnswers,
+        timeSpent: data.timeSpent,
+        completedAt: data.completedAt?.toDate() || new Date(),
+        answers: data.answers || [],
+      });
+    });
+    
+    // Trier par date (plus récent en premier)
+    results.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
+    
+    return results;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résultats du quiz:', error);
+    throw new Error(`Impossible de récupérer les résultats: ${error.message}`);
   }
 };

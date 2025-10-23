@@ -3,6 +3,8 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuiz } from '@/hooks/useQuiz';
+import { useAuth } from '@/context/AuthContext';
+import { saveQuizResult } from '@/services/quizService';
 import { Navbar } from '@/components/Navbar';
 import { Check, X, BarChart2, Home, Loader2, BookOpen, Award, Share2, Download, Trophy, Brain, Clock, Target, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
@@ -23,6 +25,7 @@ const Results = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { getQuiz } = useQuiz();
+  const { user } = useAuth();
   const { theme } = useTheme(); // Récupérer le thème actuel
   const confettiCanvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -31,9 +34,12 @@ const Results = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [resultSaved, setResultSaved] = useState(false);
   
   const score = location.state?.score ?? 0;
   const userAnswers = location.state?.answers ?? {};
+  const timeSpent = location.state?.timeSpent ?? 0;
+  const startTime = location.state?.startTime ?? Date.now();
   const controls = useAnimation();
 
   useEffect(() => {
@@ -63,6 +69,46 @@ const Results = () => {
 
     fetchQuiz();
   }, [quizId, getQuiz, navigate]);
+
+  // Sauvegarder automatiquement les résultats
+  useEffect(() => {
+    const saveResults = async () => {
+      if (!quiz || !user || resultSaved) return;
+
+      try {
+        const totalQuestions = quiz.questions?.length || 0;
+        const correctAnswers = Math.round((score / 100) * totalQuestions);
+        const calculatedTimeSpent = timeSpent || Math.floor((Date.now() - startTime) / 1000);
+
+        // Préparer les réponses au format attendu
+        const formattedAnswers = Object.entries(userAnswers).map(([questionId, answer]: [string, any]) => ({
+          questionId,
+          selectedOptionId: answer.selectedOptionId || answer,
+          isCorrect: answer.isCorrect || false,
+        }));
+
+        await saveQuizResult({
+          userId: user.id,
+          quizId: quiz.id,
+          quizTitle: quiz.title,
+          score,
+          totalQuestions,
+          correctAnswers,
+          timeSpent: calculatedTimeSpent,
+          answers: formattedAnswers,
+        });
+
+        setResultSaved(true);
+        console.log('✅ Résultats sauvegardés dans Firestore');
+      } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde des résultats:', error);
+        // Ne pas afficher d'erreur à l'utilisateur pour ne pas gâcher l'expérience
+        // Les résultats sont déjà affichés correctement
+      }
+    };
+
+    saveResults();
+  }, [quiz, user, score, userAnswers, timeSpent, startTime, resultSaved]);
 
   // Effet pour lancer les confettis si le score est bon
   useEffect(() => {
@@ -245,11 +291,11 @@ const Results = () => {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30 dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-1 pt-16 pb-16 px-6">
-        <div className="container mx-auto max-w-4xl">
+      <main className="flex-1 py-24 px-6">
+        <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

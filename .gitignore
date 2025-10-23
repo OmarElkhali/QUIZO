@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
@@ -23,6 +24,33 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables (IMPORTANT: Ne jamais commiter les fichiers .env)
 .env
-. e n v
+.env.local
+.env.development
+.env.production
+python_api/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Build
+build/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
