@@ -1,6 +1,9 @@
 # Configuration Variables d'Environnement Render
 
-Votre backend est déployé sur : **https://quizo-nued.onrender.com**
+## 🌐 URLs de Production
+
+- **Frontend Vercel** : https://quizo-ruddy.vercel.app
+- **Backend Render** : https://quizo-nued.onrender.com
 
 ## ⚠️ IMPORTANT: Mettre à jour CORS_ORIGINS
 
@@ -9,8 +12,8 @@ Allez sur Render.com → votre service → Environment
 ### Variables à configurer :
 
 ```bash
-# CORS - CRITIQUE pour la production
-CORS_ORIGINS=https://ests-quiz.web.app,https://ests-quiz.firebaseapp.com,http://localhost:5173,http://localhost:8080
+# CORS - CRITIQUE pour la production (URL Vercel)
+CORS_ORIGINS=https://quizo-ruddy.vercel.app,http://localhost:5173,http://localhost:8080
 
 # API Keys (déjà configurées)
 GEMINI_API_KEY=votre_clé_actuelle

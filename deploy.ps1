@@ -180,6 +180,7 @@ Write-Host "  1. Déployez le backend sur Render.com (si pas encore fait)" -Fore
 Write-Host "  2. Mettez à jour VITE_BACKEND_URL dans les variables d'environnement Firebase" -ForegroundColor Gray
 Write-Host "  3. Testez votre application sur l'URL Firebase" -ForegroundColor Gray
 Write-Host ""
-Write-Host "📱 URL Firebase Hosting: https://ests-quiz.web.app" -ForegroundColor Cyan
-Write-Host "🔗 Repository GitHub: https://github.com/OmarElkhali/QUIZO" -ForegroundColor Cyan
+Write-Host "📱 Frontend Vercel: https://quizo-ruddy.vercel.app" -ForegroundColor Cyan
+Write-Host "🔗 Backend Render: https://quizo-nued.onrender.com" -ForegroundColor Cyan
+Write-Host "� Repository GitHub: https://github.com/OmarElkhali/QUIZO" -ForegroundColor Cyan
 Write-Host ""
