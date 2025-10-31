@@ -10,7 +10,7 @@ services:
     branch: main
     rootDir: python_api
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 180 --max-requests 1000 --max-requests-jitter 50
     envVars:
       - key: PORT
         value: 5000
