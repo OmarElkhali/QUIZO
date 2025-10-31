@@ -5,8 +5,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BookOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const CreateQuiz = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   
   // Rediriger si l'utilisateur n'est pas connecté
@@ -29,9 +31,9 @@ const CreateQuiz = () => {
             <div className="inline-flex items-center justify-center bg-primary/10 p-3 rounded-full mb-4">
               <BookOpen className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold mb-4">Créer votre Quiz</h1>
+            <h1 className="text-3xl font-bold mb-4">{t('createQuiz.title')}</h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Téléchargez vos documents, définissez vos paramètres, et notre IA générera un quiz personnalisé.
+              {t('createQuiz.uploadDescription')}
             </p>
           </motion.div>
           
@@ -43,7 +45,7 @@ const CreateQuiz = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="flex justify-center items-center">
             <p className="text-sm text-muted-foreground">
-              © 2025 QUIZO. Tous droits réservés.
+              © 2025 QUIZO. {t('footer.allRightsReserved')}
             </p>
           </div>
         </div>

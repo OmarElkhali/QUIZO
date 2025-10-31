@@ -1,0 +1,172 @@
+/* Support RTL (Right-to-Left) pour l'arabe */
+
+/* Application automatique du RTL quand dir="rtl" est défini sur <html> */
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Inverser les marges et paddings pour RTL */
+[dir="rtl"] .mr-2 {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+[dir="rtl"] .ml-2 {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+[dir="rtl"] .mr-3 {
+  margin-right: 0;
+  margin-left: 0.75rem;
+}
+
+[dir="rtl"] .ml-3 {
+  margin-left: 0;
+  margin-right: 0.75rem;
+}
+
+[dir="rtl"] .mr-4 {
+  margin-right: 0;
+  margin-left: 1rem;
+}
+
+[dir="rtl"] .ml-4 {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+/* Padding inverses pour RTL */
+[dir="rtl"] .pr-2 {
+  padding-right: 0;
+  padding-left: 0.5rem;
+}
+
+[dir="rtl"] .pl-2 {
+  padding-left: 0;
+  padding-right: 0.5rem;
+}
+
+[dir="rtl"] .pr-4 {
+  padding-right: 0;
+  padding-left: 1rem;
+}
+
+[dir="rtl"] .pl-4 {
+  padding-left: 0;
+  padding-right: 1rem;
+}
+
+[dir="rtl"] .pl-6 {
+  padding-left: 0;
+  padding-right: 1.5rem;
+}
+
+/* Inverser les icônes et flèches pour RTL */
+[dir="rtl"] .lucide {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .lucide-arrow-right {
+  transform: rotate(180deg);
+}
+
+[dir="rtl"] .lucide-arrow-left {
+  transform: rotate(180deg);
+}
+
+/* Alignement du texte pour RTL */
+[dir="rtl"] .text-left {
+  text-align: right !important;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left !important;
+}
+
+/* Dropdowns et menus pour RTL */
+[dir="rtl"] [data-radix-popper-content-wrapper] {
+  right: auto !important;
+  left: 0 !important;
+}
+
+/* Flex direction inversée pour RTL */
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+/* Grid auto-flow inversé pour RTL */
+[dir="rtl"] .grid {
+  direction: rtl;
+}
+
+/* Border radius inversé pour RTL */
+[dir="rtl"] .rounded-l {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+[dir="rtl"] .rounded-r {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+
+/* Checkbox et inputs RTL */
+[dir="rtl"] input[type="checkbox"],
+[dir="rtl"] input[type="radio"] {
+  margin-left: 0.5rem;
+  margin-right: 0;
+}
+
+/* Animations et transformations préservées */
+[dir="rtl"] .animate-spin {
+  animation-direction: reverse;
+}
+
+/* Tableaux RTL */
+[dir="rtl"] table {
+  direction: rtl;
+}
+
+[dir="rtl"] th,
+[dir="rtl"] td {
+  text-align: right;
+}
+
+/* Forms et labels RTL */
+[dir="rtl"] label {
+  text-align: right;
+}
+
+/* Buttons avec icônes RTL */
+[dir="rtl"] button {
+  direction: rtl;
+}
+
+/* Navigation RTL */
+[dir="rtl"] nav {
+  direction: rtl;
+}
+
+/* Dialogs et modals RTL */
+[dir="rtl"] [role="dialog"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Tooltips RTL */
+[dir="rtl"] [role="tooltip"] {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Scrollbar pour RTL (facultatif) */
+[dir="rtl"]::-webkit-scrollbar {
+  left: 0;
+  right: auto;
+}

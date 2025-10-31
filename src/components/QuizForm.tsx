@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const QuizForm = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { createQuiz, isLoading } = useQuiz();
   const { user } = useAuth();
@@ -238,14 +240,14 @@ export const QuizForm = () => {
               className="w-full"
               onClick={handleCancel}
             >
-              Annuler
+              {t('common.cancel')}
             </Button>
           )}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="file-upload">Télécharger votre document</Label>
+            <Label htmlFor="file-upload">{t('createQuiz.uploadFile')}</Label>
             <FileUpload onFileSelect={handleFileSelect} />
             <p className="text-xs text-muted-foreground">
               Formats acceptés: PDF, DOCX, TXT (max 10MB)
@@ -253,7 +255,7 @@ export const QuizForm = () => {
           </div>
           
           <div className="space-y-4">
-            <Label>Modèle d'IA pour la génération</Label>
+            <Label>{t('createQuiz.aiModel')}</Label>
             <Card className="border border-muted p-4">
               <CardContent className="p-0 space-y-4">
                 <div className="flex space-x-2">
@@ -284,7 +286,7 @@ export const QuizForm = () => {
           </div>
           
           <div className="space-y-4">
-            <Label>Niveau de difficulté</Label>
+            <Label>{t('createQuiz.difficulty')}</Label>
             <div className="flex space-x-2">
               {(['easy', 'medium', 'hard'] as const).map((level) => (
                 <Button
@@ -294,7 +296,7 @@ export const QuizForm = () => {
                   onClick={() => setDifficulty(level)}
                   className={difficulty === level ? "flex-1" : "flex-1"}
                 >
-                  {level === 'easy' ? 'Facile' : level === 'medium' ? 'Moyen' : 'Difficile'}
+                  {level === 'easy' ? t('createQuiz.easy') : level === 'medium' ? t('createQuiz.medium') : t('createQuiz.hard')}
                 </Button>
               ))}
             </div>
@@ -302,7 +304,7 @@ export const QuizForm = () => {
           
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="num-questions">Nombre de questions</Label>
+              <Label htmlFor="num-questions">{t('createQuiz.numberOfQuestions')}</Label>
               <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-0.5 rounded-full">
                 {numQuestions}
               </span>
@@ -382,11 +384,11 @@ export const QuizForm = () => {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Génération en cours...
+                  {t('createQuiz.generating')}
                 </>
               ) : (
                 <>
-                  Commencer le Quiz
+                  {t('createQuiz.generate')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -400,7 +402,7 @@ export const QuizForm = () => {
               onClick={() => navigate('/history')}
             >
               <Share2 className="mr-2 h-4 w-4" />
-              Mes Quiz
+              {t('nav.myQuizzes')}
             </Button>
           </div>
         </form>

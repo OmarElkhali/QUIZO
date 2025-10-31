@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
@@ -16,6 +17,7 @@ import {
 } from '@/services/manualQuizService';
 
 const JoinQuiz = () => {
+  const { t } = useTranslation();
   const { shareCode: urlShareCode } = useParams<{ shareCode?: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -104,20 +106,20 @@ const JoinQuiz = () => {
               <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Users className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Rejoindre un Quiz</CardTitle>
+              <CardTitle className="text-2xl">{t('join.title')}</CardTitle>
               <CardDescription>
-                Entrez le code de partage pour participer au quiz
+                {t('join.enterCode')}
               </CardDescription>
             </CardHeader>
 
             <CardContent>
               <form onSubmit={handleJoinQuiz} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="shareCode">Code de Partage</Label>
+                  <Label htmlFor="shareCode">{t('share.shareCode')}</Label>
                   <Input
                     id="shareCode"
                     type="text"
-                    placeholder="Ex: ABC123"
+                    placeholder={t('join.codePlaceholder')}
                     value={shareCode}
                     onChange={(e) => setShareCode(e.target.value.toUpperCase())}
                     maxLength={6}
@@ -131,11 +133,11 @@ const JoinQuiz = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="name">Votre Nom</Label>
+                  <Label htmlFor="name">{t('join.yourName')}</Label>
                   <Input
                     id="name"
                     type="text"
-                    placeholder="Ex: Jean Dupont"
+                    placeholder={t('join.namePlaceholder')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={isLoading}
@@ -144,11 +146,11 @@ const JoinQuiz = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email (optionnel)</Label>
+                  <Label htmlFor="email">{t('join.yourEmail')}</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="votre.email@exemple.com"
+                    placeholder={t('join.emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
@@ -166,11 +168,11 @@ const JoinQuiz = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Connexion...
+                      {t('common.loading')}
                     </>
                   ) : (
                     <>
-                      Rejoindre le Quiz
+                      {t('join.joinQuiz')}
                       <ArrowRight className="h-4 w-4" />
                     </>
                   )}
@@ -184,7 +186,7 @@ const JoinQuiz = () => {
                     onClick={() => navigate('/')}
                     className="text-primary hover:underline"
                   >
-                    Retour à l'accueil
+                    {t('results.backToHome')}
                   </button>
                 </p>
               </div>

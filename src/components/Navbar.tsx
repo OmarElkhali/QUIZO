@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { 
@@ -12,12 +13,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { AuthDialog } from './AuthDialog';
+import { LanguageSelector } from './LanguageSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Menu, X, User, History, LogOut, Settings, Plus, BookOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 
 export const Navbar = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -70,28 +73,29 @@ export const Navbar = () => {
             <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">QUIZO</span>
           </Link>
           <ThemeToggle />
+          <LanguageSelector />
         </div>
         
         {!isMobile ? (
           <nav className="flex items-center space-x-8">
             <Link to="/" className="font-medium underline-animation">
-              Accueil
+              {t('nav.home')}
             </Link>
             {user && (
               <>
                 <Link to="/create-quiz" className="font-medium underline-animation">
-                  Créer un Quiz IA
+                  {t('nav.createQuizAI')}
                 </Link>
                 <Link to="/create-manual-quiz" className="font-medium underline-animation">
-                  Créer un Quiz Manuel
+                  {t('nav.createQuizManual')}
                 </Link>
                 <Link to="/join" className="font-medium underline-animation">
-                  Rejoindre par Code
+                  {t('nav.joinByCode')}
                 </Link>
               </>
             )}
             <Link to="/history" className="font-medium underline-animation">
-              Historique
+              {t('nav.history')}
             </Link>
             
             {user ? (
@@ -111,7 +115,7 @@ export const Navbar = () => {
                   <div className="flex items-center justify-start gap-2 p-2">
                     <div className="flex flex-col space-y-0.5">
                       <p className="text-sm font-medium">
-                        {user.name || 'Utilisateur'}
+                        {user.name || t('nav.user')}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {user.email}
@@ -121,20 +125,20 @@ export const Navbar = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate('/create-quiz')}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Créer un quiz
+                    {t('nav.createQuiz')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/history')}>
                     <History className="mr-2 h-4 w-4" />
-                    Mes quiz
+                    {t('nav.myQuizzes')}
                   </DropdownMenuItem>
                   <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
-                    Paramètres
+                    {t('nav.settings')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    Déconnexion
+                    {t('nav.logout')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -145,7 +149,7 @@ export const Navbar = () => {
                 className="hover-scale"
               >
                 <User className="mr-2 h-4 w-4" />
-                Connexion
+                {t('nav.login')}
               </Button>
             )}
           </nav>
@@ -164,12 +168,16 @@ export const Navbar = () => {
               <span className="text-sm font-medium">Mode nuit</span>
               <ThemeToggle />
             </div>
+            <div className="flex items-center justify-between px-4 py-2">
+              <span className="text-sm font-medium">Langue</span>
+              <LanguageSelector />
+            </div>
             <Link 
               to="/" 
               className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
               onClick={() => setIsOpen(false)}
             >
-              Accueil
+              {t('nav.home')}
             </Link>
             {user && (
               <>
@@ -178,21 +186,21 @@ export const Navbar = () => {
                   className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
-                  Créer un Quiz IA
+                  {t('nav.createQuizAI')}
                 </Link>
                 <Link 
                   to="/create-manual-quiz" 
                   className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
-                  Créer un Quiz Manuel
+                  {t('nav.createQuizManual')}
                 </Link>
                 <Link 
                   to="/join" 
                   className="px-4 py-2 rounded-md hover:bg-secondary transition-colors"
                   onClick={() => setIsOpen(false)}
                 >
-                  Rejoindre par Code
+                  {t('nav.joinByCode')}
                 </Link>
               </>
             )}
@@ -202,7 +210,7 @@ export const Navbar = () => {
               onClick={() => setIsOpen(false)}
             >
               <History className="mr-2 h-4 w-4" /> 
-              Historique
+              {t('nav.history')}
             </Link>
             
             {user ? (
@@ -216,7 +224,7 @@ export const Navbar = () => {
                     )}
                   </Avatar>
                   <div>
-                    <p className="text-sm font-medium">{user.name || 'Utilisateur'}</p>
+                    <p className="text-sm font-medium">{user.name || t('nav.user')}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
@@ -226,7 +234,7 @@ export const Navbar = () => {
                   className="justify-start"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  Déconnexion
+                  {t('nav.logout')}
                 </Button>
               </>
             ) : (
@@ -238,7 +246,7 @@ export const Navbar = () => {
                 className="w-full justify-start"
               >
                 <User className="mr-2 h-4 w-4" />
-                Connexion
+                {t('nav.login')}
               </Button>
             )}
           </nav>
