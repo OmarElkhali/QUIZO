@@ -14,9 +14,21 @@
   },
   "home": {
     "title": "Bienvenido a QUIZO",
-    "subtitle": "Crea y comparte cuestionarios interactivos en solo unos clics",
+    "subtitle": "Crea y comparte cuestionarios interactivos en pocos clics",
     "getStarted": "Comenzar",
-    "learnMore": "Saber más"
+    "learnMore": "Saber Más",
+    "badge": "Aprendizaje Inteligente",
+    "heroTitle": "QUIZO - Transforma tus Cursos en Cuestionarios Interactivos",
+    "heroDescription": "Sube tus materiales de curso y deja que nuestra IA cree cuestionarios personalizados para evaluar tus conocimientos.",
+    "assistantTagline": "El asistente inteligente para tus estudios",
+    "featuresTitle": "Funciones Principales",
+    "featuresDescription": "QUIZO combina inteligencia artificial con un diseño elegante para crear la experiencia de aprendizaje definitiva",
+    "feature1Title": "Generación de Preguntas con IA",
+    "feature1Description": "Sube tus documentos de curso y nuestra IA generará preguntas relevantes adaptadas a tu contenido.",
+    "feature2Title": "Cuestionarios Colaborativos",
+    "feature2Description": "Comparte tus cuestionarios con amigos y hazlos juntos en tiempo real para una experiencia de aprendizaje social.",
+    "feature3Title": "Historial Completo",
+    "feature3Description": "Consulta tus cuestionarios pasados, rastrea tu progreso e identifica áreas de mejora."
   },
   "createQuiz": {
     "title": "Crear un nuevo cuestionario",

@@ -13,10 +13,22 @@
     "user": "用户"
   },
   "home": {
-    "title": "欢迎来到QUIZO",
-    "subtitle": "只需几次点击即可创建和分享互动测验",
+    "title": "欢迎来到 QUIZO",
+    "subtitle": "只需点击几下即可创建和分享互动测验",
     "getStarted": "开始使用",
-    "learnMore": "了解更多"
+    "learnMore": "了解更多",
+    "badge": "智能学习",
+    "heroTitle": "QUIZO - 将您的课程转换为互动选择题",
+    "heroDescription": "上传您的课程材料，让我们的AI创建个性化测验来测试您的知识。",
+    "assistantTagline": "您学习的智能助手",
+    "featuresTitle": "主要功能",
+    "featuresDescription": "QUIZO将人工智能与优雅设计相结合，打造终极学习体验",
+    "feature1Title": "AI 问题生成",
+    "feature1Description": "上传您的课程文档，我们的AI将生成针对您内容的相关问题。",
+    "feature2Title": "协作测验",
+    "feature2Description": "与朋友分享您的测验，实时一起完成，享受社交学习体验。",
+    "feature3Title": "完整历史记录",
+    "feature3Description": "查看过去的测验，跟踪进度，并确定需要改进的领域。"
   },
   "createQuiz": {
     "title": "创建新测验",

@@ -16,7 +16,19 @@
     "title": "Bienvenue sur QUIZO",
     "subtitle": "Créez et partagez des quiz interactifs en quelques clics",
     "getStarted": "Commencer",
-    "learnMore": "En savoir plus"
+    "learnMore": "En savoir plus",
+    "badge": "Apprentissage Intelligent",
+    "heroTitle": "QUIZO - Transformez Vos Cours en QCM Interactifs",
+    "heroDescription": "Téléchargez vos supports de cours et laissez notre IA créer des quiz personnalisés pour tester vos connaissances.",
+    "assistantTagline": "L'assistant intelligent pour vos études",
+    "featuresTitle": "Fonctionnalités Clés",
+    "featuresDescription": "QUIZO combine l'intelligence artificielle avec un design élégant pour créer l'expérience d'apprentissage ultime",
+    "feature1Title": "Génération IA de Questions",
+    "feature1Description": "Téléchargez vos documents de cours et notre IA générera des questions pertinentes adaptées à votre contenu.",
+    "feature2Title": "Quiz Collaboratifs",
+    "feature2Description": "Partagez vos quiz avec vos amis et faites-les ensemble en temps réel pour une expérience d'apprentissage sociale.",
+    "feature3Title": "Historique Complet",
+    "feature3Description": "Consultez vos quiz passés, suivez vos progrès et identifiez les domaines à améliorer."
   },
   "createQuiz": {
     "title": "Créer un nouveau quiz",

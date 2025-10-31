@@ -7,6 +7,7 @@ import { FileText, Share2, History, ArrowRight, BookOpen, Sparkles } from 'lucid
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -35,6 +36,7 @@ export const Hero = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   
   const handleGetStarted = () => {
     if (user) {
@@ -58,13 +60,13 @@ export const Hero = () => {
             <div className="space-y-2">
               <div className="inline-block bg-primary/10 text-primary font-medium rounded-full px-4 py-1 text-sm mb-4 flex items-center">
                 <Sparkles className="h-4 w-4 mr-2" />
-                Apprentissage Intelligent
+                {t('home.badge')}
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">QUIZO</span> - Transformez Vos Cours en QCM Interactifs
+                <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">QUIZO</span> - {t('home.heroTitle').replace('QUIZO - ', '')}
               </h1>
               <p className="text-xl text-muted-foreground mt-6">
-                Téléchargez vos supports de cours et laissez notre IA créer des quiz personnalisés pour tester vos connaissances.
+                {t('home.heroDescription')}
               </p>
             </div>
             
@@ -74,7 +76,7 @@ export const Hero = () => {
                 size="lg"
                 className="btn-shine bg-primary hover:bg-primary/90"
               >
-                Commencer
+                {t('home.getStarted')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button 
@@ -82,7 +84,7 @@ export const Hero = () => {
                 size="lg"
                 className="hover-scale border-primary/20 text-primary hover:text-primary/80"
               >
-                En savoir plus
+                {t('home.learnMore')}
               </Button>
             </div>
           </motion.div>
@@ -100,7 +102,7 @@ export const Hero = () => {
               <div className="flex flex-col items-center justify-center p-6 z-10">
                 <BookOpen className="h-20 w-20 text-primary mb-4" />
                 <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">QUIZO</h2>
-                <p className="text-muted-foreground text-center mt-2">L'assistant intelligent pour vos études</p>
+                <p className="text-muted-foreground text-center mt-2">{t('home.assistantTagline')}</p>
               </div>
             </div>
           </motion.div>
@@ -109,29 +111,29 @@ export const Hero = () => {
         {/* Features */}
         <div className="mt-32 mb-16">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Fonctionnalités Clés</h2>
+            <h2 className="text-3xl font-bold mb-4">{t('home.featuresTitle')}</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              QUIZO combine l'intelligence artificielle avec un design élégant pour créer l'expérience d'apprentissage ultime
+              {t('home.featuresDescription')}
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
               icon={<FileText className="h-6 w-6 text-primary" />}
-              title="Génération IA de Questions"
-              description="Téléchargez vos documents de cours et notre IA générera des questions pertinentes adaptées à votre contenu."
+              title={t('home.feature1Title')}
+              description={t('home.feature1Description')}
               delay={0.1}
             />
             <FeatureCard
               icon={<Share2 className="h-6 w-6 text-primary" />}
-              title="Quiz Collaboratifs"
-              description="Partagez vos quiz avec vos amis et faites-les ensemble en temps réel pour une expérience d'apprentissage sociale."
+              title={t('home.feature2Title')}
+              description={t('home.feature2Description')}
               delay={0.2}
             />
             <FeatureCard
               icon={<History className="h-6 w-6 text-primary" />}
-              title="Historique Complet"
-              description="Consultez vos quiz passés, suivez vos progrès et identifiez les domaines à améliorer."
+              title={t('home.feature3Title')}
+              description={t('home.feature3Description')}
               delay={0.3}
             />
           </div>

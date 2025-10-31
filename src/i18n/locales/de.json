@@ -16,7 +16,19 @@
     "title": "Willkommen bei QUIZO",
     "subtitle": "Erstellen und teilen Sie interaktive Quiz mit nur wenigen Klicks",
     "getStarted": "Loslegen",
-    "learnMore": "Mehr erfahren"
+    "learnMore": "Mehr Erfahren",
+    "badge": "Intelligentes Lernen",
+    "heroTitle": "QUIZO - Verwandeln Sie Ihre Kurse in Interaktive Multiple-Choice-Tests",
+    "heroDescription": "Laden Sie Ihre Kursmaterialien hoch und lassen Sie unsere KI personalisierte Quiz erstellen, um Ihr Wissen zu testen.",
+    "assistantTagline": "Der intelligente Assistent für Ihr Studium",
+    "featuresTitle": "Hauptmerkmale",
+    "featuresDescription": "QUIZO kombiniert künstliche Intelligenz mit elegantem Design, um das ultimative Lernerlebnis zu schaffen",
+    "feature1Title": "KI-Fragengenerierung",
+    "feature1Description": "Laden Sie Ihre Kursdokumente hoch und unsere KI generiert relevante Fragen, die auf Ihren Inhalt zugeschnitten sind.",
+    "feature2Title": "Kollaborative Quiz",
+    "feature2Description": "Teilen Sie Ihre Quiz mit Freunden und machen Sie sie gemeinsam in Echtzeit für ein soziales Lernerlebnis.",
+    "feature3Title": "Vollständiger Verlauf",
+    "feature3Description": "Überprüfen Sie Ihre vergangenen Quiz, verfolgen Sie Ihren Fortschritt und identifizieren Sie Verbesserungsbereiche."
   },
   "createQuiz": {
     "title": "Neues Quiz erstellen",

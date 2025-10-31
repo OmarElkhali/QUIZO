@@ -16,7 +16,19 @@
     "title": "Welcome to QUIZO",
     "subtitle": "Create and share interactive quizzes in just a few clicks",
     "getStarted": "Get Started",
-    "learnMore": "Learn More"
+    "learnMore": "Learn More",
+    "badge": "Intelligent Learning",
+    "heroTitle": "QUIZO - Transform Your Courses into Interactive MCQs",
+    "heroDescription": "Upload your course materials and let our AI create personalized quizzes to test your knowledge.",
+    "assistantTagline": "The intelligent assistant for your studies",
+    "featuresTitle": "Key Features",
+    "featuresDescription": "QUIZO combines artificial intelligence with elegant design to create the ultimate learning experience",
+    "feature1Title": "AI Question Generation",
+    "feature1Description": "Upload your course documents and our AI will generate relevant questions tailored to your content.",
+    "feature2Title": "Collaborative Quizzes",
+    "feature2Description": "Share your quizzes with friends and take them together in real-time for a social learning experience.",
+    "feature3Title": "Complete History",
+    "feature3Description": "Review your past quizzes, track your progress, and identify areas for improvement."
   },
   "createQuiz": {
     "title": "Create a new quiz",
