@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 
+// Aligne les appels backend sur la même variable que aiService
+const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL || 'http://localhost:5001/api';
+
 export const extractTextFromFile = async (file: File): Promise<string> => {
   try {
     console.log(`Extraction du texte du fichier: ${file.name}`);
@@ -56,7 +59,7 @@ const extractTextFromPDF = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await fetch('http://localhost:5000/api/extract-text', {
+    const response = await fetch(`${BACKEND_URL}/extract-text`, {
       method: 'POST',
       body: formData,
     });
@@ -104,7 +107,7 @@ const extractTextFromWord = async (file: File): Promise<string> => {
     }
     
     // 3. Envoyer le fichier à l'API Python pour l'extraction
-    const response = await fetch('http://localhost:5000/api/extract-word', {
+    const response = await fetch(`${BACKEND_URL}/extract-word`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

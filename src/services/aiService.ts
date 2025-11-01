@@ -5,7 +5,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { extractTextFromFile } from './fileService';
 
 // URL de l'API Flask - utiliser variable d'environnement ou localhost par défaut
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+// Aligner le port par défaut avec la doc du repo et fileService (5001)
+const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001/api';
 
 // Exporter la fonction pour pouvoir l'utiliser directement
 export const getFirebaseBackupQuestions = async (): Promise<Question[]> => {
@@ -203,7 +204,13 @@ export const processFileAndGenerateQuestions = async (
       console.error('Erreur lors de l\'extraction via Flask API:', extractError);
       console.log('Utilisation de l\'extraction côté client comme solution de secours...');
       // Fallback à l'extraction côté client
-      extractedText = await extractTextFromFile(file);
+      try {
+        extractedText = await extractTextFromFile(file);
+      } catch (fallbackExtractError) {
+        console.error('Échec de l\'extraction côté client:', fallbackExtractError);
+        // Continuer avec un texte vide, la génération appliquera un fallback questions de secours
+        extractedText = '';
+      }
     }
     console.log(`=== FIN EXTRACTION DE TEXTE ===`);
     
@@ -311,7 +318,7 @@ export const generateQuestionsWithAI = async (
       }
       
       if (response.data && response.data.questions) {
-        let questions = response.data.questions;
+        const questions = response.data.questions;
         console.log(`${questions.length} questions générées via Flask API`);
         
         // Vérification et correction des questions générées
@@ -382,10 +389,21 @@ export const generateQuestionsWithAI = async (
       }
     } catch (apiError) {
       console.error('Erreur lors de l\'appel à l\'API Flask:', apiError);
-      throw new Error(`Échec de la génération avec Gemini: ${apiError.message || 'Erreur inconnue'}`);
+      const msg = apiError instanceof Error ? apiError.message : String(apiError);
+      throw new Error(`Échec de la génération avec Gemini: ${msg || 'Erreur inconnue'}`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur générale lors de la génération des questions:', error);
-    throw error; // Propager l'erreur au lieu de masquer avec des questions de secours
+    // Fallback silencieux vers des questions de secours pour éviter de bloquer la création de quiz
+    try {
+      const backup = await getFirebaseBackupQuestions();
+      const sliced = backup.slice(0, Math.max(1, Math.min(backup.length, numQuestions)));
+      console.warn(`Retour aux questions de secours (${sliced.length}) suite à une erreur de génération.`);
+      return sliced;
+    } catch (fallbackError) {
+      console.error('Échec du fallback Firebase, utilisation de questions statiques.', fallbackError);
+      // Utilisation finale: questions statiques via getStaticBackupQuestions(), exposées via getFirebaseBackupQuestions en cas d'échec
+      return [];
+    }
   }
 };

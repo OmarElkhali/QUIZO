@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Users, BarChart, Clock, Share2, Copy, CheckCircle, XCircle } from 'lucide-react';
-import { getCompetitionByShareCode, getCompetitionStats, getCompetitionLeaderboard } from '@/services/manualQuizService';
+import { getCompetitionByShareCode, getCompetitionById, getCompetitionStats, getCompetitionLeaderboard } from '@/services/manualQuizService';
 import { Competition, Participant } from '@/types/quiz';
 
 const CreatorDashboard = () => {
@@ -26,8 +26,13 @@ const CreatorDashboard = () => {
       if (!id) return;
       
       try {
-        // Récupérer la compétition
-        const competitionData = await getCompetitionByShareCode(id);
+        // Récupérer la compétition (accepte soit un shareCode de 6 caractères, soit un ID de document)
+        let competitionData: Competition | null = null;
+        if (id.length === 6) {
+          competitionData = await getCompetitionByShareCode(id);
+        } else {
+          competitionData = await getCompetitionById(id);
+        }
         
         if (!competitionData) {
           toast.error('Compétition non trouvée');
