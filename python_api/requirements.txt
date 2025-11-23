@@ -16,6 +16,7 @@ python-docx==1.1.0
 
 # API IA
 google-generativeai==0.3.2
+groq==0.33.0  # LLM ultra-rapide et gratuit (14,400 req/jour) - Version 2025
 
 # Optionnel: rate limiting pour la sécurité
 # flask-limiter==3.5.0

@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "name": "quizo-frontend",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["cdg1"],
+  "build": {
+    "env": {
+      "NODE_VERSION": "18"
+    }
+  },
+  "env": {
+    "VITE_FIREBASE_API_KEY": "@firebase-api-key",
+    "VITE_FIREBASE_AUTH_DOMAIN": "@firebase-auth-domain",
+    "VITE_FIREBASE_PROJECT_ID": "@firebase-project-id",
+    "VITE_FIREBASE_STORAGE_BUCKET": "@firebase-storage-bucket",
+    "VITE_FIREBASE_MESSAGING_SENDER_ID": "@firebase-messaging-sender-id",
+    "VITE_FIREBASE_APP_ID": "@firebase-app-id",
+    "VITE_FIREBASE_MEASUREMENT_ID": "@firebase-measurement-id",
+    "VITE_FIREBASE_DATABASE_URL": "@firebase-database-url",
+    "VITE_BACKEND_URL": "@backend-url",
+    "VITE_OPENAI_API_KEY": "@openai-api-key"
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://quizo-backend.onrender.com/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

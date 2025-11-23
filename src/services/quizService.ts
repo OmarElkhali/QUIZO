@@ -54,7 +54,7 @@ export const generateQuizQuestions = async (
   numQuestions: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
-  modelType: 'chatgpt' | 'gemini' = 'chatgpt',
+  modelType: 'chatgpt' | 'gemini' | 'groq' = 'groq', // Groq par défaut (ultra-rapide)
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   try {

@@ -31,7 +31,7 @@ export const QuizForm = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState(30); // minutes
-  const [modelType, setModelType] = useState<'chatgpt' | 'gemini'>('gemini');
+  const [modelType, setModelType] = useState<'chatgpt' | 'gemini' | 'groq'>('groq'); // Groq par défaut (ultra-rapide et gratuit)
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCreated, setQuizCreated] = useState(false);
@@ -258,29 +258,50 @@ export const QuizForm = () => {
             <Label>{t('createQuiz.aiModel')}</Label>
             <Card className="border border-muted p-4">
               <CardContent className="p-0 space-y-4">
-                <div className="flex space-x-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    variant={modelType === 'groq' ? "default" : "outline"}
+                    onClick={() => setModelType('groq')}
+                    className="flex flex-col items-center py-3 h-auto"
+                  >
+                    <span className="text-sm font-bold">Groq</span>
+                    <span className="text-xs opacity-70">⚡ Ultra-rapide</span>
+                  </Button>
                   <Button
                     type="button"
                     variant={modelType === 'gemini' ? "default" : "outline"}
                     onClick={() => setModelType('gemini')}
-                    className="flex-1"
+                    className="flex flex-col items-center py-3 h-auto"
                   >
-                    Google Gemini
+                    <span className="text-sm font-bold">Gemini</span>
+                    <span className="text-xs opacity-70">🔥 Puissant</span>
                   </Button>
                   <Button
                     type="button"
                     variant={modelType === 'chatgpt' ? "default" : "outline"}
                     onClick={() => setModelType('chatgpt')}
-                    className="flex-1"
+                    className="flex flex-col items-center py-3 h-auto"
                   >
-                    ChatGPT
+                    <span className="text-sm font-bold">ChatGPT</span>
+                    <span className="text-xs opacity-70">🎯 Précis</span>
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {modelType === 'chatgpt' 
-                    ? "ChatGPT - Optimisé pour générer des quiz en français"
-                    : "Google Gemini - Modèle puissant pour la génération de quiz éducatifs"}
-                </p>
+                <div className="bg-muted/50 rounded-lg p-3 border border-muted">
+                  <p className="text-xs text-muted-foreground">
+                    {modelType === 'groq' 
+                      ? "⚡ Groq - Ultra-rapide (3-5s), gratuit et illimité. Recommandé!"
+                      : modelType === 'chatgpt' 
+                      ? "🎯 ChatGPT - Optimisé pour générer des quiz en français"
+                      : "🔥 Google Gemini - Modèle puissant pour la génération de quiz éducatifs"}
+                  </p>
+                  {modelType === 'groq' && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Gratuit • Rapide • Illimité</span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

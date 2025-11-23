@@ -4,9 +4,8 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { extractTextFromFile } from './fileService';
 
-// URL de l'API Flask - utiliser variable d'environnement ou localhost par défaut
-// Aligner le port par défaut avec la doc du repo et fileService (5001)
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001/api';
+// URL de l'API Flask - utiliser proxy Vite en dev, variable d'env en prod
+const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 // Exporter la fonction pour pouvoir l'utiliser directement
 export const getFirebaseBackupQuestions = async (): Promise<Question[]> => {
@@ -186,7 +185,7 @@ export const processFileAndGenerateQuestions = async (
         headers: {
           'Content-Type': 'multipart/form-data'
         },
-        timeout: 30000 // 30 secondes
+        timeout: 120000 // 2 minutes (extraction PDF peut être lente pour gros fichiers)
       });
       
       if (response.data && response.data.text) {
@@ -204,13 +203,7 @@ export const processFileAndGenerateQuestions = async (
       console.error('Erreur lors de l\'extraction via Flask API:', extractError);
       console.log('Utilisation de l\'extraction côté client comme solution de secours...');
       // Fallback à l'extraction côté client
-      try {
-        extractedText = await extractTextFromFile(file);
-      } catch (fallbackExtractError) {
-        console.error('Échec de l\'extraction côté client:', fallbackExtractError);
-        // Continuer avec un texte vide, la génération appliquera un fallback questions de secours
-        extractedText = '';
-      }
+      extractedText = await extractTextFromFile(file);
     }
     console.log(`=== FIN EXTRACTION DE TEXTE ===`);
     
@@ -256,7 +249,7 @@ export const generateQuestionsWithAI = async (
   numQuestions: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
-  modelType: 'chatgpt' | 'gemini' = 'gemini',
+  modelType: 'chatgpt' | 'gemini' | 'groq' = 'groq', // Groq par défaut
   progressCallback?: (progress: number) => void,
   apiKey?: string
 ): Promise<Question[]> => {
@@ -267,17 +260,29 @@ export const generateQuestionsWithAI = async (
     // Vérification de l'état du serveur Flask
     try {
       progressCallback?.(0.2);
-      console.log('Vérification de l\'état du serveur Flask...');
+      console.log('🔍 Vérification du serveur Flask...');
       const healthCheck = await axios.get(`${FLASK_API_URL}/health`, { timeout: 5000 });
-      console.log('Statut du serveur Flask:', healthCheck.data);
+      console.log('✅ Serveur Flask opérationnel:', healthCheck.data);
       
-      // Vérifier que Gemini est configuré
-      if (!healthCheck.data.services?.gemini) {
-        throw new Error('Gemini API non configurée sur le serveur');
+      // Vérifier que le modèle choisi est configuré
+      if (modelType === 'gemini' && !healthCheck.data.services?.gemini) {
+        throw new Error('Gemini API non configurée. Ajoutez GEMINI_API_KEY dans python_api/.env');
       }
-    } catch (healthError) {
-      console.error('Le serveur Flask est inaccessible ou Gemini non configuré:', healthError);
-      throw new Error('Impossible de se connecter au serveur de génération. Veuillez vérifier que le serveur Flask est démarré et que la clé API Gemini est configurée.');
+      if (modelType === 'groq') {
+        if (!healthCheck.data.groq) {
+          throw new Error('Groq API non configurée. Ajoutez GROQ_API_KEY dans python_api/.env');
+        }
+        console.log('⚡ Groq activé - Génération ultra-rapide');
+      }
+      if (modelType === 'chatgpt' && !healthCheck.data.services?.chatgpt && !apiKey) {
+        throw new Error('ChatGPT API non configurée. Fournissez une clé API ou configurez le backend.');
+      }
+    } catch (healthError: any) {
+      if (healthError.message?.includes('API non configurée')) {
+        throw healthError; // Re-throw configuration errors
+      }
+      console.error('❌ Serveur Flask inaccessible:', healthError);
+      throw new Error('Backend non accessible. Vérifiez que Flask tourne sur localhost:5000');
     }
     
     // Création de la requête vers l'API Flask
@@ -294,6 +299,11 @@ export const generateQuestionsWithAI = async (
     try {
       console.log(`Envoi de la requête à ${FLASK_API_URL}/generate...`);
       const startTime = Date.now();
+      
+      // Timeout adapté au modèle (Groq ultra-rapide, Gemini/ChatGPT plus lents)
+      const timeoutMs = modelType === 'groq' ? 60000 : 180000; // 1min pour Groq, 3min pour autres
+      console.log(`Timeout configuré: ${timeoutMs / 1000}s pour ${modelType}`);
+      
       const response = await axios.post(`${FLASK_API_URL}/generate`, {
         text,
         numQuestions,
@@ -305,7 +315,7 @@ export const generateQuestionsWithAI = async (
         headers: {
           'Content-Type': 'application/json'
         },
-        timeout: 180000 // 3 minutes
+        timeout: timeoutMs
       });
       const endTime = Date.now();
       console.log(`Réponse reçue en ${(endTime - startTime) / 1000} secondes`);
@@ -318,7 +328,7 @@ export const generateQuestionsWithAI = async (
       }
       
       if (response.data && response.data.questions) {
-        const questions = response.data.questions;
+        let questions = response.data.questions;
         console.log(`${questions.length} questions générées via Flask API`);
         
         // Vérification et correction des questions générées
@@ -389,21 +399,10 @@ export const generateQuestionsWithAI = async (
       }
     } catch (apiError) {
       console.error('Erreur lors de l\'appel à l\'API Flask:', apiError);
-      const msg = apiError instanceof Error ? apiError.message : String(apiError);
-      throw new Error(`Échec de la génération avec Gemini: ${msg || 'Erreur inconnue'}`);
+      throw new Error(`Échec de la génération avec Gemini: ${apiError.message || 'Erreur inconnue'}`);
     }
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Erreur générale lors de la génération des questions:', error);
-    // Fallback silencieux vers des questions de secours pour éviter de bloquer la création de quiz
-    try {
-      const backup = await getFirebaseBackupQuestions();
-      const sliced = backup.slice(0, Math.max(1, Math.min(backup.length, numQuestions)));
-      console.warn(`Retour aux questions de secours (${sliced.length}) suite à une erreur de génération.`);
-      return sliced;
-    } catch (fallbackError) {
-      console.error('Échec du fallback Firebase, utilisation de questions statiques.', fallbackError);
-      // Utilisation finale: questions statiques via getStaticBackupQuestions(), exposées via getFirebaseBackupQuestions en cas d'échec
-      return [];
-    }
+    throw error; // Propager l'erreur au lieu de masquer avec des questions de secours
   }
 };

@@ -40,6 +40,14 @@ logger = logging.getLogger(__name__)
 # Clés API depuis les variables d'environnement (SANS valeurs par défaut hardcodées)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")  # Groq ultra-rapide et gratuit
+
+# Configuration Ollama (LLM local)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+DEFAULT_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+
+# Configuration Groq (recommandé pour production)
+DEFAULT_GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 # Configuration de l'API Gemini
 if GEMINI_API_KEY:
@@ -50,6 +58,13 @@ else:
     
 if not CHATGPT_API_KEY:
     logger.warning("CHATGPT_API_KEY n'est pas configurée - la génération avec ChatGPT sera désactivée")
+
+if GROQ_API_KEY:
+    logger.info("API Groq configurée - LLM ultra-rapide disponible (gratuit)")
+else:
+    logger.warning("GROQ_API_KEY n'est pas configurée - la génération avec Groq sera désactivée")
+
+logger.info(f"Ollama configuré sur: {OLLAMA_BASE_URL} avec modèle par défaut: {DEFAULT_OLLAMA_MODEL}")
 
 def extract_text_from_file(file):
     """Extrait le texte des fichiers PDF/DOCX/TXT"""
@@ -176,10 +191,12 @@ def generate_quiz():
             difficulty = 'medium'
 
         model_type = data.get('modelType', 'gemini')
-        if model_type not in ['gemini', 'chatgpt']:
+        if model_type not in ['gemini', 'chatgpt', 'local', 'groq']:
             model_type = 'gemini'
 
         api_key = data.get('apiKey', '')
+        local_model = data.get('localModel', DEFAULT_OLLAMA_MODEL)
+        groq_model = data.get('groqModel', DEFAULT_GROQ_MODEL)
         
         logger.info(f"Paramètres de génération: {num_questions} questions, difficulté {difficulty}, modèle {model_type}")
 
@@ -188,6 +205,8 @@ def generate_quiz():
             return jsonify({'error': 'Clé API Gemini non configurée'}), 503
         if model_type == 'chatgpt' and not api_key and not CHATGPT_API_KEY:
             return jsonify({'error': 'Clé API ChatGPT requise'}), 400
+        if model_type == 'groq' and not GROQ_API_KEY:
+            return jsonify({'error': 'Clé API Groq non configurée'}), 503
 
         # Construction du prompt
         logger.debug(f"Construction du prompt avec {len(text[:5000])} caractères de texte")
@@ -223,7 +242,18 @@ def generate_quiz():
         logger.debug("Prompt construit avec succès")
 
         # Sélection du modèle à utiliser
-        if model_type == 'chatgpt':
+        if model_type == 'groq':
+            # Utiliser Groq (ULTRA-RAPIDE et GRATUIT - RECOMMANDÉ)
+            logger.info(f"Utilisation de Groq avec le modèle: {groq_model}")
+            from groq_service import generate_quiz_with_groq
+            questions_data = generate_quiz_with_groq(text, num_questions, difficulty, GROQ_API_KEY, groq_model)
+            # Convert to expected format
+            content = json.dumps({"questions": questions_data})
+        elif model_type == 'local':
+            # Utiliser Ollama (LLM local)
+            logger.info(f"Utilisation d'Ollama avec le modèle: {local_model}")
+            content = generate_with_ollama(prompt, local_model)
+        elif model_type == 'chatgpt':
             # Utiliser ChatGPT
             logger.info("Utilisation de l'API ChatGPT")
             content = generate_with_chatgpt(prompt, api_key or CHATGPT_API_KEY)
@@ -328,6 +358,71 @@ def generate_with_chatgpt(prompt, api_key):
             logger.error(f"Détails de l'erreur: {e.response.text}")
         raise ValueError(f"Erreur lors de l'appel à l'API ChatGPT: {str(e)}")
 
+def generate_with_ollama(prompt, model=DEFAULT_OLLAMA_MODEL):
+    """Génère du contenu en utilisant Ollama (LLM local)"""
+    try:
+        logger.info(f"Envoi de la requête à Ollama, modèle: {model}")
+        
+        # D'abord vérifier si Ollama est accessible
+        try:
+            health_check = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+            if health_check.status_code != 200:
+                raise ValueError("Ollama n'est pas accessible")
+        except requests.exceptions.RequestException:
+            raise ValueError(
+                "Ollama n'est pas disponible. "
+                "Assurez-vous qu'Ollama est installé et en cours d'exécution (ollama serve). "
+                "Installation: https://ollama.com/download"
+            )
+        
+        # Envoyer la requête de génération
+        response = requests.post(
+            f"{OLLAMA_BASE_URL}/api/generate",
+            json={
+                'model': model,
+                'prompt': prompt,
+                'stream': False,
+                'options': {
+                    'temperature': 0.7,
+                    'top_p': 0.9,
+                    'top_k': 40,
+                    'num_predict': 2048,
+                }
+            },
+            timeout=180  # 3 minutes max pour la génération
+        )
+        
+        if response.status_code == 404:
+            # Le modèle n'existe pas
+            raise ValueError(
+                f"Le modèle '{model}' n'est pas disponible. "
+                f"Téléchargez-le avec: ollama pull {model}"
+            )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        generated_text = result.get('response', '')
+        logger.info(f"Réponse reçue d'Ollama: {len(generated_text)} caractères")
+        
+        if not generated_text:
+            raise ValueError("Ollama n'a pas généré de contenu")
+        
+        return generated_text
+        
+    except requests.exceptions.Timeout:
+        logger.error("Timeout lors de la génération Ollama")
+        raise ValueError(
+            "La génération a pris trop de temps (>3 minutes). "
+            "Essayez avec un texte plus court ou un modèle plus rapide (phi3:mini)."
+        )
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erreur lors de l'appel à Ollama: {str(e)}")
+        raise ValueError(f"Erreur Ollama: {str(e)}")
+    except Exception as e:
+        logger.error(f"Erreur inattendue avec Ollama: {str(e)}")
+        raise ValueError(f"Erreur lors de la génération avec Ollama: {str(e)}")
+
 def generate_fallback_questions(num, difficulty):
     """Génère des questions de secours formatées correctement"""
     logger.info(f"Génération de {num} questions de secours avec difficulté {difficulty}")
@@ -348,14 +443,60 @@ def generate_fallback_questions(num, difficulty):
 def health_check():
     """Endpoint de vérification de l'état du service"""
     logger.info("Vérification de l'état du service")
+    
+    # Vérifier Ollama
+    ollama_available = False
+    ollama_models = []
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+        if response.status_code == 200:
+            ollama_available = True
+            data = response.json()
+            ollama_models = [model['name'] for model in data.get('models', [])]
+    except Exception:
+        pass
+    
     return jsonify({
         "status": "ok",
         "version": "1.0.0",
         "services": {
             "gemini": bool(GEMINI_API_KEY),
-            "chatgpt": bool(CHATGPT_API_KEY)
-        }
+            "chatgpt": bool(CHATGPT_API_KEY),
+            "ollama": ollama_available,
+            "ollama_models": ollama_models
+        },
+        "groq": bool(GROQ_API_KEY)  # Groq ultra-rapide disponible
     })
+
+@app.route('/api/ollama/models', methods=['GET'])
+def list_ollama_models():
+    """Liste les modèles Ollama disponibles"""
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        models = data.get('models', [])
+        
+        return jsonify({
+            "available": True,
+            "models": [
+                {
+                    "name": model['name'],
+                    "size": model.get('size', 0),
+                    "modified_at": model.get('modified_at', '')
+                }
+                for model in models
+            ],
+            "count": len(models)
+        })
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des modèles Ollama: {e}")
+        return jsonify({
+            "available": False,
+            "models": [],
+            "error": str(e),
+            "message": "Ollama n'est pas disponible. Installez-le depuis https://ollama.com"
+        }), 503
 
 if __name__ == '__main__':
     logger.info("Démarrage du serveur Flask sur le port 5000")

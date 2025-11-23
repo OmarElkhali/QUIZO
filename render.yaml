@@ -10,17 +10,27 @@ services:
     branch: main
     rootDir: python_api
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 180 --max-requests 1000 --max-requests-jitter 50
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --max-requests 1000 --max-requests-jitter 50 --keep-alive 5
     envVars:
       - key: PORT
         value: 5000
       - key: LOG_LEVEL
         value: INFO
+      - key: FLASK_ENV
+        value: production
       - key: CORS_ORIGINS
-        sync: false  # À configurer manuellement dans Render Dashboard
+        sync: false  # À configurer: https://quizo.vercel.app
+      - key: GROQ_API_KEY
+        sync: false  # OBLIGATOIRE: Clé API Groq (secret)
       - key: GEMINI_API_KEY
-        sync: false  # À configurer manuellement (secret)
+        sync: false  # Optionnel: Fallback Gemini
       - key: CHATGPT_API_KEY
-        sync: false  # À configurer manuellement (secret, optionnel)
+        sync: false  # Optionnel: Fallback ChatGPT
+      - key: PYTHON_VERSION
+        value: "3.11"
     healthCheckPath: /api/health
     autoDeploy: true  # Déploiement automatique sur push GitHub
+    disk:
+      name: quizo-data
+      mountPath: /data
+      sizeGB: 1

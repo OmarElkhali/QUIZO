@@ -17,7 +17,7 @@ interface QuizContextType {
     timeLimit?: number,
     additionalInfo?: string, 
     apiKey?: string,
-    modelType?: 'chatgpt' | 'gemini',
+    modelType?: 'chatgpt' | 'gemini' | 'groq',
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;
