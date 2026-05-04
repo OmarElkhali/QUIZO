@@ -5,18 +5,17 @@ export const useInView = (ref: React.RefObject<HTMLElement>, options = {}) => {
   const [isInView, setIsInView] = useState(false);
 
   useEffect(() => {
-    if (!ref.current) return;
+    const element = ref.current;
+    if (!element) return;
     
     const observer = new IntersectionObserver(([entry]) => {
       setIsInView(entry.isIntersecting);
     }, options);
     
-    observer.observe(ref.current);
+    observer.observe(element);
     
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      observer.unobserve(element);
     };
   }, [ref, options]);
 

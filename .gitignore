@@ -46,11 +46,20 @@ ENV/
 .firebase/
 firebase-debug.log
 firestore-debug.log
+**/service-account*.json
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+
+# Test artifacts
+test-results/
+playwright-report/
 
 # Build
 build/
 *.tsbuildinfo
+supabase/.temp/
 
 # OS
 .DS_Store
 Thumbs.db
+.vercel

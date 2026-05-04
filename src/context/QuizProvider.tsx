@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import QuizContext from './QuizContext';
-import { Quiz } from '@/types/quiz';
+import { AIModelType, Quiz } from '@/types/quiz';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import * as quizService from '@/services/quizService';
@@ -8,6 +8,10 @@ import { generateQuestionsWithAI, getFirebaseBackupQuestions, processFileAndGene
 import { useNavigate } from 'react-router-dom';
 
 type ProgressCallback = (stage: string, percent: number, message?: string) => void;
+
+const getErrorMessage = (error: unknown): string => (
+  error instanceof Error ? error.message : 'Erreur inconnue'
+);
 
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -50,7 +54,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       console.error('QuizProvider: Erreur lors de la récupération des quiz:', error);
       setQuizzes([]);
       setSharedQuizzes([]);
-      toast.error(error.message || 'Impossible de récupérer vos quiz');
+      toast.error(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -63,14 +67,14 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, fetchQuizzes]);
   
-  const createQuiz = async (
+  const createQuiz = useCallback(async (
     file: File, 
     numQuestions: number, 
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     timeLimit?: number,
     additionalInfo?: string,
     apiKey?: string,
-    modelType: 'chatgpt' | 'gemini' = 'gemini',
+    modelType: AIModelType = 'gemini',
     progressCallback?: ProgressCallback
   ) => {
     try {
@@ -98,8 +102,13 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       
       try {
         // Télécharger le fichier pour référence future
-        const fileUrl = await quizService.uploadFile(file, user.id);
-        progressCallback?.('Fichier téléchargé', 25, `Fichier téléchargé: ${file.name}`);
+        try {
+          await quizService.uploadFile(file, user.id);
+          progressCallback?.('Fichier telecharge', 25, `Fichier archive sur Supabase: ${file.name}`);
+        } catch (uploadError) {
+          console.warn('Archivage Supabase ignore, generation directe depuis le fichier local:', uploadError);
+          progressCallback?.('Extraction directe', 25, 'Supabase Storage indisponible, traitement direct du fichier local...');
+        }
         
         // Utiliser notre nouvelle fonction qui extrait le texte et génère les questions
         progressCallback?.('Génération des questions', 30, `Génération de ${numQuestions} questions avec ${modelType}...`);
@@ -112,7 +121,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
           (progress: number) => {
             const percent = 30 + Math.round(progress * 45);
             progressCallback?.('Génération des questions', percent, `Progression: ${Math.round(progress * 100)}%`);
-          }
+          },
+          apiKey
         );
       } catch (genError) {
         // En cas d'erreur, aucune notification à l'utilisateur
@@ -190,14 +200,14 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         
         return quizId;
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('QuizProvider: Error creating quiz:', error);
-      toast.error(`Impossible de créer le quiz: ${error.message || "Erreur inconnue"}`);
+      toast.error(`Impossible de créer le quiz: ${getErrorMessage(error)}`);
       throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigate, user]);
   
   const getQuiz = useCallback(async (id: string) => {
     console.log(`QuizProvider: Récupération du quiz avec ID: ${id}`);
@@ -254,7 +264,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('QuizProvider: Error getting quiz:', error);
-      toast.error(`Impossible de récupérer le quiz: ${error.message || "Erreur inconnue"}`);
+      toast.error(`Impossible de récupérer le quiz: ${getErrorMessage(error)}`);
       return null;
     }
   }, []);
@@ -288,7 +298,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       setSharedQuizzes(prev => prev.filter(quiz => quiz.id !== id));
       if (currentQuiz?.id === id) setCurrentQuiz(null);
       // Ne pas afficher de toast ici, c'est géré dans le composant DeleteQuizDialog
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting quiz:', error);
       // Propager l'erreur avec un message clair
       throw error;

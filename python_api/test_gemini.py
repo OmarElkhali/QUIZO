@@ -1,42 +1,44 @@
-import requests
 import json
-import os # <-- 1. Importer os
+import os
 
-# 2. Lire la clé depuis les variables d'environnement (plus sécurisé)
-GEMINI_API_KEY = os.environ.get("AIzaSyB-XpyVgRljUIcR7cBECGKqb7-3_RVgT5M")
+import requests
+from dotenv import load_dotenv
 
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-# Test de l'API Gemini avec gemini-pro sur v1
-url = f'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GEMINI_API_KEY}'
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    raise SystemExit("GEMINI_API_KEY non configuree")
+
+url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 payload = {
     "contents": [{
         "parts": [{
-            "text": "Génère une question de quiz en français au format JSON avec cette structure: {\"question\": \"texte\", \"reponse\": \"texte\"}"
+            "text": 'Genere une question de quiz en francais au format JSON: {"question": "texte", "reponse": "texte"}'
         }]
     }]
 }
 
-print(f"Test de l'API Gemini...")
-print(f"URL: {url[:80]}...")
+print("Test de l'API Gemini...")
 
 try:
     response = requests.post(
         url,
-        headers={'Content-Type': 'application/json'},
+        params={"key": GEMINI_API_KEY},
+        headers={"Content-Type": "application/json"},
         json=payload,
-        timeout=30
+        timeout=30,
     )
-    
+
     print(f"Status: {response.status_code}")
-    
+
     if response.status_code == 200:
-        print("✅ Succès!")
         data = response.json()
-        print(f"Réponse: {json.dumps(data, indent=2)[:500]}")
+        print(f"Reponse: {json.dumps(data, ensure_ascii=False, indent=2)[:500]}")
     else:
-        print("❌ Erreur")
-        print(f"Détails: {response.text[:500]}")
-        
+        print(f"Erreur: {response.text[:500]}")
 except Exception as e:
-    print(f"❌ Exception: {e}")
+    print(f"Exception: {e}")

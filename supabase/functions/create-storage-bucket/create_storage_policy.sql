@@ -1,42 +1,36 @@
-
 CREATE OR REPLACE FUNCTION create_storage_policy(bucket_name text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  -- Create policy to allow public read access
+  EXECUTE format('DROP POLICY IF EXISTS "quizo %s public read" ON storage.objects', bucket_name);
+  EXECUTE format('DROP POLICY IF EXISTS "quizo %s public upload" ON storage.objects', bucket_name);
+  EXECUTE format('DROP POLICY IF EXISTS "quizo %s public update" ON storage.objects', bucket_name);
+
   EXECUTE format(
-    'CREATE POLICY IF NOT EXISTS "Public Access" ON storage.objects
-    FOR SELECT
-    USING (bucket_id = %L)',
+    'CREATE POLICY "quizo %s public read" ON storage.objects
+     FOR SELECT TO anon, authenticated
+     USING (bucket_id = %L)',
+    bucket_name,
     bucket_name
   );
 
-  -- Create policy to allow authenticated users to upload files
   EXECUTE format(
-    'CREATE POLICY IF NOT EXISTS "Upload Access" ON storage.objects
-    FOR INSERT
-    TO authenticated
-    WITH CHECK (bucket_id = %L)',
+    'CREATE POLICY "quizo %s public upload" ON storage.objects
+     FOR INSERT TO anon, authenticated
+     WITH CHECK (bucket_id = %L)',
+    bucket_name,
     bucket_name
   );
 
-  -- Create policy to allow authenticated users to update their own files
   EXECUTE format(
-    'CREATE POLICY IF NOT EXISTS "Update Access" ON storage.objects
-    FOR UPDATE
-    TO authenticated
-    USING (bucket_id = %L AND auth.uid() = owner)',
-    bucket_name
-  );
-
-  -- Create policy to allow authenticated users to delete their own files
-  EXECUTE format(
-    'CREATE POLICY IF NOT EXISTS "Delete Access" ON storage.objects
-    FOR DELETE
-    TO authenticated
-    USING (bucket_id = %L AND auth.uid() = owner)',
+    'CREATE POLICY "quizo %s public update" ON storage.objects
+     FOR UPDATE TO anon, authenticated
+     USING (bucket_id = %L)
+     WITH CHECK (bucket_id = %L)',
+    bucket_name,
+    bucket_name,
     bucket_name
   );
 END;

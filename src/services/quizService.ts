@@ -5,6 +5,7 @@ import {
   getDocs, 
   getDoc, 
   doc, 
+  setDoc,
   updateDoc, 
   deleteDoc, 
   query, 
@@ -13,9 +14,21 @@ import {
   arrayUnion,
   arrayRemove 
 } from 'firebase/firestore';
-import { Quiz, Question } from '@/types/quiz';
+import { AIModelType, Quiz, Question } from '@/types/quiz';
 import { uploadFileToSupabase } from './storageService';
 import { getAuth, signInAnonymously } from 'firebase/auth';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+
+const getErrorMessage = (error: unknown): string => (
+  error instanceof Error ? error.message : String(error)
+);
+
+const getErrorCode = (error: unknown): string | undefined => (
+  typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code)
+    : undefined
+);
 
 export const uploadFile = async (file: File, userId: string): Promise<string> => {
   try {
@@ -25,7 +38,7 @@ export const uploadFile = async (file: File, userId: string): Promise<string> =>
     return fileUrl;
   } catch (error) {
     console.error('Erreur de téléchargement:', error);
-    throw new Error('Échec du téléchargement du fichier');
+    throw new Error(getErrorMessage(error));
   }
 };
 
@@ -43,9 +56,9 @@ export const extractTextFromFile = async (fileUrl: string, fileType: string): Pr
     }
     
     throw new Error('Format de fichier non supporté');
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erreur d\'extraction de texte:', error);
-    throw new Error(`Échec de l'extraction: ${error.message}`);
+    throw new Error(`Echec de l'extraction: ${getErrorMessage(error)}`);
   }
 };
 
@@ -54,16 +67,15 @@ export const generateQuizQuestions = async (
   numQuestions: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
-  modelType: 'chatgpt' | 'gemini' = 'chatgpt',
+  modelType: AIModelType = 'chatgpt',
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   try {
     console.log(`Génération de ${numQuestions} questions avec le modèle ${modelType}...`);
     
-    let questions;
     // Utilisation de l'API backend Python pour les deux modèles
-    console.log(`Appel de l'API backend à /api/generate pour le modèle ${modelType}`);
-    const response = await fetch('/api/generate', {
+    console.log(`Appel de l'API backend a ${BACKEND_URL}/generate pour le modele ${modelType}`);
+    const response = await fetch(`${BACKEND_URL}/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -81,8 +93,8 @@ export const generateQuizQuestions = async (
       throw new Error(`Erreur API backend (${response.status}): ${errorText}`);
     }
     
-    const data = await response.json();
-    questions = data.questions;
+    const data = await response.json() as { questions?: Question[]; warning?: string };
+    const questions = data.questions;
     
     if (data.warning) {
       console.warn("Avertissement du backend:", data.warning);
@@ -198,7 +210,12 @@ export const createQuiz = async (
       duration: parsedTimeLimit ? `${parsedTimeLimit} min` : `${Math.round(questions.length * 1.5)} min`,
       participants: 0,
       collaborators: [],
+      collaboratorUids: [],
+      invitedEmails: [],
       isShared: false,
+      visibility: 'private',
+      mode: 'async',
+      status: 'active',
       difficulty,
       timeLimit: parsedTimeLimit
     };
@@ -263,7 +280,13 @@ export const getQuizzes = async (userId: string): Promise<Quiz[]> => {
         duration: data.duration || '30 min',
         participants: data.participants || 0,
         collaborators: data.collaborators || [],
+        collaboratorUids: data.collaboratorUids || [],
+        invitedEmails: data.invitedEmails || [],
         isShared: data.isShared || false,
+        shareCode: data.shareCode,
+        visibility: data.visibility || (data.shareCode ? 'by_code' : 'private'),
+        mode: data.mode || 'async',
+        status: data.status || 'active',
       });
     });
     
@@ -281,7 +304,7 @@ export const getQuizzes = async (userId: string): Promise<Quiz[]> => {
 export const getSharedQuizzes = async (userId: string): Promise<Quiz[]> => {
   const q = query(
     collection(db, 'quizzes'), 
-    where('collaborators', 'array-contains', userId)
+    where('collaboratorUids', 'array-contains', userId)
   );
   
   const querySnapshot = await getDocs(q);
@@ -299,6 +322,10 @@ export const getSharedQuizzes = async (userId: string): Promise<Quiz[]> => {
       duration: data.duration,
       participants: data.participants,
       collaborators: data.collaborators || [],
+      collaboratorUids: data.collaboratorUids || [],
+      invitedEmails: data.invitedEmails || [],
+      shareCode: data.shareCode,
+      visibility: data.visibility || (data.shareCode ? 'by_code' : 'private'),
       isShared: true,
     });
   });
@@ -353,15 +380,21 @@ export const getQuiz = async (quizId: string): Promise<Quiz | null> => {
       duration: data.duration || '30 min',
       participants: data.participants || 0,
       collaborators: data.collaborators || [],
+      collaboratorUids: data.collaboratorUids || [],
+      invitedEmails: data.invitedEmails || [],
       isShared: data.isShared || false,
       difficulty: data.difficulty || 'medium',
-      timeLimit: data.timeLimit || null
+      timeLimit: data.timeLimit || null,
+      shareCode: data.shareCode,
+      visibility: data.visibility || (data.shareCode ? 'by_code' : 'private'),
+      mode: data.mode || 'async',
+      status: data.status || 'active'
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('[quizService] Erreur lors de la récupération du quiz:', error);
     console.timeEnd(`[quizService] Temps de récupération du quiz ${quizId}`);
     console.groupEnd();
-    throw new Error(`Échec de la récupération du quiz: ${error.message}`);
+    throw new Error(`Echec de la recuperation du quiz: ${getErrorMessage(error)}`);
   }
 };
 
@@ -468,15 +501,15 @@ export const deleteQuiz = async (quizId: string): Promise<void> => {
     await deleteDoc(docRef);
     
     console.log('Quiz supprimé avec succès de la base de données');
-  } catch (error: any) {
+  } catch (error) {
     console.error('Erreur lors de la suppression du quiz:', error);
     
     // Messages d'erreur plus spécifiques
-    if (error.code === 'permission-denied') {
+    if (getErrorCode(error) === 'permission-denied') {
       throw new Error('Permission refusée: Vous n\'êtes pas autorisé à supprimer ce quiz');
     }
     
-    throw new Error(`Échec de la suppression du quiz: ${error.message}`);
+    throw new Error(`Echec de la suppression du quiz: ${getErrorMessage(error)}`);
   }
 };
 
@@ -509,7 +542,27 @@ export const getOrCreateShareCode = async (quizId: string): Promise<string> => {
     
     // Si le quiz a déjà un shareCode, le retourner
     if (quizData.shareCode) {
-      return quizData.shareCode;
+      const shareCode = quizData.shareCode.toUpperCase();
+      const ownerId = quizData.creatorId || quizData.userId || quizData.ownerId || getAuth().currentUser?.uid;
+
+      if (ownerId) {
+        await setDoc(doc(db, 'shareCodes', shareCode), {
+          type: 'quiz',
+          targetId: quizId,
+          ownerId,
+          status: 'active',
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+
+        await updateDoc(docRef, {
+          isShared: true,
+          isPublic: true,
+          visibility: 'by_code',
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      return shareCode;
     }
     
     // Sinon, générer un nouveau code unique
@@ -520,18 +573,35 @@ export const getOrCreateShareCode = async (quizId: string): Promise<string> => {
     while (!isUnique) {
       const q = query(collection(db, 'quizzes'), where('shareCode', '==', shareCode));
       const snapshot = await getDocs(q);
+      const shareCodeDoc = await getDoc(doc(db, 'shareCodes', shareCode));
       
-      if (snapshot.empty) {
+      if (snapshot.empty && !shareCodeDoc.exists()) {
         isUnique = true;
       } else {
         shareCode = generateShareCode();
       }
     }
     
+    const ownerId = quizData.creatorId || quizData.userId || quizData.ownerId || getAuth().currentUser?.uid;
+    if (!ownerId) {
+      throw new Error('Proprietaire du quiz introuvable');
+    }
+
+    await setDoc(doc(db, 'shareCodes', shareCode), {
+      type: 'quiz',
+      targetId: quizId,
+      ownerId,
+      status: 'active',
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+
     // Sauvegarder le shareCode dans le quiz
     await updateDoc(docRef, {
       shareCode,
       isShared: true,
+      isPublic: true,
+      visibility: 'by_code',
+      updatedAt: serverTimestamp(),
     });
     
     console.log(`✅ ShareCode généré pour le quiz ${quizId}: ${shareCode}`);
@@ -547,11 +617,21 @@ export const getOrCreateShareCode = async (quizId: string): Promise<string> => {
  */
 export const joinQuizByShareCode = async (shareCode: string): Promise<string> => {
   try {
+    const normalizedCode = shareCode.trim().toUpperCase();
+    const shareCodeDoc = await getDoc(doc(db, 'shareCodes', normalizedCode));
+
+    if (shareCodeDoc.exists()) {
+      const data = shareCodeDoc.data();
+      if (data.type === 'quiz' && data.status === 'active' && data.targetId) {
+        return data.targetId;
+      }
+    }
+
     console.log(`🔍 Recherche du quiz avec le code: ${shareCode}`);
     
     const q = query(
       collection(db, 'quizzes'),
-      where('shareCode', '==', shareCode.toUpperCase())
+      where('shareCode', '==', normalizedCode)
     );
     
     const querySnapshot = await getDocs(q);
@@ -587,14 +667,17 @@ export const shareQuiz = async (
     // Générer ou obtenir le shareCode
     const shareCode = await getOrCreateShareCode(quizId);
     
-    // Ajouter l'email aux collaborateurs
+    // Ajouter l'email comme information d'invitation. Les droits passent par le code.
     await updateDoc(docRef, {
-      collaborators: arrayUnion(collaboratorEmail),
+      invitedEmails: arrayUnion(collaboratorEmail),
       isShared: true,
+      isPublic: true,
+      visibility: 'by_code',
+      updatedAt: serverTimestamp(),
     });
     
     // Construire le lien de partage
-    const shareLink = `${window.location.origin}/shared-quiz/${quizId}?code=${shareCode}`;
+    const shareLink = `${window.location.origin}/join-quiz/${shareCode}`;
     
     console.log(`✅ Quiz partagé avec ${collaboratorEmail}`);
     console.log(`🔗 Lien de partage: ${shareLink}`);
@@ -617,6 +700,8 @@ export const removeCollaborator = async (
   
   await updateDoc(docRef, {
     collaborators: arrayRemove(collaboratorId),
+    collaboratorUids: arrayRemove(collaboratorId),
+    invitedEmails: arrayRemove(collaboratorId),
   });
   
   const quizDoc = await getDoc(docRef);

@@ -50,7 +50,7 @@ serve(async (req) => {
       );
     }
 
-    const bucketExists = existingBuckets.some(bucket => bucket.name === "quiz-files");
+    const bucketExists = existingBuckets.some(bucket => bucket.id === "quiz-files" || bucket.name === "quiz-files");
     
     if (bucketExists) {
       console.log("Bucket 'quiz-files' already exists");
@@ -67,7 +67,13 @@ serve(async (req) => {
       .storage
       .createBucket("quiz-files", {
         public: true,
-        fileSizeLimit: 10485760, // 10MB
+        fileSizeLimit: 52428800, // 50MB
+        allowedMimeTypes: [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "text/plain",
+        ],
       });
 
     if (error) {
@@ -82,9 +88,6 @@ serve(async (req) => {
     try {
       const createPolicyResponse = await supabaseAdmin.rpc('create_storage_policy', {
         bucket_name: 'quiz-files',
-        policy_name: 'Public Access',
-        definition: 'true',
-        policy_for: 'SELECT'
       });
       
       console.log("Public access policy created:", createPolicyResponse);

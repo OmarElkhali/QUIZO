@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   text: string;
@@ -12,6 +11,8 @@ export interface Question {
   correctAnswer?: string;
 }
 
+export type AIModelType = 'chatgpt' | 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'qwen';
+
 export interface Quiz {
   id: string;
   title: string;
@@ -22,9 +23,15 @@ export interface Quiz {
   duration: string;
   participants?: number;
   collaborators?: string[];
+  collaboratorUids?: string[];
+  invitedEmails?: string[];
   isShared?: boolean;
   difficulty?: 'easy' | 'medium' | 'hard';
   timeLimit?: number;
+  shareCode?: string;
+  visibility?: 'private' | 'by_code';
+  mode?: 'ai' | 'manual' | 'async' | 'realtime';
+  status?: 'draft' | 'active' | 'completed';
 }
 
 export type ProgressCallback = (stage: string, percent: number, message?: string) => void;
@@ -35,17 +42,20 @@ export interface QuizContextType {
   currentQuiz: Quiz | null;
   isLoading: boolean;
   createQuiz: (
-    file: File, 
-    numQuestions: number, 
-    difficulty?: 'easy' | 'medium' | 'hard', 
-    timeLimit?: number, 
-    additionalInfo?: string, 
+    file: File,
+    numQuestions: number,
+    difficulty?: 'easy' | 'medium' | 'hard',
+    timeLimit?: number,
+    additionalInfo?: string,
     apiKey?: string,
-    modelType?: 'chatgpt' | 'gemini',
+    modelType?: AIModelType,
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;
-  submitQuizAnswers: (quizId: string, answers: Record<string, string>) => Promise<number>;
+  submitQuizAnswers: (
+    quizId: string,
+    answers: Record<string, string>
+  ) => Promise<{ quizId: string; submissionId: string; score: number }>;
   deleteQuiz: (id: string) => Promise<void>;
   shareQuiz: (id: string, email: string) => Promise<void>;
   removeCollaborator: (quizId: string, collaboratorId: string) => Promise<void>;
@@ -60,10 +70,6 @@ export interface QuizResult {
   completedAt: string;
 }
 
-
-// Types existants...
-
-// Nouveaux types pour le mode manuel
 export interface ManualQuestion {
   id: string;
   text: string;
@@ -86,10 +92,17 @@ export interface ManualQuiz {
   isPublic: boolean;
   timeLimit?: number;
   shareCode?: string;
-  mode?: 'realtime' | 'async'; // Mode de passage du quiz
-  status?: 'draft' | 'active' | 'completed'; // Statut du quiz
-  invitedEmails?: string[]; // Liste des emails invités
-  maxParticipants?: number; // Nombre maximum de participants
+  visibility?: 'private' | 'by_code';
+  mode?: 'realtime' | 'async';
+  status?: 'draft' | 'active' | 'completed';
+  invitedEmails?: string[];
+  collaboratorUids?: string[];
+  maxParticipants?: number;
+  stats?: {
+    participantsCount?: number;
+    completedAttempts?: number;
+    averageScore?: number;
+  };
 }
 
 export interface Competition {
@@ -103,12 +116,13 @@ export interface Competition {
   shareCode: string;
   isActive: boolean;
   participantsCount: number;
+  status?: 'active' | 'completed';
 }
 
 export interface Participant {
   id: string;
-  competitionId: string;
-  quizId?: string; // ID du quiz manuel
+  competitionId?: string;
+  quizId?: string;
   userId: string;
   email?: string;
   name: string;
@@ -116,19 +130,30 @@ export interface Participant {
   score?: number;
   completedAt?: string;
   rank?: number;
-  isActive?: boolean; // Pour le mode temps réel
-  currentQuestionIndex?: number; // Progression en temps réel
+  isActive?: boolean;
+  currentQuestionIndex?: number;
+  lastActivityAt?: string;
 }
 
 export interface Attempt {
   id: string;
   competitionId?: string;
-  quizId?: string; // ID du quiz manuel
+  quizId?: string;
   participantId: string;
   userId: string;
   startedAt: string;
   completedAt?: string;
   score?: number;
   answers: Record<string, string>;
-  timeSpent?: number; // Temps passé en secondes
+  timeSpent?: number;
+}
+
+export interface ShareCodeDoc {
+  code: string;
+  type: 'quiz' | 'competition';
+  targetId: string;
+  ownerId: string;
+  status: 'active' | 'disabled';
+  createdAt?: string;
+  expiresAt?: string;
 }

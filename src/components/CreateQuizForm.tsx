@@ -1,5 +1,5 @@
-
-import { useState, useEffect } from 'react';
+﻿
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,6 @@ import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { initializeBucket } from '@/integrations/supabase/client';
-
-// Remove this line with the hardcoded API key
-// const DEFAULT_API_KEY = "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";
 
 export const CreateQuizForm = () => {
   const navigate = useNavigate();
@@ -27,59 +23,17 @@ export const CreateQuizForm = () => {
   const [file, setFile] = useState<File | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [selectedAI, setSelectedAI] = useState<'chatgpt' | 'local'>('chatgpt');
+  const [selectedAI, setSelectedAI] = useState<'chatgpt' | 'local'>('local');
   const [apiKey, setApiKey] = useState(''); // Initialize with empty string instead of DEFAULT_API_KEY
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [bucketInitialized, setBucketInitialized] = useState(false);
-  const [initializationAttempts, setInitializationAttempts] = useState(0);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [timeLimit, setTimeLimit] = useState(15); // Default time limit in minutes
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   
-  // Initialize bucket when component loads
-  useEffect(() => {
-    if (!bucketInitialized && initializationAttempts < 3) {
-      ensureBucketExists();
-    }
-  }, [bucketInitialized, initializationAttempts]);
-  
-  const ensureBucketExists = async () => {
-    if (bucketInitialized) return true;
-    if (isInitializing) return false;
-    
-    setIsInitializing(true);
-    try {
-      console.log("Attempting bucket initialization...");
-      const success = await initializeBucket();
-      setBucketInitialized(success);
-      
-      if (!success) {
-        // Only show toast after multiple failures
-        if (initializationAttempts >= 2) {
-          toast.error("Erreur lors de la configuration du stockage. Réessayez plus tard.");
-        }
-        
-        setInitializationAttempts(prev => prev + 1);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error initializing bucket:", error);
-      setInitializationAttempts(prev => prev + 1);
-      return false;
-    } finally {
-      setIsInitializing(false);
-    }
-  };
-  
   const handleFileSelect = (file: File) => {
     setFile(file);
-    toast.success(`Fichier sélectionné: ${file.name}`);
-    // Ensure bucket is ready when file is selected
-    ensureBucketExists();
+    toast.success(`Fichier selectionne: ${file.name}`);
   };
-  
+
   const handleNumQuestionsChange = (value: number[]) => {
     setNumQuestions(value[0]);
   };
@@ -92,29 +46,22 @@ export const CreateQuizForm = () => {
     e.preventDefault();
     
     if (!user) {
-      toast.error("Veuillez vous connecter pour créer un quiz");
+      toast.error("Veuillez vous connecter pour crÃ©er un quiz");
       return;
     }
     
     if (!file) {
-      toast.error("Veuillez sélectionner un fichier");
+      toast.error("Veuillez sÃ©lectionner un fichier");
       return;
     }
-    
-    // Final check to ensure bucket exists
-    const bucketReady = await ensureBucketExists();
-    if (!bucketReady) {
-      toast.error("Impossible de configurer le stockage. Veuillez réessayer.");
-      return;
-    }
-    
+
     try {
       console.log('Starting quiz creation process');
       const apiKeyToUse = selectedAI === 'chatgpt' ? apiKey : undefined;
       const actualTimeLimit = enableTimeLimit ? timeLimit : undefined;
       const modelType = selectedAI === 'chatgpt' ? 'chatgpt' : 'gemini';
       
-      // Définir une fonction de callback pour suivre la progression
+      // DÃ©finir une fonction de callback pour suivre la progression
       const progressCallback = (stage: string, percent: number, message?: string) => {
         console.log(`[CreateQuizForm] Progress: ${stage} - ${percent}% - ${message || ''}`);
       };
@@ -130,11 +77,12 @@ export const CreateQuizForm = () => {
         progressCallback
       );
       
-      toast.success(`${numQuestions} questions générées à partir de vos documents!`);
+      toast.success(`${numQuestions} questions generees a partir de vos documents!`);
       navigate(`/quiz-preview/${quizId}`);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating quiz:", error);
-      toast.error(`Impossible de créer le quiz: ${error.message || "Erreur inconnue"}`);
+      const message = error instanceof Error ? error.message : "Erreur inconnue";
+      toast.error(`Impossible de creer le quiz: ${message}`);
     }
   };
   
@@ -149,17 +97,17 @@ export const CreateQuizForm = () => {
         <div className="p-2 rounded-full bg-[#D2691E]/10">
           <BrainCircuit className="h-6 w-6 text-[#D2691E]" />
         </div>
-        <h2 className="text-2xl font-bold">Paramètres du Quiz</h2>
+        <h2 className="text-2xl font-bold">ParamÃ¨tres du Quiz</h2>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="file-upload">Télécharger votre document</Label>
+          <Label htmlFor="file-upload">TÃ©lÃ©charger votre document</Label>
           <FileUpload onFileSelect={handleFileSelect} />
         </div>
         
         <div className="space-y-4">
-          <Label>Niveau de difficulté</Label>
+          <Label>Niveau de difficultÃ©</Label>
           <ToggleGroup 
             type="single" 
             value={difficulty}
@@ -230,7 +178,7 @@ export const CreateQuizForm = () => {
         </div>
         
         <div className="space-y-4">
-          <Label>Modèle d'IA pour la génération</Label>
+          <Label>ModÃ¨le d'IA pour la gÃ©nÃ©ration</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">  {/* Ajout de grid-cols-1 pour mobile */}
             <Card 
               className={`p-4 cursor-pointer transition-all hover:shadow-md border ${
@@ -241,7 +189,7 @@ export const CreateQuizForm = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">Gemini</h3>
-                  <p className="text-xs text-muted-foreground">Recommandé, fonctionne hors ligne</p>
+                  <p className="text-xs text-muted-foreground">RecommandÃ©, fonctionne hors ligne</p>
                 </div>
                 <div className={`w-4 h-4 rounded-full ${selectedAI === 'local' ? 'bg-[#D2691E]' : 'bg-muted'}`}></div>
               </div>
@@ -256,7 +204,7 @@ export const CreateQuizForm = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">ChatGPT</h3>
-                  <p className="text-xs text-muted-foreground">Qualité supérieure, requiert une API key</p>
+                  <p className="text-xs text-muted-foreground">QualitÃ© supÃ©rieure, requiert une API key</p>
                 </div>
                 <div className={`w-4 h-4 rounded-full ${selectedAI === 'chatgpt' ? 'bg-[#D2691E]' : 'bg-muted'}`}></div>
               </div>
@@ -288,10 +236,10 @@ export const CreateQuizForm = () => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="additional-info">Informations supplémentaires (Optionnel)</Label>
+          <Label htmlFor="additional-info">Informations supplÃ©mentaires (Optionnel)</Label>
           <Textarea
             id="additional-info"
-            placeholder="Ajoutez des sujets spécifiques à aborder, des styles de questions préférés, ou d'autres détails..."
+            placeholder="Ajoutez des sujets spÃ©cifiques Ã  aborder, des styles de questions prÃ©fÃ©rÃ©s, ou d'autres dÃ©tails..."
             value={additionalInfo}
             onChange={(e) => setAdditionalInfo(e.target.value)}
             className="min-h-[100px] resize-none"
@@ -310,7 +258,7 @@ export const CreateQuizForm = () => {
               onChange={(e) => setApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Votre clé API est stockée uniquement sur votre appareil et n'est jamais partagée.
+              Votre clÃ© API est stockÃ©e uniquement sur votre appareil et n'est jamais partagÃ©e.
             </p>
           </div>
         )}
@@ -319,16 +267,16 @@ export const CreateQuizForm = () => {
           <Button 
             type="submit" 
             className="w-full btn-shine bg-[#D2691E] hover:bg-[#D2691E]/90"
-            disabled={isLoading || isInitializing || !file || !user || (selectedAI === 'chatgpt' && !apiKey)}
+            disabled={isLoading || !file || !user || (selectedAI === 'chatgpt' && !apiKey)}
           >
-            {isLoading || isInitializing ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isLoading ? "Génération en cours..." : "Initialisation..."}
+                Generation en cours...
               </>
             ) : (
               <>
-                Créer le Quiz
+                CrÃ©er le Quiz
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}

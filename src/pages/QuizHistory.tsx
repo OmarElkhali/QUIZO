@@ -19,8 +19,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
 const QuizHistory = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { quizzes, isLoading } = useQuiz();
+  const quizContext = useContext(QuizContext);
   const navigate = useNavigate();
   const { theme } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +40,6 @@ const QuizHistory = () => {
   const handleRefresh = async () => {
     // Accéder à fetchQuizzes via le contexte
     setIsRefreshing(true);
-    const quizContext = useContext(QuizContext);
     if (quizContext && quizContext.fetchQuizzes) {
       await quizContext.fetchQuizzes();
     }
@@ -92,6 +92,17 @@ const QuizHistory = () => {
   });
   
   // Rediriger si l'utilisateur n'est pas connecté
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+        </main>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/" />;
   }

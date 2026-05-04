@@ -1,6 +1,6 @@
 
 import { createContext } from 'react';
-import { Quiz } from '@/types/quiz';
+import { AIModelType, Quiz } from '@/types/quiz';
 
 type ProgressCallback = (stage: string, percent: number, message?: string) => void;
 
@@ -17,7 +17,7 @@ interface QuizContextType {
     timeLimit?: number,
     additionalInfo?: string, 
     apiKey?: string,
-    modelType?: 'chatgpt' | 'gemini',
+    modelType?: AIModelType,
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;

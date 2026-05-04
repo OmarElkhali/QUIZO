@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, ArrowRight, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { getCompetitionByShareCode, addParticipantToCompetition } from '@/services/manualQuizService';
+import { getCompetitionByShareCode, addParticipantToCompetition, ensureParticipantSession } from '@/services/manualQuizService';
 import { Competition } from '@/types/quiz'; // Importation du type Competition manquant
 import {
   InputOTP,
@@ -27,8 +27,9 @@ interface RecentCompetition {
 const JoinByCode = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { shareCode: urlShareCode } = useParams<{ shareCode?: string }>();
   
-  const [shareCode, setShareCode] = useState('');
+  const [shareCode, setShareCode] = useState(urlShareCode?.toUpperCase() || '');
   const [participantName, setParticipantName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [competition, setCompetition] = useState<Competition | null>(null);
@@ -46,6 +47,8 @@ const JoinByCode = () => {
     } else {
       setCompetition(null);
     }
+  // checkCompetition is declared below but only called after render by this timer.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareCode]);
   
   // Fonction pour vérifier le code sans rejoindre
@@ -59,6 +62,7 @@ const JoinByCode = () => {
     setIsCheckingCode(true);
     
     try {
+      await ensureParticipantSession();
       const competitionData = await getCompetitionByShareCode(formattedCode);
       setCompetition(competitionData);
     } catch (error) {
@@ -129,6 +133,7 @@ const JoinByCode = () => {
     
     try {
       // Récupérer la compétition par code de partage
+      await ensureParticipantSession();
       const competition = await getCompetitionByShareCode(formattedCode);
       
       if (!competition) {
@@ -168,9 +173,9 @@ const JoinByCode = () => {
       
       // Ajouter à l'historique
       addToRecentCompetitions(formattedCode, competition.title);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la tentative de rejoindre la compétition:', error);
-      toast.error(error.message || 'Une erreur est survenue');
+      toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
       setIsLoading(false);
     }
   };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
@@ -13,7 +13,6 @@ import {
   Play,
   Pause,
   BarChart3,
-  Share2,
   Copy
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,7 +41,7 @@ import {
 
 const RealtimeDashboard = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [quiz, setQuiz] = useState<ManualQuiz | null>(null);
@@ -52,7 +51,14 @@ const RealtimeDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (!id || !user) return;
+    if (!id || !user) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let unsubscribeParticipants: (() => void) | undefined;
+    let unsubscribeAttempts: (() => void) | undefined;
 
     const loadQuizData = async () => {
       try {
@@ -70,6 +76,8 @@ const RealtimeDashboard = () => {
           return;
         }
 
+        if (cancelled) return;
+
         setQuiz(quizData);
         setIsLoading(false);
 
@@ -83,26 +91,31 @@ const RealtimeDashboard = () => {
         setAttempts(attemptsData);
 
         // Écouter les changements en temps réel
-        const unsubscribeParticipants = listenToParticipants(id, (updatedParticipants) => {
+        if (cancelled) return;
+
+        unsubscribeParticipants = listenToParticipants(id, (updatedParticipants) => {
           setParticipants(updatedParticipants);
         });
 
-        const unsubscribeAttempts = listenToAttempts(id, (updatedAttempts) => {
+        unsubscribeAttempts = listenToAttempts(id, (updatedAttempts) => {
           setAttempts(updatedAttempts);
         });
-
-        return () => {
-          unsubscribeParticipants();
-          unsubscribeAttempts();
-        };
-      } catch (error: any) {
+      } catch (error) {
         console.error('Erreur lors du chargement:', error);
         toast.error('Erreur lors du chargement du quiz');
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadQuizData();
+
+    return () => {
+      cancelled = true;
+      unsubscribeParticipants?.();
+      unsubscribeAttempts?.();
+    };
   }, [id, user, navigate]);
 
   const handleStartQuiz = async () => {
@@ -154,6 +167,21 @@ const RealtimeDashboard = () => {
   const getActiveParticipants = () => {
     return participants.filter(p => p.isActive && !p.completedAt).length;
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
   if (isLoading) {
     return (

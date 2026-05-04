@@ -9,9 +9,20 @@ import { useTranslation } from 'react-i18next';
 
 const CreateQuiz = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   
   // Rediriger si l'utilisateur n'est pas connecté
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+        </main>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/" />;
   }

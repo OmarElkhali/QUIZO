@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,9 +37,9 @@ const Results = () => {
   const [resultSaved, setResultSaved] = useState(false);
   
   const score = location.state?.score ?? 0;
-  const userAnswers = location.state?.answers ?? {};
+  const userAnswers = useMemo(() => location.state?.answers ?? {}, [location.state?.answers]);
   const timeSpent = location.state?.timeSpent ?? 0;
-  const startTime = location.state?.startTime ?? Date.now();
+  const startTime = useMemo(() => location.state?.startTime ?? Date.now(), [location.state?.startTime]);
   const controls = useAnimation();
 
   useEffect(() => {

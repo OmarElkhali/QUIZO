@@ -1,12 +1,12 @@
-# Configuration Render.com pour le backend Python
-# Ce fichier permet un déploiement automatique depuis GitHub
+# Configuration Render.com pour le backend Python QUIZO
+# Déploiement automatique depuis GitHub
 
 services:
   - type: web
     name: quizo-backend
     runtime: python
-    region: frankfurt  # EU Central
-    plan: free  # ou 'starter' pour production
+    region: frankfurt
+    plan: free
     branch: main
     rootDir: python_api
     buildCommand: pip install -r requirements.txt
@@ -14,13 +14,27 @@ services:
     envVars:
       - key: PORT
         value: 5000
+      - key: FLASK_ENV
+        value: production
       - key: LOG_LEVEL
         value: INFO
+      - key: PYTHON_VERSION
+        value: "3.11"
       - key: CORS_ORIGINS
-        sync: false  # À configurer manuellement dans Render Dashboard
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
       - key: GEMINI_API_KEY
-        sync: false  # À configurer manuellement (secret)
+        sync: false
       - key: CHATGPT_API_KEY
-        sync: false  # À configurer manuellement (secret, optionnel)
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: QWEN_API_KEY
+        sync: false
     healthCheckPath: /api/health
-    autoDeploy: true  # Déploiement automatique sur push GitHub
+    autoDeploy: true

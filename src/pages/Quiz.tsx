@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
@@ -32,7 +31,6 @@ const Quiz = () => {
   const navigate = useNavigate();
   const { submitQuizAnswers, getQuiz } = useQuiz();
   const { user } = useAuth();
-  const userId = user?.id || '';
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -108,7 +106,7 @@ const Quiz = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [id]);
+  }, [getQuiz, id]);
 
   // Timer pour le décompte du temps
   useEffect(() => {
@@ -166,7 +164,7 @@ const Quiz = () => {
       toast.error('Erreur lors de la soumission: ' + (error.message || 'Erreur inconnue'));
       setIsSubmitting(false);
     }
-  }, [isSubmitting, quiz, answers, submitQuizAnswers, navigate, id, userId]);
+  }, [isSubmitting, quiz, answers, submitQuizAnswers, navigate, id]);
 
   // Vérifier si le temps est écoulé pour soumettre automatiquement
   useEffect(() => {

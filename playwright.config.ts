@@ -1,10 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL || 'https://quizo-ruddy.vercel.app';
+const baseURL = process.env.E2E_BASE_URL || 'http://127.0.0.1:5173';
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: false,
   timeout: 120_000,
   expect: { timeout: 10_000 },
   reporter: [['list']],
@@ -19,6 +19,20 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  webServer: [
+    {
+      command: 'cmd /c "cd python_api && .venv\\Scripts\\python.exe app.py"',
+      url: 'http://127.0.0.1:5000/api/health',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      command: 'npm.cmd run dev -- --host 127.0.0.1 --port 5173',
+      url: baseURL,
+      reuseExistingServer: true,
+      timeout: 120_000,
     },
   ],
 });

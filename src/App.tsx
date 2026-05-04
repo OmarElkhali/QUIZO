@@ -1,49 +1,59 @@
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
 import { AuthProvider } from './context/AuthContext';
-import Index from './pages/Index';
-import CreateQuiz from './pages/CreateQuiz';
-import QuizPreview from './pages/QuizPreview';
-import Quiz from './pages/Quiz';
-import Results from './pages/Results';
-import QuizHistory from './pages/QuizHistory';
-import NotFound from './pages/NotFound';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsOfService from './pages/TermsOfService';
-import Contact from './pages/Contact';
 import { QuizProvider } from '@/context/index';
-import JoinByCode from './pages/JoinByCode';
-import CreateManualQuiz from './pages/CreateManualQuiz';
-import ManualQuizBuilder from './pages/ManualQuizBuilder';
-import CompetitionPlay from './pages/Competition';
-import Leaderboard from './pages/Leaderboard';
-import CreatorDashboard from './pages/CreatorDashboard';
-import SharedQuiz from './pages/SharedQuiz';
-import RealtimeDashboard from './pages/RealtimeDashboard';
-import JoinQuiz from './pages/JoinQuiz';
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+);
+
+// Lazy-loaded page components
+const Index = React.lazy(() => import('./pages/Index'));
+const CreateQuiz = React.lazy(() => import('./pages/CreateQuiz'));
+const QuizPreview = React.lazy(() => import('./pages/QuizPreview'));
+const Quiz = React.lazy(() => import('./pages/Quiz'));
+const Results = React.lazy(() => import('./pages/Results'));
+const QuizHistory = React.lazy(() => import('./pages/QuizHistory'));
+const NotFound = React.lazy(() => import('./pages/NotFound'));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = React.lazy(() => import('./pages/TermsOfService'));
+const Contact = React.lazy(() => import('./pages/Contact'));
+const JoinByCode = React.lazy(() => import('./pages/JoinByCode'));
+const CreateManualQuiz = React.lazy(() => import('./pages/CreateManualQuiz'));
+const ManualQuizBuilder = React.lazy(() => import('./pages/ManualQuizBuilder'));
+const CompetitionPlay = React.lazy(() => import('./pages/Competition'));
+const Leaderboard = React.lazy(() => import('./pages/Leaderboard'));
+const CreatorDashboard = React.lazy(() => import('./pages/CreatorDashboard'));
+const SharedQuiz = React.lazy(() => import('./pages/SharedQuiz'));
+const RealtimeDashboard = React.lazy(() => import('./pages/RealtimeDashboard'));
+const JoinQuiz = React.lazy(() => import('./pages/JoinQuiz'));
+const QuizSession = React.lazy(() => import('./pages/QuizSession'));
 
 const queryClient = new QueryClient()
 
 function App() {
   return (
-    <React.Fragment>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <BrowserRouter>
-          <TooltipProvider>
-            <QueryClientProvider client={queryClient}>
-              <AuthProvider>
-                <QuizProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <BrowserRouter>
+        <TooltipProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <QuizProvider>
+                <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/create-quiz" element={<CreateQuiz />} />
                     <Route path="/create-manual-quiz" element={<CreateManualQuiz />} />
                     <Route path="/manual-quiz-builder/:id" element={<ManualQuizBuilder />} />
-                    <Route path="/join" element={<JoinByCode />} />
+                    <Route path="/join/:shareCode?" element={<JoinByCode />} />
                     <Route path="/competition/share/:shareCode" element={<CompetitionPlay />} />
                     <Route path="/competition/:competitionId" element={<CompetitionPlay />} />
                     <Route path="/leaderboard/:id" element={<Leaderboard />} />
@@ -53,6 +63,7 @@ function App() {
                     <Route path="/shared-quiz/:quizId" element={<SharedQuiz />} />
                     <Route path="/quiz-dashboard/:id" element={<RealtimeDashboard />} />
                     <Route path="/join-quiz/:shareCode?" element={<JoinQuiz />} />
+                    <Route path="/quiz-session/:quizId/:attemptId" element={<QuizSession />} />
                     <Route path="/results/:quizId/:submissionId" element={<Results />} />
                     <Route path="/history" element={<QuizHistory />} />
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -60,14 +71,14 @@ function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </QuizProvider>
-              </AuthProvider>
-            </QueryClientProvider>
-          </TooltipProvider>
-        </BrowserRouter>
-        <Toaster />
-      </ThemeProvider>
-    </React.Fragment>
+                </Suspense>
+              </QuizProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </TooltipProvider>
+      </BrowserRouter>
+      <Toaster />
+    </ThemeProvider>
   );
 }
 

@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 
 const ManualQuizBuilder = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   const [quiz, setQuiz] = useState<ManualQuiz | null>(null);
@@ -58,6 +58,10 @@ const ManualQuizBuilder = () => {
   
   useEffect(() => {
     const fetchQuiz = async () => {
+      if (authLoading) {
+        return;
+      }
+
       if (!id || !user) {
         toast.error('Utilisateur non connecté ou ID de quiz manquant');
         navigate('/');
@@ -93,9 +97,20 @@ const ManualQuizBuilder = () => {
     };
     
     fetchQuiz();
-  }, [id, user, navigate]);
+  }, [authLoading, id, user, navigate]);
   
   // Rediriger si l'utilisateur n'est pas connecté
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 pt-32 pb-16 px-6 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
+        </main>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/" />;
   }
@@ -636,14 +651,14 @@ const ManualQuizBuilder = () => {
             <div className="space-y-2">
               <Label htmlFor="time-limit">Limite de temps (minutes)</Label>
               <Select
-                value={timeLimit?.toString() || ''}
-                onValueChange={(value) => setTimeLimit(value ? parseInt(value) : undefined)}
+                value={timeLimit?.toString() || 'none'}
+                onValueChange={(value) => setTimeLimit(value === 'none' ? undefined : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Aucune limite" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune limite</SelectItem>
+                  <SelectItem value="none">Aucune limite</SelectItem>
                   <SelectItem value="5">5 minutes</SelectItem>
                   <SelectItem value="10">10 minutes</SelectItem>
                   <SelectItem value="15">15 minutes</SelectItem>

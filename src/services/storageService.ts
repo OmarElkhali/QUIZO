@@ -1,5 +1,5 @@
 
-import { supabase, initializeBucket } from '@/integrations/supabase/client';
+import { QUIZ_FILES_BUCKET, getSupabaseStorageErrorMessage, supabase } from '@/integrations/supabase/client';
 
 export const uploadFileToSupabase = async (file: File, userId: string): Promise<string> => {
   try {
@@ -13,12 +13,6 @@ export const uploadFileToSupabase = async (file: File, userId: string): Promise<
     
     console.log("Starting file upload process for:", file.name);
     
-    // Ensure bucket exists before uploading (with retry)
-    const bucketReady = await initializeBucket();
-    if (!bucketReady) {
-      throw new Error('Storage bucket initialization failed. Please try again.');
-    }
-    
     // Create a unique path with timestamp
     const timestamp = Date.now();
     const cleanFileName = file.name
@@ -31,21 +25,21 @@ export const uploadFileToSupabase = async (file: File, userId: string): Promise<
     // Upload the file
     const { data, error: uploadError } = await supabase
       .storage
-      .from('quiz-files')
+      .from(QUIZ_FILES_BUCKET)
       .upload(filePath, file, {
         cacheControl: '3600',
-        upsert: true
+        upsert: false
       });
     
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      throw new Error(`Upload failed: ${uploadError.message}`);
+      throw new Error(getSupabaseStorageErrorMessage(uploadError));
     }
     
     // Get the public URL
     const { data: urlData } = supabase
       .storage
-      .from('quiz-files')
+      .from(QUIZ_FILES_BUCKET)
       .getPublicUrl(filePath);
       
     if (!urlData || !urlData.publicUrl) {
@@ -54,8 +48,8 @@ export const uploadFileToSupabase = async (file: File, userId: string): Promise<
     
     console.log("File uploaded successfully:", urlData.publicUrl);
     return urlData.publicUrl;
-  } catch (error: any) {
+  } catch (error) {
     console.error('File upload error:', error);
-    throw new Error(`File upload failed: ${error.message}`);
+    throw new Error(error instanceof Error ? error.message : 'File upload failed');
   }
 };

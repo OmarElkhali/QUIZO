@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { getUserQuizResults, getQuizResults, QuizResult } from '@/services/quizService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,13 +31,7 @@ export const QuizResultsHistory = ({ quizId }: QuizResultsHistoryProps) => {
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadResults();
-    }
-  }, [user?.id, quizId]);
-
-  const loadResults = async () => {
+  const loadResults = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -61,7 +55,13 @@ export const QuizResultsHistory = ({ quizId }: QuizResultsHistoryProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quizId, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadResults();
+    }
+  }, [loadResults, user?.id]);
 
   const toggleExpanded = (resultId: string) => {
     setExpandedResults((prev) => {

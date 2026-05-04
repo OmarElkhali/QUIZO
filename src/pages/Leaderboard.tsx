@@ -1,94 +1,107 @@
-import { useState, useEffect } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowUpDown, Home, Medal, Share2, Trophy } from 'lucide-react';
+import { toast } from 'sonner';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
-import { Trophy, Medal, Share2, Home, ArrowUpDown } from 'lucide-react';
-import { getCompetitionByShareCode, getCompetitionLeaderboard } from '@/services/manualQuizService';
+import { getCompetitionById, getCompetitionLeaderboard } from '@/services/manualQuizService';
 import { Competition, Participant } from '@/types/quiz';
 
 const Leaderboard = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const userScore = searchParams.get('score');
   const navigate = useNavigate();
-  
+  const userScore = searchParams.get('score');
+
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
+
   useEffect(() => {
+    let cancelled = false;
+
     const fetchCompetitionAndLeaderboard = async () => {
-      if (!id) return;
-      
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        // Récupérer la compétition
-        const competitionData = await getCompetitionByShareCode(id);
-        
+        const competitionData = await getCompetitionById(id);
+
         if (!competitionData) {
-          toast.error('Compétition non trouvée');
+          toast.error('Competition non trouvee');
           navigate('/join');
           return;
         }
-        
-        setCompetition(competitionData);
-        
-        // Récupérer le classement
+
         const leaderboardData = await getCompetitionLeaderboard(competitionData.id);
-        setParticipants(leaderboardData);
-      } catch (error: any) {
+
+        if (!cancelled) {
+          setCompetition(competitionData);
+          setParticipants(leaderboardData);
+        }
+      } catch (error) {
         console.error('Erreur lors du chargement du classement:', error);
-        toast.error(error.message || 'Une erreur est survenue');
+        toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
-    
+
     fetchCompetitionAndLeaderboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, navigate]);
-  
-  const toggleSortOrder = () => {
-    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
-  };
-  
-  const sortedParticipants = [...participants].sort((a, b) => {
-    const scoreA = a.score || 0;
-    const scoreB = b.score || 0;
-    return sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
-  });
-  
+
+  const sortedParticipants = useMemo(() => {
+    return [...participants].sort((a, b) => {
+      const scoreA = a.score || 0;
+      const scoreB = b.score || 0;
+      return sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+    });
+  }, [participants, sortOrder]);
+
   const handleShare = () => {
     if (!competition) return;
-    
-    const shareText = `Rejoignez la compétition "${competition.title}" avec le code: ${competition.shareCode}`;
-    const shareUrl = `${window.location.origin}/join`;
-    
+
+    const shareUrl = `${window.location.origin}/join/${competition.shareCode}`;
+    const shareText = `Rejoignez la competition "${competition.title}" avec le code: ${competition.shareCode}`;
+
     if (navigator.share) {
-      navigator.share({
-        title: `Compétition: ${competition.title}`,
-        text: shareText,
-        url: shareUrl
-      }).catch(err => console.error('Erreur lors du partage:', err));
-    } else {
-      navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`)
-        .then(() => toast.success('Lien copié dans le presse-papier!'))
-        .catch(() => toast.error('Impossible de copier le lien'));
+      navigator
+        .share({
+          title: `Competition: ${competition.title}`,
+          text: shareText,
+          url: shareUrl,
+        })
+        .catch(err => console.error('Erreur lors du partage:', err));
+      return;
     }
+
+    navigator.clipboard
+      .writeText(`${shareText}\n\n${shareUrl}`)
+      .then(() => toast.success('Lien copie dans le presse-papier'))
+      .catch(() => toast.error('Impossible de copier le lien'));
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 pt-32 pb-16 px-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" />
         </main>
       </div>
     );
   }
-  
+
   if (!competition) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -97,36 +110,36 @@ const Leaderboard = () => {
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>Erreur</CardTitle>
-              <CardDescription>Impossible de charger la compétition</CardDescription>
+              <CardDescription>Impossible de charger la competition</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center">La compétition n'a pas pu être trouvée.</p>
+              <p className="text-center">La competition n'a pas pu etre trouvee.</p>
             </CardContent>
             <CardFooter className="flex justify-center">
-              <Button onClick={() => navigate('/')}>Retour à l'accueil</Button>
+              <Button onClick={() => navigate('/')}>Retour a l'accueil</Button>
             </CardFooter>
           </Card>
         </main>
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1 pt-24 pb-16 px-6">
         <div className="container mx-auto max-w-4xl">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold mb-2">{competition.title}</h1>
             <p className="text-muted-foreground mb-4">{competition.description}</p>
-            
+
             {userScore && (
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800 mb-6 inline-block">
                 <p className="text-green-800 dark:text-green-300 font-medium">Votre score: {userScore}%</p>
               </div>
             )}
-            
+
             <div className="flex justify-center gap-4 mt-4">
               <Button variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" />
@@ -138,66 +151,63 @@ const Leaderboard = () => {
               </Button>
             </div>
           </div>
-          
+
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-4">
                 <CardTitle className="flex items-center">
                   <Trophy className="h-5 w-5 mr-2 text-amber-500" />
                   Classement
                 </CardTitle>
-                <Button variant="ghost" size="sm" onClick={toggleSortOrder}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'))}
+                >
                   <ArrowUpDown className="h-4 w-4 mr-2" />
-                  {sortOrder === 'desc' ? 'Score décroissant' : 'Score croissant'}
+                  {sortOrder === 'desc' ? 'Score decroissant' : 'Score croissant'}
                 </Button>
               </div>
               <CardDescription>
                 {participants.length} participant{participants.length !== 1 ? 's' : ''}
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent>
               {sortedParticipants.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">Aucun participant n'a encore terminé le quiz.</p>
+                  <p className="text-muted-foreground">Aucun participant n'a encore termine le quiz.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {sortedParticipants.map((participant, index) => {
-                    const rank = sortOrder === 'desc' ? index + 1 : participants.length - index;
-                    let medalColor = '';
-                    let medalIcon = null;
-                    
-                    if (rank === 1) {
-                      medalColor = 'text-yellow-500';
-                      medalIcon = <Medal className="h-5 w-5 mr-2 text-yellow-500" />;
-                    } else if (rank === 2) {
-                      medalColor = 'text-gray-400';
-                      medalIcon = <Medal className="h-5 w-5 mr-2 text-gray-400" />;
-                    } else if (rank === 3) {
-                      medalColor = 'text-amber-700';
-                      medalIcon = <Medal className="h-5 w-5 mr-2 text-amber-700" />;
-                    }
-                    
+                    const rank = index + 1;
+                    const medalClass =
+                      rank === 1
+                        ? 'text-yellow-500'
+                        : rank === 2
+                          ? 'text-gray-400'
+                          : rank === 3
+                            ? 'text-amber-700'
+                            : '';
+
                     return (
-                      <div 
-                        key={participant.id} 
+                      <div
+                        key={participant.id}
                         className={`flex items-center justify-between p-4 rounded-lg ${rank <= 3 ? 'bg-muted/50' : ''}`}
                       >
                         <div className="flex items-center">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${medalColor} ${rank <= 3 ? 'bg-muted' : 'bg-muted/30'}`}>
-                            {medalIcon || rank}
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${medalClass} ${rank <= 3 ? 'bg-muted' : 'bg-muted/30'}`}>
+                            {rank <= 3 ? <Medal className={`h-5 w-5 ${medalClass}`} /> : rank}
                           </div>
                           <div className="ml-4">
                             <p className="font-medium">{participant.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(participant.completedAt || '').toLocaleString()}
+                              {participant.completedAt ? new Date(participant.completedAt).toLocaleString() : 'En cours'}
                             </p>
                           </div>
                         </div>
-                        <div className="text-xl font-bold">
-                          {participant.score?.toFixed(1)}%
-                        </div>
+                        <div className="text-xl font-bold">{(participant.score || 0).toFixed(1)}%</div>
                       </div>
                     );
                   })}

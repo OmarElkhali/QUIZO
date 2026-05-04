@@ -1,242 +1,196 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Fonctions utilitaires
-    function signed() { 
-      return request.auth != null; 
-    }
-    
-    function isOwner(resource) { 
-      return signed() && (
-        request.auth.uid == resource.userId ||     // Pour les quiz générés par IA
-        request.auth.uid == resource.creatorId ||  // Pour les quiz manuels
-        request.auth.uid == resource.ownerId       // Pour les quiz avec ownerId
-      ); 
-    }
-    
-    function isCollaborator(resource) {
-      return signed() && 
-        resource.collaborators != null && 
-        resource.collaborators.hasAny([request.auth.uid]);
-    }
-    
-    function sameUser(field) { 
-      return request.method == 'create' || 
-        request.resource.data[field] == resource.data[field]; 
+    function signed() {
+      return request.auth != null;
     }
 
-    // === RÈGLES POUR LES UTILISATEURS ===
+    function isOwner(data) {
+      return signed() && (
+        data.get('creatorId', '') == request.auth.uid ||
+        data.get('ownerId', '') == request.auth.uid ||
+        data.get('userId', '') == request.auth.uid
+      );
+    }
+
+    function isCollaborator(data) {
+      return signed() && (
+        data.get('collaboratorUids', []).hasAny([request.auth.uid]) ||
+        data.get('collaborators', []).hasAny([request.auth.uid])
+      );
+    }
+
+    function isByCode(data) {
+      return data.get('visibility', '') == 'by_code' ||
+        data.get('isPublic', false) == true ||
+        data.get('shareCode', '') != '';
+    }
+
+    function sameExistingUser() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+    function quizData(quizId) {
+      return get(/databases/$(database)/documents/quizzes/$(quizId)).data;
+    }
+
+    function competitionData(competitionId) {
+      return get(/databases/$(database)/documents/competitions/$(competitionId)).data;
+    }
+
     match /users/{userId} {
       allow read, create, update: if signed() && request.auth.uid == userId;
       allow delete: if false;
     }
 
-    // === RÈGLES POUR LES QUIZ (UNIFIÉES) ===
+    match /shareCodes/{code} {
+      allow get: if signed();
+      allow list: if false;
+      allow create: if signed() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if signed() &&
+        resource.data.ownerId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signed() && resource.data.ownerId == request.auth.uid;
+    }
+
     match /quizzes/{quizId} {
-      
-      // Création : tout utilisateur connecté peut créer
-      allow create: if signed() && (
-        (request.resource.data.keys().hasAll(['userId']) && request.resource.data.userId == request.auth.uid) ||
-        (request.resource.data.keys().hasAll(['creatorId']) && request.resource.data.creatorId == request.auth.uid) ||
-        (request.resource.data.keys().hasAll(['ownerId']) && request.resource.data.ownerId == request.auth.uid)
-      );
-      
-      // Lecture : propriétaire, collaborateurs, ou quiz public
-      allow read: if signed() && (
+      allow create: if signed() && isOwner(request.resource.data);
+      allow get: if signed() && (
         isOwner(resource.data) ||
         isCollaborator(resource.data) ||
-        resource.data.get('isPublic', false) == true ||
-        resource.data.get('shareCode', '') != ''
+        isByCode(resource.data)
       );
-      
-      // Mise à jour : uniquement le propriétaire avec vérification de cohérence
-      allow update: if signed() && 
-        isOwner(resource.data) && 
-        (sameUser('userId') || sameUser('creatorId') || sameUser('ownerId'));
-      
-      // Suppression : uniquement le propriétaire (pas de vérification sameUser car pas de nouvelle ressource)
-      allow delete: if signed() && isOwner(resource.data);
-      
-      // Requêtes list : simplifié - la sécurité est assurée par read
-      // Firestore applique automatiquement les règles read sur chaque document
-      allow list: if signed() && request.query.limit <= 100;
-      
-      // === SOUS-COLLECTIONS POUR LE MODE TEMPS RÉEL ===
-      
-      // Participants d'un quiz manuel
+      allow list: if signed();
+      allow update, delete: if signed() && isOwner(resource.data);
+
       match /participants/{participantId} {
-        // Créer un participant : tout utilisateur connecté peut rejoindre
-        allow create: if signed();
-        
-        // Lire les participants : propriétaire du quiz ou le participant lui-même
-        allow read: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
+        allow create: if signed() &&
+          participantId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid &&
+          (isByCode(quizData(quizId)) || isOwner(quizData(quizId)));
+
+        allow get: if signed() && (
+          isOwner(quizData(quizId)) ||
+          request.auth.uid == participantId ||
           request.auth.uid == resource.data.userId
         );
-        
-        // Mettre à jour : le participant peut mettre à jour ses propres données
+
+        allow list: if signed() && isOwner(quizData(quizId));
+
         allow update: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
+          isOwner(quizData(quizId)) ||
           request.auth.uid == resource.data.userId
-        );
-        
-        // Supprimer : uniquement le propriétaire du quiz
-        allow delete: if signed() && 
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data);
-        
-        // Liste : propriétaire ou collaborateur du quiz
-        allow list: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
-          isCollaborator(get(/databases/$(database)/documents/quizzes/$(quizId)).data)
-        );
+        ) && sameExistingUser();
+
+        allow delete: if signed() && isOwner(quizData(quizId));
       }
-      
-      // Tentatives (attempts) pour un quiz manuel
+
       match /attempts/{attemptId} {
-        // Créer une tentative : tout utilisateur connecté
-        allow create: if signed();
-        
-        // Lire : propriétaire du quiz ou auteur de la tentative
-        allow read: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
+        allow create: if signed() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.participantId == request.auth.uid &&
+          (isByCode(quizData(quizId)) || isOwner(quizData(quizId)));
+
+        allow get: if signed() && (
+          isOwner(quizData(quizId)) ||
           request.auth.uid == resource.data.userId
         );
-        
-        // Mettre à jour : auteur de la tentative ou propriétaire du quiz
+
+        allow list: if signed() && isOwner(quizData(quizId));
+
         allow update: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
+          isOwner(quizData(quizId)) ||
           request.auth.uid == resource.data.userId
-        );
-        
-        // Supprimer : uniquement le propriétaire du quiz
-        allow delete: if signed() && 
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data);
-        
-        // Liste : propriétaire ou collaborateur du quiz
-        allow list: if signed() && (
-          isOwner(get(/databases/$(database)/documents/quizzes/$(quizId)).data) ||
-          isCollaborator(get(/databases/$(database)/documents/quizzes/$(quizId)).data)
-        );
+        ) && sameExistingUser();
+
+        allow delete: if signed() && isOwner(quizData(quizId));
       }
     }
 
-    // === RÈGLES POUR LES COMPÉTITIONS ===
     match /competitions/{competitionId} {
-      
-      allow create: if signed() && 
-        request.resource.data.creatorId == request.auth.uid;
-      
-      allow read: if signed();
-      
-      allow update, delete: if signed() && 
-        request.auth.uid == resource.data.creatorId &&
-        sameUser('creatorId');
-      
-      allow list: if signed() && 
-        request.query.limit <= 50;
-
-      // === SOUS-COLLECTION : PARTICIPANTS ===
-      match /participants/{participantId} {
-        
-        allow create: if signed() && 
-          request.resource.data.userId == request.auth.uid;
-        
-        allow read: if signed();
-        
-        allow update: if signed() && 
-          request.auth.uid == resource.data.userId &&
-          sameUser('userId');
-        
-        allow delete: if false;
-        
-        allow list: if signed() && 
-          request.query.limit <= 100;
-      }
-
-      // === SOUS-COLLECTION : TENTATIVES ===
-      match /attempts/{attemptId} {
-        
-        allow create: if signed() && 
-          request.resource.data.userId == request.auth.uid;
-        
-        allow read: if signed() && (
-          request.auth.uid == resource.data.userId ||
-          request.auth.uid == get(/databases/$(database)/documents/competitions/$(competitionId)).data.creatorId
-        );
-        
-        allow update: if signed() && 
-          request.auth.uid == resource.data.userId &&
-          sameUser('userId');
-        
-        allow delete: if false;
-        
-        allow list: if signed() && 
-          request.query.limit <= 100 && (
-            request.query.where.userId == request.auth.uid ||
-            request.auth.uid == get(/databases/$(database)/documents/competitions/$(competitionId)).data.creatorId
-          );
-      }
-    }
-
-    // === RÈGLES POUR LES RÉSULTATS DE QUIZ ===
-    match /quizResults/{resultId} {
-      
-      allow create: if signed() && 
-        request.resource.data.userId == request.auth.uid;
-      
-      allow read: if signed() && (
-        request.auth.uid == resource.data.userId ||
-        (exists(/databases/$(database)/documents/quizzes/$(resource.data.quizId)) &&
-         isOwner(get(/databases/$(database)/documents/quizzes/$(resource.data.quizId)).data))
+      allow create: if signed() && request.resource.data.creatorId == request.auth.uid;
+      allow get: if signed() && (
+        resource.data.creatorId == request.auth.uid ||
+        resource.data.get('shareCode', '') != '' ||
+        resource.data.get('isActive', false) == true
       );
-      
-      allow update: if signed() && 
-        request.auth.uid == resource.data.userId &&
-        sameUser('userId');
-      
-      allow delete: if false;
-      
-      allow list: if signed() && 
-        request.query.limit <= 100 && (
-          request.query.where.userId == request.auth.uid ||
-          (exists(/databases/$(database)/documents/quizzes/$(request.query.where.quizId)) &&
-           isOwner(get(/databases/$(database)/documents/quizzes/$(request.query.where.quizId)).data))
+      allow list: if signed();
+      allow update, delete: if signed() && resource.data.creatorId == request.auth.uid;
+
+      match /participants/{participantId} {
+        allow create: if signed() &&
+          participantId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid &&
+          competitionData(competitionId).get('shareCode', '') != '';
+
+        allow get: if signed() && (
+          competitionData(competitionId).creatorId == request.auth.uid ||
+          request.auth.uid == participantId ||
+          request.auth.uid == resource.data.userId ||
+          competitionData(competitionId).get('shareCode', '') != ''
         );
+
+        allow list: if signed() && competitionData(competitionId).get('shareCode', '') != '';
+
+        allow update: if signed() && (
+          competitionData(competitionId).creatorId == request.auth.uid ||
+          request.auth.uid == resource.data.userId
+        ) && sameExistingUser();
+
+        allow delete: if signed() && competitionData(competitionId).creatorId == request.auth.uid;
+      }
+
+      match /attempts/{attemptId} {
+        allow create: if signed() &&
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.participantId == request.auth.uid &&
+          competitionData(competitionId).get('shareCode', '') != '';
+
+        allow get: if signed() && (
+          competitionData(competitionId).creatorId == request.auth.uid ||
+          request.auth.uid == resource.data.userId
+        );
+
+        allow list: if signed() && competitionData(competitionId).creatorId == request.auth.uid;
+
+        allow update: if signed() && (
+          competitionData(competitionId).creatorId == request.auth.uid ||
+          request.auth.uid == resource.data.userId
+        ) && sameExistingUser();
+
+        allow delete: if signed() && competitionData(competitionId).creatorId == request.auth.uid;
+      }
     }
 
-    // === RÈGLES POUR LES SOUMISSIONS ===
-    match /submissions/{submissionId} {
-      
-      allow create: if signed() && 
-        request.resource.data.userId == request.auth.uid;
-      
-      allow read: if signed() && 
-        request.auth.uid == resource.data.userId;
-      
-      allow update: if signed() && 
+    match /quizResults/{resultId} {
+      allow create: if signed() && request.resource.data.userId == request.auth.uid;
+      allow get: if signed() && (
+        request.auth.uid == resource.data.userId ||
+        isOwner(quizData(resource.data.quizId))
+      );
+      allow list: if signed();
+      allow update: if signed() &&
         request.auth.uid == resource.data.userId &&
-        sameUser('userId');
-      
+        sameExistingUser();
       allow delete: if false;
-      
-      allow list: if signed() && 
-        request.query.limit <= 100 &&
-        request.query.where.userId == request.auth.uid;
     }
 
-    // === RÈGLES POUR LES QUESTIONS DE SECOURS ===
+    match /submissions/{submissionId} {
+      allow create: if signed() && request.resource.data.userId == request.auth.uid;
+      allow get: if signed() && request.auth.uid == resource.data.userId;
+      allow list: if signed();
+      allow update: if signed() &&
+        request.auth.uid == resource.data.userId &&
+        sameExistingUser();
+      allow delete: if false;
+    }
+
     match /backup-questions/{docId} {
-      
       allow read: if signed();
-      
       allow create, update, delete: if false;
-      
-      allow list: if signed() && 
-        request.query.limit <= 50;
     }
 
-    // === BLOQUER TOUTE AUTRE COLLECTION ===
     match /{document=**} {
       allow read, write: if false;
     }

@@ -15,7 +15,11 @@ serve(async (req) => {
 
   try {
     const { text, numQuestions, difficulty, additionalInfo } = await req.json();
-    const geminiApiKey = 'AIzaSyAzFO0MGD9VlAHSIUyrxuhlAAltmoxT5uE'; // API Key for Gemini
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY is not configured for this Supabase Edge Function');
+    }
 
     console.log(`Generating ${numQuestions} questions with Gemini. Difficulty: ${difficulty}`);
     

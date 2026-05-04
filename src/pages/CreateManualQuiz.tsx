@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { createManualQuiz } from '@/services/manualQuizService';
 
 const CreateManualQuiz = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   const [title, setTitle] = useState('');
@@ -20,6 +20,17 @@ const CreateManualQuiz = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   // Rediriger si l'utilisateur n'est pas connecté
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+        </main>
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/" />;
   }

@@ -15,7 +15,8 @@ pypdf==3.17.4
 python-docx==1.1.0
 
 # API IA
-google-generativeai==0.3.2
+google-generativeai>=0.8.0
 
-# Optionnel: rate limiting pour la sécurité
-# flask-limiter==3.5.0
+# Sécurité
+flask-limiter==3.5.0
+firebase-admin>=6.0.0

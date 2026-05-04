@@ -4,17 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { Navbar } from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
-import { Users, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { 
-  getQuizByShareCode, 
-  addParticipantToQuiz,
-  createQuizAttempt 
-} from '@/services/manualQuizService';
+import { addParticipantToQuiz, createQuizAttempt, ensureParticipantSession, getQuizByShareCode } from '@/services/manualQuizService';
 
 const JoinQuiz = () => {
   const { t } = useTranslation();
@@ -23,14 +19,15 @@ const JoinQuiz = () => {
   const navigate = useNavigate();
 
   const [shareCode, setShareCode] = useState(urlShareCode || '');
-  const [name, setName] = useState(user?.email?.split('@')[0] || '');
+  const [name, setName] = useState(user?.name || user?.email?.split('@')[0] || '');
   const [email, setEmail] = useState(user?.email || '');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleJoinQuiz = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleJoinQuiz = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-    if (!shareCode.trim()) {
+    const code = shareCode.trim().toUpperCase();
+    if (!code) {
       toast.error('Veuillez entrer un code de partage');
       return;
     }
@@ -43,50 +40,40 @@ const JoinQuiz = () => {
     setIsLoading(true);
 
     try {
-      // Récupérer le quiz
-      const quiz = await getQuizByShareCode(shareCode.toUpperCase());
-
+      await ensureParticipantSession();
+      const quiz = await getQuizByShareCode(code);
       if (!quiz) {
         toast.error('Code de partage invalide');
         setIsLoading(false);
         return;
       }
 
-      // Vérifier si le quiz est actif
       if (quiz.status === 'completed') {
-        toast.error('Ce quiz est terminé');
+        toast.error('Ce quiz est termine');
         setIsLoading(false);
         return;
       }
 
-      if (quiz.status === 'draft' && quiz.mode === 'realtime') {
-        toast.info('Ce quiz n\'a pas encore démarré. Veuillez patienter...');
+      if (quiz.status === 'draft') {
+        toast.info("Ce quiz n'a pas encore demarre. Veuillez patienter.");
         setIsLoading(false);
         return;
       }
 
-      // Utiliser l'ID utilisateur ou générer un ID temporaire
-      const userId = user?.id || `temp_${Date.now()}`;
-
-      // Ajouter le participant
-      const participantId = await addParticipantToQuiz(quiz.id, userId, name, email);
-
-      // Créer une tentative
-      const attemptId = await createQuizAttempt(quiz.id, participantId, userId);
+      const participantId = await addParticipantToQuiz(quiz.id, user?.id || '', name.trim(), email.trim());
+      const attemptId = await createQuizAttempt(quiz.id, participantId, user?.id || '');
 
       toast.success('Bienvenue ! Le quiz va commencer.');
-
-      // Rediriger vers la page du quiz avec les IDs nécessaires
-      navigate(`/take-quiz/${quiz.id}`, {
+      navigate(`/quiz-session/${quiz.id}/${attemptId}`, {
         state: {
           participantId,
           attemptId,
-          quizMode: quiz.mode
-        }
+          quizMode: quiz.mode,
+        },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erreur lors de la participation:', error);
-      toast.error(error.message || 'Erreur lors de la participation au quiz');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la participation au quiz');
       setIsLoading(false);
     }
   };
@@ -107,9 +94,7 @@ const JoinQuiz = () => {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <CardTitle className="text-2xl">{t('join.title')}</CardTitle>
-              <CardDescription>
-                {t('join.enterCode')}
-              </CardDescription>
+              <CardDescription>{t('join.enterCode')}</CardDescription>
             </CardHeader>
 
             <CardContent>
@@ -121,8 +106,8 @@ const JoinQuiz = () => {
                     type="text"
                     placeholder={t('join.codePlaceholder')}
                     value={shareCode}
-                    onChange={(e) => setShareCode(e.target.value.toUpperCase())}
-                    maxLength={6}
+                    onChange={(event) => setShareCode(event.target.value.toUpperCase())}
+                    maxLength={8}
                     className="text-center text-2xl font-mono font-bold tracking-wider"
                     disabled={isLoading}
                     required
@@ -139,7 +124,7 @@ const JoinQuiz = () => {
                     type="text"
                     placeholder={t('join.namePlaceholder')}
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(event) => setName(event.target.value)}
                     disabled={isLoading}
                     required
                   />
@@ -152,19 +137,15 @@ const JoinQuiz = () => {
                     type="email"
                     placeholder={t('join.emailPlaceholder')}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(event) => setEmail(event.target.value)}
                     disabled={isLoading}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Pour recevoir vos résultats par email
+                    Pour recevoir vos resultats par email
                   </p>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full gap-2"
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full gap-2" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -183,6 +164,7 @@ const JoinQuiz = () => {
                 <p className="text-sm text-muted-foreground">
                   Vous n'avez pas de code ?{' '}
                   <button
+                    type="button"
                     onClick={() => navigate('/')}
                     className="text-primary hover:underline"
                   >

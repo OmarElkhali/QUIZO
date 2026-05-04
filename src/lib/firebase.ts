@@ -2,17 +2,34 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import { getAnalytics } from 'firebase/analytics';
 
-// Configuration Firebase
+// Validate that required Firebase env vars are present
+const requiredEnvVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN',
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_APP_ID',
+] as const;
+
+for (const envVar of requiredEnvVars) {
+  if (!import.meta.env[envVar]) {
+    throw new Error(
+      `Variable d'environnement manquante : ${envVar}. ` +
+      `Copiez .env.example vers .env et remplissez les valeurs Firebase.`
+    );
+  }
+}
+
+// Configuration Firebase — toutes les valeurs viennent des variables d'environnement
 const firebaseConfig = {
-  apiKey: "AIzaSyD_dCI8kVmfIAhW52qPC6wK-zawdx6nmMk",
-  authDomain: "ests-quiz.firebaseapp.com",
-  projectId: "ests-quiz",
-  storageBucket: "ests-quiz.firebasestorage.app",
-  messagingSenderId: "520344746317",
-  appId: "1:520344746317:web:6be8fd307eea9222b61f04",
-  measurementId: "G-MYDPS4XE5F"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase
@@ -21,6 +38,13 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
-export const analytics = getAnalytics(app);
+
+// Analytics — only in production to avoid dev noise
+export let analytics: ReturnType<typeof import('firebase/analytics').getAnalytics> | null = null;
+if (import.meta.env.PROD && firebaseConfig.measurementId) {
+  import('firebase/analytics').then(({ getAnalytics }) => {
+    analytics = getAnalytics(app);
+  });
+}
 
 export default app;
