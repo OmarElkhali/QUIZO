@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Navbar } from '@/components/Navbar';
+import { AlertCircle, ArrowLeft, ArrowRight, Check, Clock, Loader2 } from 'lucide-react';
+import { AppShell } from '@/components/layout/AppShell';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StateCard } from '@/components/ui/StateCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Clock, Loader2 } from 'lucide-react';
 import {
   ensureParticipantSession,
   getManualQuiz,
@@ -17,6 +19,7 @@ import {
   updateParticipantProgress,
 } from '@/services/manualQuizService';
 import { Attempt, ManualQuiz } from '@/types/quiz';
+import { cn } from '@/lib/utils';
 
 interface QuizSessionLocationState {
   participantId?: string;
@@ -68,9 +71,9 @@ const QuizSession = () => {
         if (cancelled) return;
         if (!quizData) throw new Error('Quiz introuvable');
         if (!attemptData) throw new Error('Tentative introuvable');
-        if (quizData.status === 'completed') throw new Error('Ce quiz est termine');
+        if (quizData.status === 'completed') throw new Error('Ce quiz est terminé');
         if (quizData.status === 'draft' && quizData.mode === 'realtime') {
-          throw new Error("Ce quiz n'a pas encore demarre");
+          throw new Error("Ce quiz n'a pas encore démarré");
         }
 
         setQuiz(quizData);
@@ -112,7 +115,7 @@ const QuizSession = () => {
 
     try {
       const score = await submitQuizAttempt(quizId, attemptId, participantId, answers);
-      toast.success('Quiz soumis avec succes');
+      toast.success('Quiz soumis avec succès');
       navigate(`/results/${quizId}/${attemptId}`, {
         state: {
           score,
@@ -156,7 +159,7 @@ const QuizSession = () => {
     setAnswers((current) => ({ ...current, [questionId]: optionId }));
     void recordQuizAttemptAnswer(quizId, attemptId, questionId, optionId).catch((answerError) => {
       console.error('Unable to save answer:', answerError);
-      toast.error('Impossible de sauvegarder cette reponse');
+      toast.error('Impossible de sauvegarder cette réponse');
     });
   };
 
@@ -169,143 +172,163 @@ const QuizSession = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </main>
-      </div>
+      <AppShell>
+        <StateCard state="loading" title="Chargement de la session" description="Récupération du quiz et de votre tentative." />
+      </AppShell>
     );
   }
 
   if (error || !quiz || !currentQuestion) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center px-6">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Impossible de charger le quiz</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{error || 'Session invalide'}</p>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" onClick={() => navigate('/join-quiz')}>
-                Retour
-              </Button>
-            </CardFooter>
-          </Card>
-        </main>
-      </div>
+      <AppShell>
+        <StateCard
+          state="error"
+          title="Impossible de charger le quiz"
+          description={error || 'Session invalide'}
+          action={
+            <Button className="bg-[#d77a36] text-white hover:bg-[#b85f26]" onClick={() => navigate('/join-quiz')}>
+              Retour
+            </Button>
+          }
+        />
+      </AppShell>
     );
   }
 
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 py-24 px-6">
-        <div className="container mx-auto max-w-4xl">
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div>
-                <h1 className="text-2xl font-bold">{quiz.title}</h1>
-                <p className="text-muted-foreground">{quiz.description}</p>
-              </div>
-              {timeLeft !== null && (
-                <div className="flex items-center bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-3 py-2 rounded-md">
-                  <Clock className="h-4 w-4 mr-2" />
-                  <span className="font-semibold">{formatTime(timeLeft)}</span>
-                </div>
-              )}
+    <AppShell>
+      <PageHeader
+        eyebrow={quiz.mode === 'realtime' ? 'Session live' : 'Session autonome'}
+        title={quiz.title}
+        description={quiz.description || 'Répondez aux questions, votre progression est sauvegardée automatiquement.'}
+        actions={
+          timeLeft !== null ? (
+            <div className="flex items-center rounded-lg border border-[#d77a36]/30 bg-[#d77a36]/12 px-3 py-2 text-[#f7c693]">
+              <Clock className="mr-2 h-4 w-4" />
+              <span className="font-semibold tabular-nums">{formatTime(timeLeft)}</span>
             </div>
+          ) : null
+        }
+      />
 
-            <div className="flex justify-between text-sm mb-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <section>
+          <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+            <div className="mb-2 flex justify-between text-sm text-slate-400">
               <span>Question {currentQuestionIndex + 1} sur {quiz.questions.length}</span>
               <span>{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} />
+            <Progress value={progress} className="h-2 bg-white/10" />
           </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex justify-between gap-4">
+          <Card className="border-white/10 bg-white/[0.04] shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+            <CardHeader className="border-b border-white/10">
+              <CardTitle className="flex flex-col gap-3 text-xl leading-8 text-white sm:flex-row sm:justify-between">
                 <span>{currentQuestion.text}</span>
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="shrink-0 rounded-md border border-white/10 bg-[#0b0f14] px-2 py-1 text-sm font-medium text-slate-400">
                   {currentQuestion.points || 1} pt
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-5">
               <RadioGroup
                 value={answers[currentQuestion.id] || ''}
                 onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
                 className="space-y-3"
               >
-                {currentQuestion.options.map((option) => (
-                  <Label
-                    key={option.id}
-                    htmlFor={`${currentQuestion.id}-${option.id}`}
-                    className="flex items-center space-x-3 border rounded-lg p-4 cursor-pointer hover:bg-muted/50"
-                  >
-                    <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
-                    <span>{option.text}</span>
-                  </Label>
-                ))}
+                {currentQuestion.options.map((option) => {
+                  const selected = answers[currentQuestion.id] === option.id;
+                  return (
+                    <Label
+                      key={option.id}
+                      htmlFor={`${currentQuestion.id}-${option.id}`}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-slate-200 transition',
+                        selected
+                          ? 'border-[#d77a36] bg-[#d77a36]/15 text-white shadow-[0_0_0_1px_rgba(215,122,54,0.25)]'
+                          : 'border-white/10 bg-[#0b0f14] hover:border-[#d77a36]/40 hover:bg-white/[0.05]'
+                      )}
+                    >
+                      <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
+                      <span>{option.text}</span>
+                    </Label>
+                  );
+                })}
               </RadioGroup>
             </CardContent>
-            <CardFooter className="flex justify-between gap-3">
+            <CardFooter className="flex flex-col gap-3 border-t border-white/10 sm:flex-row sm:justify-between">
               <Button
                 variant="outline"
+                className="w-full border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.08] sm:w-auto"
                 onClick={() => goToQuestion(currentQuestionIndex - 1)}
                 disabled={currentQuestionIndex === 0 || isSubmitting}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Precedent
+                Précédent
               </Button>
               {currentQuestionIndex < quiz.questions.length - 1 ? (
-                <Button onClick={() => goToQuestion(currentQuestionIndex + 1)} disabled={isSubmitting}>
+                <Button className="w-full bg-[#d77a36] text-white hover:bg-[#b85f26] sm:w-auto" onClick={() => goToQuestion(currentQuestionIndex + 1)} disabled={isSubmitting}>
                   Suivant
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-                  {isSubmitting ? 'Soumission...' : 'Terminer'}
-                  <Check className="ml-2 h-4 w-4" />
+                <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Soumission...
+                    </>
+                  ) : (
+                    <>
+                      Terminer
+                      <Check className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               )}
             </CardFooter>
           </Card>
+        </section>
 
-          <div className="flex flex-wrap gap-2 justify-center">
-            {quiz.questions.map((question, index) => (
-              <Button
-                key={question.id}
-                variant={index === currentQuestionIndex ? 'default' : answers[question.id] ? 'outline' : 'ghost'}
-                size="sm"
-                className={answers[question.id] ? 'border-green-500' : ''}
-                onClick={() => goToQuestion(index)}
-                disabled={isSubmitting}
-              >
-                {index + 1}
-              </Button>
-            ))}
+        <aside className="space-y-4">
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+            <h2 className="font-semibold text-white">Navigation</h2>
+            <p className="mt-1 text-sm text-slate-500">{answeredCount} / {quiz.questions.length} réponses enregistrées</p>
+            <div className="mt-4 grid grid-cols-5 gap-2 xl:grid-cols-4">
+              {quiz.questions.map((question, index) => (
+                <Button
+                  key={question.id}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-9 border border-white/10 bg-[#0b0f14] text-slate-300 hover:bg-white/[0.08]',
+                    index === currentQuestionIndex && 'border-[#d77a36] bg-[#d77a36]/15 text-[#f7c693]',
+                    answers[question.id] && index !== currentQuestionIndex && 'border-emerald-500/40 text-emerald-300'
+                  )}
+                  onClick={() => goToQuestion(index)}
+                  disabled={isSubmitting}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {answeredCount < quiz.questions.length && (
-            <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-md border border-amber-100 dark:border-amber-800 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                {quiz.questions.length - answeredCount} question(s) sans reponse.
-              </p>
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 text-amber-300" />
+                <p className="text-sm text-amber-100">
+                  {quiz.questions.length - answeredCount} question(s) sans réponse.
+                </p>
+              </div>
             </div>
           )}
-        </div>
-      </main>
-    </div>
+        </aside>
+      </div>
+    </AppShell>
   );
 };
 
