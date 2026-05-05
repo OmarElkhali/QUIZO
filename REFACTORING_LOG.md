@@ -59,7 +59,7 @@
 - `DOCUMENTATION-INDEX.md`, `START-HERE.md`
 
 ### Dépendances supprimées
-- `openai` (aucun import — appels IA via backend Flask uniquement)
+- Ancien SDK IA inutilise (aucun import direct fournisseur cote frontend)
 - `@tailwindcss/typography` (non utilisé selon depcheck)
 
 ### Dépendances mises à jour
@@ -118,7 +118,7 @@
 Résultats documentés dans `AI_PROVIDERS_STATUS.md` :
 - **Gemini** : ✅ Fonctionnel (SDK deprecated mais opérationnel)
 - **OpenRouter** : ⚠️ Clé expirée (401)
-- **ChatGPT** : ❌ Non configuré (placeholder)
+- **Qwen** : ❌ Non configuré
 - **Groq** : ❌ Non configuré
 - **Ollama** : ❌ Non installé localement
 

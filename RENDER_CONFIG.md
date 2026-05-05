@@ -17,7 +17,9 @@ CORS_ORIGINS=https://quizo-ruddy.vercel.app,http://localhost:5173,http://localho
 
 # API Keys (déjà configurées)
 GEMINI_API_KEY=votre_clé_actuelle
-CHATGPT_API_KEY=votre_clé_openai  # Optionnel
+OPENROUTER_API_KEY=votre_cle_openrouter
+GROQ_API_KEY=votre_cle_groq
+QWEN_API_KEY=votre_cle_qwen
 
 # Autres
 LOG_LEVEL=INFO

@@ -118,7 +118,9 @@ Write-Host "     - Build Command: pip install -r requirements.txt" -ForegroundCo
 Write-Host "     - Start Command: gunicorn app:app" -ForegroundColor Gray
 Write-Host "  5. Ajoutez les variables d'environnement:" -ForegroundColor Gray
 Write-Host "     - GEMINI_API_KEY" -ForegroundColor Gray
-Write-Host "     - CHATGPT_API_KEY (optionnel)" -ForegroundColor Gray
+Write-Host "     - OPENROUTER_API_KEY (optionnel)" -ForegroundColor Gray
+Write-Host "     - GROQ_API_KEY (optionnel)" -ForegroundColor Gray
+Write-Host "     - QWEN_API_KEY (optionnel)" -ForegroundColor Gray
 Write-Host "     - CORS_ORIGINS" -ForegroundColor Gray
 Write-Host "     - LOG_LEVEL=INFO" -ForegroundColor Gray
 Write-Host "  6. Cliquez sur 'Create Web Service'" -ForegroundColor Gray

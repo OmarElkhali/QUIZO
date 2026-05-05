@@ -28,13 +28,15 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: CHATGPT_API_KEY
-        sync: false
       - key: OPENROUTER_API_KEY
         sync: false
       - key: GROQ_API_KEY
         sync: false
       - key: QWEN_API_KEY
         sync: false
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 10
+      - key: MAX_AI_QUESTIONS_PER_QUIZ
+        value: 20
     healthCheckPath: /api/health
     autoDeploy: true

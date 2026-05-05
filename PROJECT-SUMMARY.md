@@ -26,7 +26,7 @@ Backend:
 - Flask 3.0.0 + Python 3.11
 - Gunicorn (WSGI server)
 - Gemini AI (génération questions)
-- ChatGPT API (optionnel)
+- Gemini, OpenRouter, Groq, Qwen et Ollama local
 
 Database:
 - Firebase Firestore (NoSQL)
@@ -50,7 +50,7 @@ Fonctionnalités:
 - Upload PDF, DOCX, TXT (max 10 MB)
 - Extraction de texte automatique
 - Génération via Gemini AI
-- Modèles: Gemini (actif), ChatGPT (avec clé API)
+- Modèles: Gemini (actif), OpenRouter, Groq, Qwen, Ollama local
 - Difficulté: Facile, Moyen, Difficile
 - Nombre de questions: 5-20
 - Timeout: 180 secondes

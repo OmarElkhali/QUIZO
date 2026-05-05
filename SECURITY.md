@@ -8,7 +8,10 @@
 ```bash
 # python_api/.env
 GEMINI_API_KEY=votre_clé_gemini
-CHATGPT_API_KEY=votre_clé_openai
+OPENROUTER_API_KEY=votre_cle_openrouter
+GROQ_API_KEY=votre_cle_groq
+QWEN_API_KEY=votre_cle_qwen
+OLLAMA_BASE_URL=http://localhost:11434
 CORS_ORIGINS=http://localhost:5173,http://localhost:8080
 LOG_LEVEL=INFO
 ```
@@ -28,6 +31,7 @@ VITE_FIREBASE_PROJECT_ID=...
 - ❌ Ne jamais hardcoder les clés API dans le code
 - ❌ Ne jamais exposer les clés privées Firebase Admin
 - ❌ Ne jamais commit `firebase-service-account.json`
+- ❌ Ne jamais commit de fichier `*firebase-adminsdk*.json`, service account, token GitHub, cle Stripe, ou cle Supabase `service_role`
 
 ### ✅ TOUJOURS
 
@@ -36,6 +40,7 @@ VITE_FIREBASE_PROJECT_ID=...
 - ✅ Utiliser des variables d'environnement
 - ✅ Restreindre les CORS aux domaines autorisés
 - ✅ Activer le logging en production (niveau INFO)
+- ✅ Revoquer immediatement toute cle affichee dans un terminal, chat, log CI ou capture d'ecran
 
 ## 🛡️ Règles Firestore
 

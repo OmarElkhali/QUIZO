@@ -60,7 +60,10 @@ Réponse attendue:
   "version": "1.0.0",
   "services": {
     "gemini": true,
-    "chatgpt": true
+    "openrouter": true,
+    "groq": false,
+    "qwen": true,
+    "ollama": false
   }
 }
 ```
@@ -189,7 +192,7 @@ firebase deploy --only firestore:rules
 
 ## ✨ Fonctionnalités
 
-- ✅ Génération de quiz par IA (Gemini/ChatGPT)
+- ✅ Génération de quiz par IA (Gemini, OpenRouter, Groq, Qwen, Ollama)
 - ✅ Création manuelle de quiz
 - ✅ Compétitions en temps réel
 - ✅ Leaderboard

@@ -1,68 +1,38 @@
-# 🤖 AI Providers Status — QUIZO
+# AI Providers Status - QUIZO
 
-> Dernière vérification : 2026-05-04
+Derniere verification: 2026-05-05
 
-## Résumé
+## Resume
 
-| Provider | Status | Clé configurée | Modèle |
+| Provider | Role | Variable | Modele par defaut |
 |---|---|---|---|
-| **Gemini** | ✅ Fonctionnel | `GEMINI_API_KEY` ✅ | `gemini-2.5-flash` |
-| **OpenRouter** | ⚠️ Clé expirée | `OPENROUTER_API_KEY` ❌ | `qwen/qwen3.6-flash` |
-| **ChatGPT** | ❌ Non configuré | `CHATGPT_API_KEY` ❌ | `gpt-4o-mini` |
-| **Groq** | ❌ Non configuré | `GROQ_API_KEY` ❌ | `qwen/qwen3-32b` |
-| **Qwen** | ❌ Non configuré | `QWEN_API_KEY` ❌ | `qwen-plus` |
-| **Ollama** | ❌ Non installé | N/A (local) | `qwen2.5:7b` |
+| Gemini | Provider production par defaut | `GEMINI_API_KEY` | `gemini-2.5-flash` |
+| OpenRouter | Fallback multi-modeles | `OPENROUTER_API_KEY` | `qwen/qwen3.6-flash` |
+| Groq | Fallback rapide | `GROQ_API_KEY` | `qwen/qwen3-32b` |
+| Qwen | Direct ou via OpenRouter | `QWEN_API_KEY` ou `OPENROUTER_API_KEY` | `qwen-plus` |
+| Ollama local | Fallback local gratuit | aucune cle | `qwen2.5:7b` |
 
----
+## Fallback backend
 
-## Détails par Provider
+Ordre applique par `/api/generate`:
 
-### Gemini — ✅ Fonctionnel (Provider Principal)
-- **SDK :** `google-generativeai` v0.8.6 (fonctionne mais deprecated, migration vers `google.genai` recommandée)
-- **Modèle :** `gemini-2.5-flash`
-- **Clé :** Configurée dans `python_api/.env`
-- **Note :** Le SDK v0.8+ affiche un avertissement de dépréciation mais fonctionne correctement
+1. Gemini
+2. OpenRouter
+3. Groq
+4. Qwen
+5. Ollama local
+6. Generateur local a partir du texte extrait
 
-### OpenRouter — ⚠️ Clé expirée
-- **Erreur :** `401 - User not found`
-- **Raison :** La clé API `sk-or-v1-...` semble expirée ou révoquée
-- **Pour réactiver :**
-  1. Se connecter sur [openrouter.ai](https://openrouter.ai)
-  2. Générer une nouvelle clé API
-  3. Mettre à jour `OPENROUTER_API_KEY` dans `python_api/.env`
-- **Coût estimé :** Modèles gratuits disponibles (`qwen/qwen3-4b:free`, `meta-llama/llama-3.1-8b-instruct:free`)
+Les cles restent uniquement cote backend. Les erreurs fournisseur sont sanitisees avant logs/reponses.
 
-### ChatGPT — ❌ Non configuré
-- **Pour activer :**
-  1. Obtenir une clé API sur [platform.openai.com](https://platform.openai.com/api-keys)
-  2. Ajouter `CHATGPT_API_KEY=sk-...` dans `python_api/.env`
-- **Coût estimé :** ~$0.15 / million tokens (gpt-4o-mini)
+## Limites beta gratuite
 
-### Groq — ❌ Non configuré
-- **Pour activer :**
-  1. Obtenir une clé API sur [console.groq.com](https://console.groq.com)
-  2. Ajouter `GROQ_API_KEY=gsk_...` dans `python_api/.env`
-- **Coût estimé :** Gratuit (tier gratuit généreux)
+- 20 questions IA maximum par quiz (`MAX_AI_QUESTIONS_PER_QUIZ`)
+- 10 MB maximum par upload (`MAX_UPLOAD_SIZE_MB`)
+- Uploads acceptes: PDF, DOCX, TXT
 
-### Qwen Direct — ❌ Non configuré
-- **Pour activer :**
-  1. Obtenir une clé API sur [dashscope.aliyun.com](https://dashscope.aliyun.com)
-  2. Ajouter `QWEN_API_KEY=sk-...` dans `python_api/.env`
-- **Alternative :** Qwen est aussi accessible via OpenRouter (pas besoin de clé séparée)
+## Notes d'exploitation
 
-### Ollama — ❌ Non installé
-- **Pour activer :**
-  1. Installer Ollama : [ollama.com/download](https://ollama.com/download)
-  2. Exécuter : `ollama pull qwen2.5:7b`
-  3. Lancer Ollama (tourne sur `localhost:11434`)
-- **Coût :** Gratuit (exécution locale)
-- **Prérequis :** GPU recommandé pour des performances acceptables
-
----
-
-## Système de Fallback
-
-Le backend QUIZO inclut un **mécanisme de fallback automatique** :
-1. Si le provider demandé échoue → essaie de générer des questions localement à partir du texte source
-2. Les questions fallback sont basiques mais garantissent une réponse
-3. Un warning est inclus dans la réponse pour informer l'utilisateur
+- Gemini doit rester le provider production par defaut.
+- OpenRouter peut servir Qwen si `QWEN_API_KEY` n'est pas configuree.
+- Ollama ne doit jamais bloquer les autres providers s'il n'est pas lance localement.

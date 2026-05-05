@@ -8,7 +8,7 @@ Plateforme de création de quiz hybride (IA + manuel) conçue pour la compétiti
 
 - **Génération IA** — Upload un PDF/DOCX/TXT et l'IA génère des questions automatiquement
 - **Création Manuelle** — Builder de quiz intuitif avec drag & drop
-- **Multi-Providers IA** — Gemini, ChatGPT, Groq, OpenRouter, Qwen, Ollama
+- **Multi-Providers IA** — Gemini, OpenRouter, Groq, Qwen, Ollama local
 - **Compétitions Temps Réel** — Leaderboard live via Firestore `onSnapshot`
 - **Partage par Code** — Codes de partage `QUIZO-XXXXXX` pour rejoindre un quiz
 - **8 Langues** — FR, EN, ES, AR (RTL), ZH, HI, PT, DE
@@ -22,7 +22,7 @@ Plateforme de création de quiz hybride (IA + manuel) conçue pour la compétiti
 | **Backend** | Python 3, Flask 3, Gunicorn |
 | **Base de données** | Firebase Firestore |
 | **Auth** | Firebase Auth (Email + Google + Anonyme) |
-| **IA** | Gemini 2.5, GPT-4o-mini, Groq, OpenRouter, Qwen, Ollama |
+| **IA** | Gemini 2.5, OpenRouter, Groq, Qwen, Ollama |
 | **Déploiement** | Vercel (frontend) + Render (backend) |
 
 ## 🚀 Démarrage Local

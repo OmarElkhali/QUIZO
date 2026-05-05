@@ -64,7 +64,9 @@ Créez `python_api/.env` :
 ```env
 # API Keys
 GEMINI_API_KEY=your_gemini_api_key
-CHATGPT_API_KEY=your_openai_api_key  # Optionnel
+OPENROUTER_API_KEY=your_openrouter_api_key
+GROQ_API_KEY=your_groq_api_key
+QWEN_API_KEY=your_qwen_api_key
 
 # CORS Configuration
 CORS_ORIGINS=https://ests-quiz.web.app,https://ests-quiz.firebaseapp.com
@@ -132,7 +134,9 @@ npm run deploy
    Ajoutez dans l'onglet "Environment" :
    ```
    GEMINI_API_KEY=votre_clé_gemini
-   CHATGPT_API_KEY=votre_clé_openai (optionnel)
+   OPENROUTER_API_KEY=votre_cle_openrouter (optionnel)
+   GROQ_API_KEY=votre_cle_groq (optionnel)
+   QWEN_API_KEY=votre_cle_qwen (optionnel)
    CORS_ORIGINS=https://ests-quiz.web.app,https://ests-quiz.firebaseapp.com
    LOG_LEVEL=INFO
    PORT=5000
