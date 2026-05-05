@@ -147,8 +147,7 @@ export const processFileAndGenerateQuestions = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  progressCallback?: (progress: number) => void,
-  apiKey?: string
+  progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
   console.log('=== DEBUT EXTRACTION DE TEXTE ===', {
@@ -186,8 +185,7 @@ export const processFileAndGenerateQuestions = async (
       difficulty,
       additionalInfo,
       modelType,
-      progress => progressCallback?.(0.3 + progress * 0.7),
-      apiKey
+      progress => progressCallback?.(0.3 + progress * 0.7)
     );
 
     return questions;
@@ -202,8 +200,7 @@ export const generateQuestionsWithAI = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  progressCallback?: (progress: number) => void,
-  apiKey?: string
+  progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
 
@@ -224,7 +221,6 @@ export const generateQuestionsWithAI = async (
     difficulty,
     additionalInfo,
     modelType,
-    apiKey: modelType === 'chatgpt' ? apiKey : undefined,
   }, {
     headers: authHeaders,
     timeout: 240000,

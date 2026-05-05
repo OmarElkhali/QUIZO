@@ -67,7 +67,7 @@ export const generateQuizQuestions = async (
   numQuestions: number,
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
-  modelType: AIModelType = 'chatgpt',
+  modelType: AIModelType = 'gemini',
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   try {
@@ -334,10 +334,10 @@ export const getSharedQuizzes = async (userId: string): Promise<Quiz[]> => {
 };
 
 export const getQuiz = async (quizId: string): Promise<Quiz | null> => {
+  const startedAt = performance.now();
+  console.group(`[quizService] Recuperation du quiz ${quizId}`);
+
   try {
-    console.group(`[quizService] Récupération du quiz ${quizId}`);
-    console.time(`[quizService] Temps de récupération du quiz ${quizId}`);
-    
     if (!quizId) {
       console.error('[quizService] ID du quiz manquant');
       throw new Error('ID du quiz manquant');
@@ -367,9 +367,6 @@ export const getQuiz = async (quizId: string): Promise<Quiz | null> => {
       createdAt: data.createdAt
     });
     
-    console.timeEnd(`[quizService] Temps de récupération du quiz ${quizId}`);
-    console.groupEnd();
-
     return {
       id: docSnap.id,
       title: data.title || 'Quiz sans titre',
@@ -392,9 +389,10 @@ export const getQuiz = async (quizId: string): Promise<Quiz | null> => {
     };
   } catch (error) {
     console.error('[quizService] Erreur lors de la récupération du quiz:', error);
-    console.timeEnd(`[quizService] Temps de récupération du quiz ${quizId}`);
-    console.groupEnd();
     throw new Error(`Echec de la recuperation du quiz: ${getErrorMessage(error)}`);
+  } finally {
+    console.info(`[quizService] Chargement termine en ${Math.round(performance.now() - startedAt)}ms`);
+    console.groupEnd();
   }
 };
 

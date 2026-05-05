@@ -237,7 +237,7 @@ const CreatorDashboard = () => {
               <div className="flex-1" />
 
               <div className="flex items-center bg-primary/10 px-3 py-1.5 rounded-md">
-                <span className="font-mono font-bold text-lg tracking-wider mr-2">{competition.shareCode}</span>
+                <span data-testid="competition-share-code" className="font-mono font-bold text-lg tracking-wider mr-2">{competition.shareCode}</span>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={copyShareCode}>
                   {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>

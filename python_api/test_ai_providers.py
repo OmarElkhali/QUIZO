@@ -94,7 +94,7 @@ def test_provider(client, provider: str) -> dict:
 
 
 def main() -> int:
-    providers = ["gemini", "chatgpt", "openrouter", "qwen", "groq", "ollama"]
+    providers = ["gemini", "openrouter", "qwen", "groq", "ollama"]
     with app.test_client() as client:
         health = client.get("/api/health").get_json(silent=True) or {}
         provider_state = client.get("/api/providers").get_json(silent=True) or {}

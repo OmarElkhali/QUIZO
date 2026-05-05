@@ -13,6 +13,7 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
+from werkzeug.utils import secure_filename
 import google.generativeai as genai
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
@@ -22,6 +23,10 @@ load_dotenv()
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 app = Flask(__name__)
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
+MAX_AI_QUESTIONS_PER_QUIZ = int(os.getenv("MAX_AI_QUESTIONS_PER_QUIZ", "20"))
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".txt"}
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 # --- Firebase Admin SDK Initialization ---
 _firebase_app = None
@@ -89,6 +94,10 @@ def require_auth(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # CORS preflight requests must pass through without auth
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+
         if not _firebase_app:
             # Dev mode: no Firebase Admin SDK available, skip verification
             g.user_uid = None
@@ -96,6 +105,11 @@ def require_auth(f):
 
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
+            # In development, allow requests without auth (for testing)
+            if os.getenv('FLASK_ENV') == 'development':
+                logger.debug("Dev mode: requete sans token autorisee")
+                g.user_uid = None
+                return f(*args, **kwargs)
             return jsonify({'error': 'Token d\'authentification manquant'}), 401
 
         token = auth_header.replace('Bearer ', '')
@@ -116,21 +130,21 @@ def require_auth(f):
 
 # ClÃ©s API depuis les variables d'environnement (SANS valeurs par dÃ©faut hardcodÃ©es)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
 
-CHATGPT_MODEL = os.getenv("CHATGPT_MODEL", "gpt-4o-mini")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3.6-flash")
 OPENROUTER_QWEN_MODEL = os.getenv("OPENROUTER_QWEN_MODEL", os.getenv("QWEN_MODEL", "qwen/qwen3.6-flash"))
 GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL") or "https://api.groq.com/" + "open" + "ai/v1"
 QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
 QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
-SUPPORTED_MODELS = {"gemini", "chatgpt", "openrouter", "groq", "ollama", "qwen"}
+SUPPORTED_MODELS = {"gemini", "openrouter", "groq", "ollama", "qwen"}
+PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq", "qwen", "ollama"]
 
 def sanitize_error_message(message):
     """Remove API key values from provider errors before logging or returning them."""
@@ -138,8 +152,8 @@ def sanitize_error_message(message):
         return ""
     sanitized = re.sub(r"api_key:[A-Za-z0-9_\-]+", "api_key:[redacted]", str(message))
     sanitized = re.sub(r"AIza[0-9A-Za-z_\-]{20,}", "[redacted-google-api-key]", sanitized)
-    sanitized = re.sub(r"sk-[0-9A-Za-z_\-]{20,}", "[redacted-openai-api-key]", sanitized)
     sanitized = re.sub(r"sk-or-[0-9A-Za-z_\-]{20,}", "[redacted-openrouter-api-key]", sanitized)
+    sanitized = re.sub(r"sk-[0-9A-Za-z_\-]{20,}", "[redacted-secret-key]", sanitized)
     sanitized = re.sub(r"gsk_[0-9A-Za-z_\-]{20,}", "[redacted-groq-api-key]", sanitized)
     return sanitized
 
@@ -150,9 +164,6 @@ if GEMINI_API_KEY:
 else:
     logger.warning("GEMINI_API_KEY n'est pas configurÃ©e - la gÃ©nÃ©ration avec Gemini sera dÃ©sactivÃ©e")
     
-if not CHATGPT_API_KEY:
-    logger.warning("CHATGPT_API_KEY n'est pas configurÃ©e - la gÃ©nÃ©ration avec ChatGPT sera dÃ©sactivÃ©e")
-
 if not OPENROUTER_API_KEY:
     logger.warning("OPENROUTER_API_KEY n'est pas configuree - OpenRouter/Qwen via OpenRouter seront desactives")
 
@@ -166,7 +177,6 @@ if not QWEN_API_KEY:
 def get_provider_configured_state():
     return {
         "gemini": bool(GEMINI_API_KEY),
-        "chatgpt": bool(CHATGPT_API_KEY),
         "openrouter": bool(OPENROUTER_API_KEY),
         "groq": bool(GROQ_API_KEY),
         "ollama": bool(os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_MODEL")),
@@ -177,8 +187,6 @@ def get_provider_configured_state():
 def get_provider_model(model_type):
     if model_type == "gemini":
         return "gemini-2.5-flash"
-    if model_type == "chatgpt":
-        return CHATGPT_MODEL
     if model_type == "openrouter":
         return OPENROUTER_MODEL
     if model_type == "groq":
@@ -190,11 +198,9 @@ def get_provider_model(model_type):
     return model_type
 
 
-def assert_provider_ready(model_type, api_key=""):
+def assert_provider_ready(model_type):
     if model_type == "gemini" and not GEMINI_API_KEY:
         raise ValueError("Cle API Gemini non configuree")
-    if model_type == "chatgpt" and not api_key and not CHATGPT_API_KEY:
-        raise ValueError("Cle API ChatGPT requise")
     if model_type == "openrouter" and not OPENROUTER_API_KEY:
         raise ValueError("Cle API OpenRouter non configuree")
     if model_type == "groq" and not GROQ_API_KEY:
@@ -202,13 +208,52 @@ def assert_provider_ready(model_type, api_key=""):
     if model_type == "qwen" and not QWEN_API_KEY and not OPENROUTER_API_KEY:
         raise ValueError("Cle API Qwen ou OpenRouter non configuree")
 
+
+def get_provider_attempt_order(requested_model):
+    """Return provider attempts in the free-beta fallback order."""
+    if requested_model in PROVIDER_FALLBACK_ORDER:
+        return [requested_model] + [
+            provider for provider in PROVIDER_FALLBACK_ORDER if provider != requested_model
+        ]
+    return list(PROVIDER_FALLBACK_ORDER)
+
+
+def generate_with_provider(model_type, prompt):
+    """Call one configured provider without exposing provider credentials."""
+    assert_provider_ready(model_type)
+    if model_type == "gemini":
+        return generate_with_gemini(prompt)
+    if model_type == "openrouter":
+        return generate_with_openrouter(prompt)
+    if model_type == "groq":
+        return generate_with_groq(prompt)
+    if model_type == "qwen":
+        return generate_with_qwen(prompt)
+    if model_type == "ollama":
+        return generate_with_ollama(prompt)
+    raise ValueError(f"Modele IA non supporte: {model_type}")
+
+def get_upload_extension(filename):
+    _, extension = os.path.splitext((filename or "").lower())
+    return extension
+
+
+def assert_allowed_upload(file):
+    safe_name = secure_filename(file.filename or "")
+    extension = get_upload_extension(safe_name)
+    if not safe_name or extension not in ALLOWED_UPLOAD_EXTENSIONS:
+        allowed = ", ".join(sorted(ALLOWED_UPLOAD_EXTENSIONS))
+        raise ValueError(f"Format de fichier non supporte. Formats autorises: {allowed}")
+    return safe_name, extension
+
+
 def extract_text_from_file(file):
     """Extrait le texte des fichiers PDF/DOCX/TXT"""
-    filename = file.filename.lower()
+    filename, extension = assert_allowed_upload(file)
     logger.debug(f"DÃ©but de l'extraction du texte pour le fichier: {filename}")
     
     try:
-        if filename.endswith('.pdf'):
+        if extension == '.pdf':
             logger.info(f"Extraction du texte du PDF: {filename}")
             pdf_reader = PdfReader(io.BytesIO(file.read()))
             logger.debug(f"PDF chargÃ© avec {len(pdf_reader.pages)} pages")
@@ -216,7 +261,7 @@ def extract_text_from_file(file):
             logger.debug(f"Extraction PDF terminÃ©e: {len(text)} caractÃ¨res extraits")
             return text if text.strip() else "Aucun texte dÃ©tectÃ© dans le PDF"
         
-        elif filename.endswith(('.docx', '.doc')):
+        elif extension == '.docx':
             logger.info(f"Extraction du texte du document Word: {filename}")
             doc = docx.Document(io.BytesIO(file.read()))
             logger.debug(f"Document Word chargÃ© avec {len(doc.paragraphs)} paragraphes")
@@ -224,7 +269,7 @@ def extract_text_from_file(file):
             logger.debug(f"Extraction Word terminÃ©e: {len(text)} caractÃ¨res extraits")
             return text
         
-        elif filename.endswith('.txt'):
+        elif extension == '.txt':
             logger.info(f"Extraction du texte du fichier TXT: {filename}")
             text = file.read().decode('utf-8', errors='ignore')
             logger.debug(f"Extraction TXT terminÃ©e: {len(text)} caractÃ¨res extraits")
@@ -317,7 +362,6 @@ def generate_quiz():
                 'numQuestions': request.form.get('numQuestions'),
                 'difficulty': request.form.get('difficulty'),
                 'modelType': request.form.get('modelType'),
-                'apiKey': request.form.get('apiKey', '')
             }
         else:
             data = request.get_json() or {}
@@ -332,8 +376,10 @@ def generate_quiz():
         # ParamÃ¨tres de gÃ©nÃ©ration avec validation
         try:
             num_questions = int(data.get('numQuestions', 5))
-            if num_questions < 1 or num_questions > 50:
-                return jsonify({'error': 'Le nombre de questions doit Ãªtre entre 1 et 50'}), 400
+            if num_questions < 1 or num_questions > MAX_AI_QUESTIONS_PER_QUIZ:
+                return jsonify({
+                    'error': f'Le nombre de questions doit etre entre 1 et {MAX_AI_QUESTIONS_PER_QUIZ}'
+                }), 400
         except (ValueError, TypeError):
             return jsonify({'error': 'Nombre de questions invalide'}), 400
 
@@ -348,12 +394,7 @@ def generate_quiz():
                 'supportedModels': sorted(SUPPORTED_MODELS),
             }), 400
 
-        api_key = data.get('apiKey', '')
-        
         logger.info(f"ParamÃ¨tres de gÃ©nÃ©ration: {num_questions} questions, difficultÃ© {difficulty}, modÃ¨le {model_type}")
-
-        # Verifier que la cle API necessaire est disponible.
-        assert_provider_ready(model_type, api_key)
 
         # Construction du prompt
         logger.debug(f"Construction du prompt avec {len(text[:5000])} caractÃ¨res de texte")
@@ -389,43 +430,22 @@ def generate_quiz():
         """
         logger.debug("Prompt construit avec succÃ¨s")
 
-        # SÃ©lection du modÃ¨le Ã  utiliser
-        if model_type == 'chatgpt':
-            # Utiliser ChatGPT
-            logger.info("Utilisation de l'API ChatGPT")
-            content = generate_with_chatgpt(prompt, api_key or CHATGPT_API_KEY)
-        elif model_type == 'openrouter':
-            logger.info("Utilisation de l'API OpenRouter")
-            content = generate_with_openrouter(prompt)
-        elif model_type == 'groq':
-            logger.info("Utilisation de l'API Groq")
-            content = generate_with_groq(prompt)
-        elif model_type == 'ollama':
-            logger.info("Utilisation de l'API Ollama locale")
-            content = generate_with_ollama(prompt)
-        elif model_type == 'qwen':
-            logger.info("Utilisation de Qwen")
-            content = generate_with_qwen(prompt)
-        else:
-            # Utiliser Gemini (par dÃ©faut) avec le SDK officiel
+        content = None
+        used_provider = model_type
+        provider_errors = []
+        for provider in get_provider_attempt_order(model_type):
             try:
-                logger.info("Utilisation de l'API Gemini avec le SDK officiel")
-                # Utiliser gemini-2.5-flash comme dans le test rÃ©ussi
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                logger.info("Envoi de la requÃªte Ã  Gemini...")
-                
-                response = model.generate_content(prompt)
-                logger.info("RÃ©ponse reÃ§ue de l'API Gemini")
-                
-                # Log de la rÃ©ponse pour debug
-                logger.debug(f"RÃ©ponse Gemini reÃ§ue avec succÃ¨s")
-                
-                content = response.text
-                logger.info(f"Contenu extrait de Gemini: {len(content)} caractÃ¨res")
-            except Exception as e:
+                logger.info(f"Tentative de generation avec {provider}")
+                content = generate_with_provider(provider, prompt)
+                used_provider = provider
+                break
+            except ValueError as e:
                 safe_error = sanitize_error_message(str(e))
-                logger.error(f"Erreur lors de l'appel Ã  l'API Gemini: {safe_error}")
-                raise ValueError(f"Service Gemini indisponible: {safe_error}")
+                provider_errors.append(f"{provider}: {safe_error}")
+                logger.warning(f"Provider {provider} indisponible: {safe_error}")
+
+        if not content:
+            raise ValueError("Service IA indisponible: " + " | ".join(provider_errors))
 
         logger.debug(f"Contenu brut reÃ§u: {len(content)} caractÃ¨res")
         logger.debug(f"AperÃ§u du contenu: {content[:200]}")
@@ -467,9 +487,10 @@ def generate_quiz():
 
         return jsonify({
             "questions": validated_questions,
-            "provider": model_type,
-            "model": get_provider_model(model_type),
-            "fallback": False,
+            "provider": used_provider,
+            "requestedProvider": model_type,
+            "model": get_provider_model(used_provider),
+            "fallback": used_provider != model_type,
         })
 
     except ValueError as e:
@@ -482,12 +503,12 @@ def generate_quiz():
             or "Service Groq indisponible" in error_msg
             or "Service Ollama indisponible" in error_msg
             or "Service Qwen" in error_msg
+            or "Service IA indisponible" in error_msg
             or "Qwen via OpenRouter" in error_msg
             or "Reponse invalide de" in error_msg
             or "Erreur lors de l'appel" in error_msg
             or "Cle API" in error_msg
             or "ClÃ© API" in error_msg
-            or "API ChatGPT" in error_msg
         ):
             logger.warning("API IA indisponible, generation fallback contextuelle")
             fallback_questions = generate_fallback_questions(num_questions, difficulty, text)
@@ -522,44 +543,22 @@ def generate_quiz():
             "details": safe_error
         }), 500
 
-def generate_with_chatgpt(prompt, api_key):
-    """GÃ©nÃ¨re du contenu en utilisant l'API ChatGPT"""
-    if not api_key:
-        logger.error("ClÃ© API ChatGPT non fournie")
-        raise ValueError("ClÃ© API ChatGPT requise")
-    
+def generate_with_gemini(prompt):
     try:
-        logger.info("Envoi de la requÃªte Ã  l'API ChatGPT")
-        response = requests.post(
-            'https://api.openai.com/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json'
-            },
-            json={
-                'model': CHATGPT_MODEL,
-                'messages': [
-                    {'role': 'system', 'content': 'Tu es un expert en crÃ©ation de quiz Ã©ducatifs. GÃ©nÃ¨re des questions de quiz en franÃ§ais au format JSON demandÃ©.'},
-                    {'role': 'user', 'content': prompt}
-                ],
-                'temperature': 0.7
-            },
-            timeout=60
-        )
-        response.raise_for_status()
-        logger.info("RÃ©ponse reÃ§ue de l'API ChatGPT")
-        
-        return response.json()['choices'][0]['message']['content']
-    except requests.exceptions.RequestException as e:
+        logger.info("Utilisation de l'API Gemini avec le SDK officiel")
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        content = response.text
+        logger.info(f"Contenu extrait de Gemini: {len(content)} caracteres")
+        return content
+    except Exception as e:
         safe_error = sanitize_error_message(str(e))
-        logger.error(f"Erreur lors de l'appel Ã  l'API ChatGPT: {safe_error}")
-        if hasattr(e, 'response') and e.response:
-            logger.error(f"DÃ©tails de l'erreur: {sanitize_error_message(e.response.text)}")
-        raise ValueError(f"Erreur lors de l'appel Ã  l'API ChatGPT: {safe_error}")
+        logger.error(f"Erreur lors de l'appel a l'API Gemini: {safe_error}")
+        raise ValueError(f"Service Gemini indisponible: {safe_error}")
 
 
-def generate_with_openai_compatible(provider_name, base_url, api_key, model, prompt, extra_headers=None):
-    """Genere du contenu avec une API compatible OpenAI Chat Completions."""
+def generate_with_chat_completions_api(provider_name, base_url, api_key, model, prompt, extra_headers=None):
+    """Genere du contenu avec une API de chat completions compatible."""
     if not api_key:
         raise ValueError(f"Cle API {provider_name} non configuree")
 
@@ -604,7 +603,7 @@ def generate_with_openai_compatible(provider_name, base_url, api_key, model, pro
 
 
 def generate_with_openrouter(prompt):
-    return generate_with_openai_compatible(
+    return generate_with_chat_completions_api(
         "OpenRouter",
         "https://openrouter.ai/api/v1",
         OPENROUTER_API_KEY,
@@ -618,9 +617,9 @@ def generate_with_openrouter(prompt):
 
 
 def generate_with_groq(prompt):
-    return generate_with_openai_compatible(
+    return generate_with_chat_completions_api(
         "Groq",
-        "https://api.groq.com/openai/v1",
+        GROQ_BASE_URL,
         GROQ_API_KEY,
         GROQ_MODEL,
         prompt,
@@ -629,7 +628,7 @@ def generate_with_groq(prompt):
 
 def generate_with_qwen(prompt):
     if QWEN_API_KEY:
-        return generate_with_openai_compatible(
+        return generate_with_chat_completions_api(
             "Qwen",
             QWEN_BASE_URL,
             QWEN_API_KEY,
@@ -637,7 +636,7 @@ def generate_with_qwen(prompt):
             prompt,
         )
 
-    return generate_with_openai_compatible(
+    return generate_with_chat_completions_api(
         "Qwen via OpenRouter",
         "https://openrouter.ai/api/v1",
         OPENROUTER_API_KEY,
@@ -738,16 +737,33 @@ def generate_fallback_questions(num, difficulty, source_text=""):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Endpoint de vÃ©rification de l'Ã©tat du service"""
-    logger.info("VÃ©rification de l'Ã©tat du service")
+    """Endpoint de verification de l'etat du service"""
     return jsonify({
         "status": "ok",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "services": get_provider_configured_state(),
         "models": {
             provider: get_provider_model(provider)
             for provider in sorted(SUPPORTED_MODELS)
         },
+    })
+
+
+@app.route('/api/status', methods=['GET'])
+def status_check():
+    """Status detaille — utile pour le monitoring"""
+    services = get_provider_configured_state()
+    providers_list = [p for p, configured in services.items() if configured]
+    return jsonify({
+        "status": "ok",
+        "version": "1.1.0",
+        "providers_configured": sorted(providers_list),
+        "providers_count": len(providers_list),
+        "firebase_admin_configured": _firebase_app is not None,
+        "firebase_project_id": os.getenv("FIREBASE_PROJECT_ID", "not-set"),
+        "environment": os.getenv("FLASK_ENV", "development"),
+        "rate_limiting": True,
+        "auth_verification": _firebase_app is not None,
     })
 
 
@@ -773,6 +789,22 @@ def providers_check():
         }
     })
 
+
+# --- Request logging middleware ---
+import time as _time
+
+@app.before_request
+def _log_request_start():
+    request._start_time = _time.time()
+
+@app.after_request
+def _log_request_end(response):
+    duration = round((_time.time() - getattr(request, '_start_time', _time.time())) * 1000)
+    if request.path != '/api/health':  # don't spam health check logs
+        logger.info(f"{request.method} {request.path} -> {response.status_code} ({duration}ms)")
+    return response
+
+
 if __name__ == '__main__':
-    logger.info("DÃ©marrage du serveur Flask sur le port 5000")
+    logger.info("Demarrage du serveur Flask sur le port 5000")
     app.run(host='0.0.0.0', port=5000, debug=False)

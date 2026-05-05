@@ -22,7 +22,6 @@ import { AIModelType } from '@/types/quiz';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
   { value: 'gemini', label: 'Gemini', description: 'Google Gemini via le backend Flask.' },
-  { value: 'chatgpt', label: 'ChatGPT', description: 'OpenAI compatible via clé serveur.' },
   { value: 'openrouter', label: 'OpenRouter', description: 'Routeur multi-modeles configure côté backend.' },
   { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
   { value: 'groq', label: 'Groq', description: 'Groq si une clé API est fournie.' },
@@ -139,7 +138,6 @@ export const QuizForm = () => {
         difficulty, 
         enableTimeLimit ? timeLimit : undefined, 
         additionalInfo,
-        undefined, 
         modelType,
         statusCallback
       );
@@ -317,15 +315,15 @@ export const QuizForm = () => {
               id="num-questions"
               value={[numQuestions]}
               min={5}
-              max={50}
+              max={20}
               step={5}
               onValueChange={(value) => setNumQuestions(value[0])}
               className="py-4"
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>5</span>
-              <span>25</span>
-              <span>50</span>
+              <span>10</span>
+              <span>20</span>
             </div>
           </div>
           

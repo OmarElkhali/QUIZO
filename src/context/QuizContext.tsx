@@ -16,7 +16,6 @@ interface QuizContextType {
     difficulty: 'easy' | 'medium' | 'hard',
     timeLimit?: number,
     additionalInfo?: string, 
-    apiKey?: string,
     modelType?: AIModelType,
     progressCallback?: ProgressCallback
   ) => Promise<string>;

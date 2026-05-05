@@ -1,7 +1,6 @@
 ﻿
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +13,15 @@ import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/context/AuthContext';
 import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { AIModelType } from '@/types/quiz';
+
+const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
+  { value: 'gemini', label: 'Gemini', description: 'Fournisseur principal pour la production.' },
+  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur multi-modeles configure cote backend.' },
+  { value: 'groq', label: 'Groq', description: 'Generation rapide si la cle serveur est configuree.' },
+  { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
+  { value: 'ollama', label: 'Ollama', description: 'Modele local si Ollama tourne sur cette machine.' },
+];
 
 export const CreateQuizForm = () => {
   const navigate = useNavigate();
@@ -23,8 +31,7 @@ export const CreateQuizForm = () => {
   const [file, setFile] = useState<File | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [selectedAI, setSelectedAI] = useState<'chatgpt' | 'local'>('local');
-  const [apiKey, setApiKey] = useState(''); // Initialize with empty string instead of DEFAULT_API_KEY
+  const [selectedAI, setSelectedAI] = useState<AIModelType>('gemini');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [timeLimit, setTimeLimit] = useState(15); // Default time limit in minutes
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
@@ -57,9 +64,7 @@ export const CreateQuizForm = () => {
 
     try {
       console.log('Starting quiz creation process');
-      const apiKeyToUse = selectedAI === 'chatgpt' ? apiKey : undefined;
       const actualTimeLimit = enableTimeLimit ? timeLimit : undefined;
-      const modelType = selectedAI === 'chatgpt' ? 'chatgpt' : 'gemini';
       
       // DÃ©finir une fonction de callback pour suivre la progression
       const progressCallback = (stage: string, percent: number, message?: string) => {
@@ -72,8 +77,7 @@ export const CreateQuizForm = () => {
         difficulty,
         actualTimeLimit,
         additionalInfo,
-        apiKeyToUse,
-        modelType,
+        selectedAI,
         progressCallback
       );
       
@@ -179,36 +183,24 @@ export const CreateQuizForm = () => {
         
         <div className="space-y-4">
           <Label>ModÃ¨le d'IA pour la gÃ©nÃ©ration</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">  {/* Ajout de grid-cols-1 pour mobile */}
-            <Card 
-              className={`p-4 cursor-pointer transition-all hover:shadow-md border ${
-                selectedAI === 'local' ? 'border-[#D2691E]' : 'border-input'
-              }`}
-              onClick={() => setSelectedAI('local')}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">Gemini</h3>
-                  <p className="text-xs text-muted-foreground">RecommandÃ©, fonctionne hors ligne</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {AI_MODELS.map((model) => (
+              <Card
+                key={model.value}
+                className={`p-4 cursor-pointer transition-all hover:shadow-md border ${
+                  selectedAI === model.value ? 'border-[#D2691E]' : 'border-input'
+                }`}
+                onClick={() => setSelectedAI(model.value)}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-medium">{model.label}</h3>
+                    <p className="text-xs text-muted-foreground">{model.description}</p>
+                  </div>
+                  <div className={`h-4 w-4 shrink-0 rounded-full ${selectedAI === model.value ? 'bg-[#D2691E]' : 'bg-muted'}`} />
                 </div>
-                <div className={`w-4 h-4 rounded-full ${selectedAI === 'local' ? 'bg-[#D2691E]' : 'bg-muted'}`}></div>
-              </div>
-            </Card>
-            
-            <Card 
-              className={`p-4 cursor-pointer transition-all hover:shadow-md border ${
-                selectedAI === 'chatgpt' ? 'border-[#D2691E]' : 'border-input'
-              }`}
-              onClick={() => setSelectedAI('chatgpt')}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">ChatGPT</h3>
-                  <p className="text-xs text-muted-foreground">QualitÃ© supÃ©rieure, requiert une API key</p>
-                </div>
-                <div className={`w-4 h-4 rounded-full ${selectedAI === 'chatgpt' ? 'bg-[#D2691E]' : 'bg-muted'}`}></div>
-              </div>
-            </Card>
+              </Card>
+            ))}
           </div>
         </div>
         
@@ -223,15 +215,15 @@ export const CreateQuizForm = () => {
             id="num-questions"
             value={[numQuestions]}
             min={5}
-            max={50}
+                max={20}
             step={5}
             onValueChange={handleNumQuestionsChange}
             className="py-4"
           />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>5</span>
-            <span>25</span>
-            <span>50</span>
+                <span>10</span>
+                <span>20</span>
           </div>
         </div>
         
@@ -246,28 +238,11 @@ export const CreateQuizForm = () => {
           />
         </div>
         
-        {selectedAI === 'chatgpt' && (
-          <div className="space-y-2">
-            <Label htmlFor="api-key">ChatGPT API Key (Requis)</Label>
-            <Input 
-              id="api-key" 
-              type="password" 
-              placeholder="sk-..." 
-              className="font-mono"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Votre clÃ© API est stockÃ©e uniquement sur votre appareil et n'est jamais partagÃ©e.
-            </p>
-          </div>
-        )}
-        
         <div className="pt-4 flex flex-col sm:flex-row gap-4">
           <Button 
             type="submit" 
             className="w-full btn-shine bg-[#D2691E] hover:bg-[#D2691E]/90"
-            disabled={isLoading || !file || !user || (selectedAI === 'chatgpt' && !apiKey)}
+            disabled={isLoading || !file || !user}
           >
             {isLoading ? (
               <>

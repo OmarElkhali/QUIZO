@@ -11,7 +11,7 @@ export interface Question {
   correctAnswer?: string;
 }
 
-export type AIModelType = 'chatgpt' | 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'qwen';
+export type AIModelType = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'qwen';
 
 export interface Quiz {
   id: string;
@@ -47,7 +47,6 @@ export interface QuizContextType {
     difficulty?: 'easy' | 'medium' | 'hard',
     timeLimit?: number,
     additionalInfo?: string,
-    apiKey?: string,
     modelType?: AIModelType,
     progressCallback?: ProgressCallback
   ) => Promise<string>;

@@ -367,11 +367,6 @@ export const submitAttemptAnswers = async (
   quizId: string
 ): Promise<number> => submitCompetitionAttempt(competitionId, attemptId, participantId, answers, quizId);
 
-export const getCompetitionParticipants = async (competitionId: string): Promise<Participant[]> => {
-  const snapshot = await getDocs(query(collection(db, 'competitions', competitionId, 'participants'), orderBy('joinedAt', 'desc')));
-  return snapshot.docs.map((participantDoc) => mapParticipant(participantDoc.id, participantDoc.data()));
-};
-
 const calculateScore = (questions: ManualQuestion[], answers: Record<string, string>): number => {
   let earned = 0;
   let total = 0;

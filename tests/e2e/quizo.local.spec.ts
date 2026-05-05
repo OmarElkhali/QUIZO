@@ -62,6 +62,7 @@ async function completeQuizSession(page: Page) {
 async function joinSharedQuiz(browser: Browser, baseURL: string, shareCode: string) {
   const context = await browser.newContext();
   const page = await context.newPage();
+  await signUpTestUser(page, 'participant');
   await page.goto(`${baseURL}/join-quiz/${shareCode}`);
   await page.locator('#name').fill('Participant E2E');
   await page.locator('#email').fill('participant.e2e@example.com');
@@ -107,7 +108,7 @@ test.describe.serial('QUIZO local complete flow', () => {
 
     await addQuestion(page, 'Combien font 2 + 2 ?', ['4', '3', '5', '6']);
     await addQuestion(page, 'Quelle plateforme héberge le frontend ?', ['Vercel', 'Render', 'Firebase', 'Supabase']);
-    await addQuestion(page, 'Quel service stocke les participants realtime ?', ['Firebase', 'Vercel', 'GitHub', 'OpenAI']);
+    await addQuestion(page, 'Quel service stocke les participants realtime ?', ['Firebase', 'Vercel', 'GitHub', 'Supabase']);
 
     await page.getByRole('button', { name: /Code/i }).first().click();
     const shareCode = (await page.locator('.font-mono').first().innerText()).trim();
@@ -132,12 +133,13 @@ test.describe.serial('QUIZO local complete flow', () => {
     await page.waitForURL(/\/creator-dashboard\/.+/, { timeout: 40_000 });
 
     const competitionId = page.url().split('/').pop();
-    const competitionCode = (await page.locator('.font-mono').first().innerText()).trim();
+    const competitionCode = (await page.getByTestId('competition-share-code').innerText()).trim();
     expect(competitionId).toBeTruthy();
     expect(competitionCode).toMatch(/^[A-Z0-9]{6}$/);
 
     const competitionContext = await browser.newContext();
     const competitorPage = await competitionContext.newPage();
+    await signUpTestUser(competitorPage, 'competitor');
     await competitorPage.goto(`${baseURL}/join/${competitionCode}`);
     await competitorPage.locator('#participant-name').fill('Compétiteur E2E');
     await competitorPage.getByRole('button', { name: /Rejoindre la compétition|Join/i }).click();

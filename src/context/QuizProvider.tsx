@@ -4,7 +4,7 @@ import { AIModelType, Quiz } from '@/types/quiz';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import * as quizService from '@/services/quizService';
-import { generateQuestionsWithAI, getFirebaseBackupQuestions, processFileAndGenerateQuestions } from '@/services/aiService';
+import { getFirebaseBackupQuestions, processFileAndGenerateQuestions } from '@/services/aiService';
 import { useNavigate } from 'react-router-dom';
 
 type ProgressCallback = (stage: string, percent: number, message?: string) => void;
@@ -73,7 +73,6 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     difficulty: 'easy' | 'medium' | 'hard' = 'medium',
     timeLimit?: number,
     additionalInfo?: string,
-    apiKey?: string,
     modelType: AIModelType = 'gemini',
     progressCallback?: ProgressCallback
   ) => {
@@ -89,8 +88,8 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Aucun fichier sélectionné");
       }
       
-      if (numQuestions <= 0 || numQuestions > 50) {
-        throw new Error("Le nombre de questions doit être entre 1 et 50");
+      if (numQuestions <= 0 || numQuestions > 20) {
+        throw new Error("Le nombre de questions doit etre entre 1 et 20");
       }
       
       // 2. Initialisation
@@ -121,8 +120,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
           (progress: number) => {
             const percent = 30 + Math.round(progress * 45);
             progressCallback?.('Génération des questions', percent, `Progression: ${Math.round(progress * 100)}%`);
-          },
-          apiKey
+          }
         );
       } catch (genError) {
         // En cas d'erreur, aucune notification à l'utilisateur

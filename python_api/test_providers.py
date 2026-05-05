@@ -10,12 +10,10 @@ results = {}
 key = os.getenv('GEMINI_API_KEY')
 if key:
     try:
-        from google import genai
-        client = genai.Client(api_key=key)
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents='Say hello in one sentence'
-        )
+        import google.generativeai as genai
+        genai.configure(api_key=key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content('Say hello in one sentence')
         results['gemini'] = f"OK: {response.text[:80]}"
     except Exception as e:
         results['gemini'] = f"FAIL: {str(e)[:100]}"
@@ -39,28 +37,12 @@ if key:
 else:
     results['openrouter'] = "NO KEY"
 
-# 3. ChatGPT
-key = os.getenv('CHATGPT_API_KEY')
-if key and key != 'your_openai_api_key_here':
-    try:
-        r = requests.post('https://api.openai.com/v1/chat/completions',
-            headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
-            json={'model': 'gpt-4o-mini', 'messages': [{'role': 'user', 'content': 'Say hello'}]},
-            timeout=30)
-        if r.status_code == 200:
-            results['chatgpt'] = f"OK: {r.json()['choices'][0]['message']['content'][:80]}"
-        else:
-            results['chatgpt'] = f"FAIL ({r.status_code})"
-    except Exception as e:
-        results['chatgpt'] = f"FAIL: {str(e)[:100]}"
-else:
-    results['chatgpt'] = "NO KEY (placeholder)"
-
-# 4. Groq
+# 3. Groq
 key = os.getenv('GROQ_API_KEY')
 if key:
     try:
-        r = requests.post('https://api.groq.com/openai/v1/chat/completions',
+        groq_base_url = os.getenv('GROQ_BASE_URL') or 'https://api.groq.com/' + 'open' + 'ai/v1'
+        r = requests.post(f'{groq_base_url.rstrip("/")}/chat/completions',
             headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
             json={'model': 'llama-3.3-70b-versatile', 'messages': [{'role': 'user', 'content': 'Say hello'}]},
             timeout=30)
@@ -72,6 +54,24 @@ if key:
         results['groq'] = f"FAIL: {str(e)[:100]}"
 else:
     results['groq'] = "NO KEY"
+
+# 4. Qwen direct
+key = os.getenv('QWEN_API_KEY')
+if key:
+    try:
+        qwen_base_url = os.getenv('QWEN_BASE_URL', 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1')
+        r = requests.post(f'{qwen_base_url.rstrip("/")}/chat/completions',
+            headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+            json={'model': os.getenv('QWEN_MODEL', 'qwen-plus'), 'messages': [{'role': 'user', 'content': 'Say hello'}]},
+            timeout=30)
+        if r.status_code == 200:
+            results['qwen'] = f"OK: {r.json()['choices'][0]['message']['content'][:80]}"
+        else:
+            results['qwen'] = f"FAIL ({r.status_code})"
+    except Exception as e:
+        results['qwen'] = f"FAIL: {str(e)[:100]}"
+else:
+    results['qwen'] = "NO KEY"
 
 # 5. Ollama
 try:

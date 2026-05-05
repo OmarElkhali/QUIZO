@@ -30,7 +30,7 @@ const Quiz = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { submitQuizAnswers, getQuiz } = useQuiz();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -41,6 +41,7 @@ const Quiz = () => {
   const [error, setError] = useState<string | null>(null);
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const loadedQuizIdRef = useRef<string | null>(null);
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
 
@@ -48,13 +49,24 @@ const Quiz = () => {
   useEffect(() => {
     let isMounted = true;
     const loadQuiz = async () => {
+      if (isAuthLoading || !user?.id) {
+        return;
+      }
+
       if (!id) {
         setError('ID manquant');
         setIsLoading(false);
         return;
       }
 
+      if (loadedQuizIdRef.current === id) {
+        return;
+      }
+
       try {
+        setIsLoading(true);
+        setError(null);
+        setCurrentQuestionIndex(0);
         const data = await getQuiz(id);
         if (!isMounted) return;
 
@@ -89,10 +101,11 @@ const Quiz = () => {
         // Définir le temps restant
         const calculatedTimeLimit = data.timeLimit || Math.ceil(data.questions.length * 1.5);
         setTimeLeft(calculatedTimeLimit * 60);
-        
+        loadedQuizIdRef.current = id;
         setIsLoading(false);
       } catch (err: any) {
         if (isMounted) {
+          loadedQuizIdRef.current = null;
           setError(err.message || 'Erreur inconnue');
           setIsLoading(false);
         }
@@ -104,29 +117,34 @@ const Quiz = () => {
       isMounted = false;
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [getQuiz, id]);
+  }, [getQuiz, id, isAuthLoading, user?.id]);
 
   // Timer pour le décompte du temps
   useEffect(() => {
-    if (isLoading || !quiz || isSubmitting || timeLeft <= 0) {
+    if (isLoading || !quiz?.id || isSubmitting || timeLeftRef.current <= 0) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
       return;
     }
 
+    if (timerRef.current) return;
+
     timerRef.current = setInterval(() => {
-      setTimeLeft(prevTime => prevTime - 1);
+      setTimeLeft(prevTime => Math.max(0, prevTime - 1));
     }, 1000);
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [isLoading, isSubmitting, quiz, timeLeft]);
+  }, [isLoading, isSubmitting, quiz?.id]);
 
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || !quiz || !id) return;
@@ -191,7 +209,8 @@ const Quiz = () => {
     setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1));
   }, [quiz]);
 
-  if (!user) return <Navigate to="/login" />;
+  if (isAuthLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/" replace />;
   if (error) return <ErrorScreen error={error} />;
   if (isLoading || !quiz) return <LoadingScreen />;
 
