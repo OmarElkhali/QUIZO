@@ -44,45 +44,73 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 25 58% 50%;
+
+    --quizo-bg: #f8f4ee;
+    --quizo-bg-soft: #fffaf4;
+    --quizo-text: #211710;
+    --quizo-heading: #100b08;
+    --quizo-muted: #77675e;
+    --quizo-border: rgba(67, 49, 36, 0.14);
+    --quizo-surface: rgba(255, 255, 255, 0.82);
+    --quizo-surface-soft: rgba(255, 255, 255, 0.68);
+    --quizo-surface-hover: rgba(255, 255, 255, 0.9);
+    --quizo-shadow: 0 24px 80px rgba(67, 49, 36, 0.12), inset 0 1px 0 rgba(255,255,255,0.75);
+    --quizo-shadow-soft: 0 18px 60px rgba(67, 49, 36, 0.09);
+    --quizo-header: rgba(255, 250, 244, 0.86);
+    --quizo-input-bg: rgba(255, 255, 255, 0.78);
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 4%;
+    --foreground: 30 12% 91%;
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 8%;
+    --card-foreground: 30 12% 91%;
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 30 12% 91%;
 
-    --primary: 25 58% 50%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 31 94% 45%;
+    --primary-foreground: 28 100% 8%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 30 12% 91%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 28 17% 72%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 28 70% 18%;
+    --accent-foreground: 27 100% 87%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 25 58% 50%;
+    --border: 28 13% 26%;
+    --input: 0 0% 18%;
+    --ring: 31 94% 45%;
 
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 25 58% 50%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 30 12% 91%;
+    --sidebar-primary: 31 94% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 25 58% 50%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 30 12% 91%;
+    --sidebar-border: 28 13% 22%;
+    --sidebar-ring: 31 94% 45%;
+
+    --quizo-bg: #070707;
+    --quizo-bg-soft: #0a0a0a;
+    --quizo-text: #e5e2e1;
+    --quizo-heading: #ffffff;
+    --quizo-muted: #a79d96;
+    --quizo-border: rgba(255, 255, 255, 0.07);
+    --quizo-surface: rgba(20, 20, 20, 0.7);
+    --quizo-surface-soft: rgba(255, 255, 255, 0.045);
+    --quizo-surface-hover: rgba(255, 255, 255, 0.065);
+    --quizo-shadow: 0 24px 80px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+    --quizo-shadow-soft: 0 18px 60px rgba(0,0,0,0.28);
+    --quizo-header: rgba(7, 7, 7, 0.86);
+    --quizo-input-bg: #090909;
   }
 }
 
@@ -131,5 +159,95 @@
 
   .btn-shine {
     @apply relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700 before:ease-out;
+  }
+
+  .quizo-brand-text {
+    @apply bg-gradient-to-r from-amber-500 via-orange-400 to-amber-200 bg-clip-text text-transparent;
+  }
+
+  .quizo-app-bg {
+    background: var(--quizo-bg);
+    color: var(--quizo-text);
+  }
+
+  .quizo-ambient {
+    background:
+      radial-gradient(circle at 50% 0%, rgba(217, 119, 6, 0.13), transparent 34%),
+      radial-gradient(circle at 12% 16%, rgba(80, 54, 38, 0.16), transparent 28%),
+      radial-gradient(circle at 90% 12%, rgba(255, 183, 125, 0.1), transparent 24%),
+      linear-gradient(180deg, var(--quizo-bg-soft) 0%, var(--quizo-bg) 100%);
+  }
+
+  .quizo-grid-overlay {
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--quizo-text) 7%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--quizo-text) 7%, transparent) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .quizo-panel {
+    @apply rounded-2xl border backdrop-blur-xl;
+    border-color: var(--quizo-border);
+    background: var(--quizo-surface);
+    box-shadow: var(--quizo-shadow);
+  }
+
+  .quizo-panel-subtle {
+    @apply rounded-xl border;
+    border-color: var(--quizo-border);
+    background: var(--quizo-surface-soft);
+    box-shadow: var(--quizo-shadow-soft);
+  }
+
+  .quizo-panel-hover {
+    @apply transition duration-300 hover:-translate-y-0.5 hover:border-orange-400/35 hover:shadow-[0_24px_90px_rgba(217,119,6,0.13)];
+  }
+
+  .quizo-panel-hover:hover {
+    background: var(--quizo-surface-hover);
+  }
+
+  .quizo-copper-button {
+    @apply bg-gradient-to-r from-amber-600 to-orange-500 text-[#241000] shadow-[0_10px_32px_rgba(217,119,6,0.34)] hover:from-amber-500 hover:to-orange-400 hover:text-[#1d0d00] focus-visible:ring-orange-400;
+  }
+
+  .quizo-outline-button {
+    @apply hover:border-orange-400/30 focus-visible:ring-orange-400;
+    border-color: var(--quizo-border);
+    background: var(--quizo-surface-soft);
+    color: var(--quizo-text);
+  }
+
+  .quizo-label {
+    @apply text-xs font-bold uppercase tracking-[0.18em] text-[#c9ad96];
+  }
+
+  .quizo-muted {
+    color: var(--quizo-muted);
+  }
+
+  .quizo-input {
+    @apply focus-visible:ring-orange-500;
+    border-color: var(--quizo-border);
+    background: var(--quizo-input-bg);
+    color: var(--quizo-heading);
+  }
+
+  .quizo-divider {
+    border-color: var(--quizo-border);
+  }
+
+  html:not(.dark) .quizo-app-bg .text-white,
+  html:not(.dark) .quizo-app-bg .text-\[\#e5e2e1\],
+  html:not(.dark) .quizo-app-bg .text-\[\#d8d2ce\] {
+    color: var(--quizo-heading) !important;
+  }
+
+  html:not(.dark) .quizo-app-bg .text-\[\#a79d96\],
+  html:not(.dark) .quizo-app-bg .text-\[\#b7b0aa\],
+  html:not(.dark) .quizo-app-bg .text-\[\#9f9690\],
+  html:not(.dark) .quizo-app-bg .text-\[\#8f8580\],
+  html:not(.dark) .quizo-app-bg .text-\[\#8d8580\] {
+    color: var(--quizo-muted) !important;
   }
 }

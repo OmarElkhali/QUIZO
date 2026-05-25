@@ -1,15 +1,14 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  BarChart3,
+  BadgeEuro,
   BookOpen,
   History,
   Home,
   LogOut,
   Menu,
-  Moon,
   PenLine,
-  Plus,
+  Search,
   ShieldCheck,
   Sparkles,
   Users,
@@ -21,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { AuthDialog } from '@/components/AuthDialog';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AppShellProps {
   children: ReactNode;
@@ -28,11 +28,12 @@ interface AppShellProps {
 }
 
 const navigation = [
-  { label: 'Tableau de bord', href: '/', icon: Home },
-  { label: 'Quiz IA', href: '/create-quiz', icon: Sparkles },
-  { label: 'Quiz manuel', href: '/create-manual-quiz', icon: PenLine },
-  { label: 'Rejoindre', href: '/join', icon: Users },
+  { label: 'Accueil', href: '/', icon: Home },
+  { label: 'Créer un Quiz IA', href: '/create-quiz', icon: Sparkles },
+  { label: 'Créer un Quiz Manuel', href: '/create-manual-quiz', icon: PenLine },
+  { label: 'Rejoindre par Code', href: '/join', icon: Users },
   { label: 'Historique', href: '/history', icon: History },
+  { label: 'Tarifs', href: '/pricing', icon: BadgeEuro },
 ];
 
 const getInitials = (name?: string | null, email?: string | null) => {
@@ -57,57 +58,96 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
     navigate('/');
   };
 
-  const sidebar = (
-    <aside className="flex h-full flex-col border-r border-white/10 bg-[#080b10]/95">
-      <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#c46a2d] text-white shadow-[0_0_24px_rgba(196,106,45,0.35)]">
-          <BookOpen className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold tracking-[0.18em] text-[#f7c693]">QUIZO</p>
-          <p className="text-xs text-slate-500">Studio de quiz</p>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-1 px-3 py-5">
-        {navigation.map((item) => (
-          <NavLink
-            key={item.href}
-            to={item.href}
-            end={item.href === '/'}
-            onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition',
-                'hover:bg-white/[0.06] hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d77a36]/60',
-                isActive && 'bg-[#d77a36]/15 text-[#f7c693] ring-1 ring-[#d77a36]/30'
-              )
-            }
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="m-3 rounded-lg border border-[#d77a36]/20 bg-[#d77a36]/10 p-3">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[#f7c693]">
-          <ShieldCheck className="h-4 w-4" />
-          Bêta gratuite
-        </div>
-        <p className="text-xs leading-5 text-slate-400">
-          Quotas protégés, compétitions live et génération IA fiable pour vos cours.
-        </p>
-      </div>
-    </aside>
+  const navLinks = (mobile = false) => (
+    <nav className={cn(mobile ? 'space-y-1 p-4' : 'hidden items-center gap-1 lg:flex')}>
+      {navigation.map((item) => (
+        <NavLink
+          key={item.href}
+          to={item.href}
+          end={item.href === '/'}
+          onClick={() => setMobileOpen(false)}
+          className={({ isActive }) =>
+            cn(
+              'group flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold tracking-wide text-[var(--quizo-muted)] transition',
+              'hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60',
+              isActive && 'border border-orange-400/20 bg-orange-500/10 text-[#d97706]',
+              mobile && 'w-full px-3 py-3'
+            )
+          }
+        >
+          <item.icon className="h-4 w-4" />
+          <span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
   );
 
   return (
-    <div className="dark min-h-screen bg-[#0b0f14] text-slate-100">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(196,106,45,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_220px)]" />
+    <div className="quizo-app-bg min-h-screen">
+      <div className="pointer-events-none fixed inset-0 quizo-ambient" />
+      <div className="pointer-events-none fixed inset-0 quizo-grid-overlay opacity-60" />
 
-      <div className="relative flex min-h-screen">
-        <div className="hidden w-72 shrink-0 lg:block">{sidebar}</div>
+      <div className="relative min-h-screen">
+        <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
+          <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
+              <BookOpen className="h-6 w-6 text-orange-500" />
+              <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
+            </button>
+
+            {navLinks()}
+
+            <div className="flex items-center gap-2">
+              {actions}
+              <LanguageSelector />
+              <ThemeToggle />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="hidden text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] sm:inline-flex"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+              {user ? (
+                <div className="flex items-center gap-2">
+                  <div className="hidden text-right xl:block">
+                    <p className="text-sm font-semibold text-[var(--quizo-heading)]">{user.name || 'Utilisateur'}</p>
+                    <p className="max-w-44 truncate text-xs text-[var(--quizo-muted)]">{user.email}</p>
+                  </div>
+                  <Avatar className="h-9 w-9 border border-orange-400/35">
+                    {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.name || user.email} /> : null}
+                    <AvatarFallback className="bg-orange-500/15 text-[#d97706]">
+                      {getInitials(user.name, user.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="hidden text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] sm:inline-flex"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button type="button" className="quizo-copper-button hidden sm:inline-flex" onClick={() => setAuthOpen(true)}>
+                  Connexion
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] lg:hidden"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </header>
 
         {mobileOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
@@ -117,73 +157,31 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
               className="absolute inset-0 bg-black/70"
               onClick={() => setMobileOpen(false)}
             />
-            <div className="relative h-full w-72 max-w-[82vw]">{sidebar}</div>
+            <aside className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col border-r border-[var(--quizo-border)]">
+              <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="h-6 w-6 text-orange-500" />
+                  <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
+                </div>
+                <Button type="button" variant="ghost" size="icon" className="text-[var(--quizo-text)]" onClick={() => setMobileOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              {navLinks(true)}
+              <div className="m-4 mt-auto rounded-xl border border-orange-400/20 bg-orange-500/10 p-4">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#d97706] dark:text-[#ffb77d]">
+                  <ShieldCheck className="h-4 w-4" />
+                  Bêta gratuite
+                </div>
+                <p className="text-xs leading-5 text-[var(--quizo-muted)]">
+                  Quotas protégés, compétitions live et génération IA fiable pour vos cours.
+                </p>
+              </div>
+            </aside>
           </div>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0b0f14]/88 backdrop-blur-xl">
-            <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-slate-300 hover:bg-white/10 hover:text-white lg:hidden"
-                  onClick={() => setMobileOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-                <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
-                  <BarChart3 className="h-4 w-4 text-[#d77a36]" />
-                  <span>Plateforme SaaS de quiz live</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {actions}
-                <LanguageSelector />
-                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 sm:flex">
-                  <Moon className="h-3.5 w-3.5 text-[#f7c693]" />
-                  Dark SaaS
-                </div>
-                {user ? (
-                  <div className="flex items-center gap-3">
-                    <div className="hidden text-right sm:block">
-                      <p className="text-sm font-medium text-slate-100">{user.name || 'Utilisateur'}</p>
-                      <p className="max-w-44 truncate text-xs text-slate-500">{user.email}</p>
-                    </div>
-                    <Avatar className="h-9 w-9 border border-[#d77a36]/40">
-                      {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.name || user.email} /> : null}
-                      <AvatarFallback className="bg-[#d77a36]/20 text-[#f7c693]">
-                        {getInitials(user.name, user.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-slate-400 hover:bg-white/10 hover:text-white"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    className="bg-[#d77a36] text-white hover:bg-[#b85f26]"
-                    onClick={() => setAuthOpen(true)}
-                  >
-                    Connexion
-                  </Button>
-                )}
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
-        </div>
+        <main className="mx-auto min-h-[calc(100vh-5rem)] max-w-[1500px] px-4 py-8 sm:px-6 lg:px-10">{children}</main>
       </div>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />

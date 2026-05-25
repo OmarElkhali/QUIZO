@@ -21,8 +21,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AIModelType } from '@/types/quiz';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
+  { value: 'openrouter', label: 'OpenRouter recommandé', description: 'Routeur rapide multi-modèles configuré côté backend.' },
   { value: 'gemini', label: 'Gemini', description: 'Google Gemini via le backend Flask.' },
-  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur multi-modeles configure côté backend.' },
   { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
   { value: 'groq', label: 'Groq', description: 'Groq si une clé API est fournie.' },
   { value: 'ollama', label: 'Ollama', description: 'Modele local si Ollama tourne sur cette machine.' },
@@ -40,7 +40,7 @@ export const QuizForm = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState(30); // minutes
-  const [modelType, setModelType] = useState<AIModelType>('gemini');
+  const [modelType, setModelType] = useState<AIModelType>('openrouter');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCreated, setQuizCreated] = useState(false);
@@ -60,7 +60,7 @@ export const QuizForm = () => {
         setRedirectCounter(prev => prev - 1);
       }, 1000);
     } else if (quizCreated && createdQuizId && redirectCounter === 0) {
-      console.log(`Redirection immÃ©diate vers /quiz/${createdQuizId}`);
+      console.log(`Redirection immédiate vers /quiz/${createdQuizId}`);
       navigate(`/quiz-preview/${createdQuizId}`);
     }
     
@@ -72,7 +72,7 @@ export const QuizForm = () => {
   const handleFileSelect = (file: File) => {
     setFile(file);
     setError(null);
-    toast.success('Fichier tÃ©lÃ©chargÃ© avec succÃ¨s');
+    toast.success('Fichier téléchargé avec succès');
   };
   
   const handleCancel = () => {
@@ -98,12 +98,12 @@ export const QuizForm = () => {
     e.preventDefault();
     
     if (!user) {
-      toast.error('Veuillez vous connecter pour crÃ©er un quiz');
+      toast.error('Veuillez vous connecter pour créer un quiz');
       return;
     }
     
     if (!file) {
-      toast.error('Veuillez tÃ©lÃ©charger un fichier de cours');
+      toast.error('Veuillez télécharger un fichier de cours');
       return;
     }
     
@@ -121,8 +121,8 @@ export const QuizForm = () => {
     };
     
     try {
-      addLog(`DÃ©marrage de la crÃ©ation d'un quiz avec ${numQuestions} questions, difficultÃ©: ${difficulty}, modÃ¨le: ${modelType}`);
-      setProgressStage('TÃ©lÃ©chargement du fichier');
+      addLog(`Démarrage de la création d’un quiz avec ${numQuestions} questions, difficulté: ${difficulty}, modèle: ${modelType}`);
+      setProgressStage('Téléchargement du fichier');
       setProgressPercent(15);
       
       const statusCallback = (stage: string, percent: number, message?: string) => {
@@ -142,22 +142,22 @@ export const QuizForm = () => {
         statusCallback
       );
       
-      addLog('GÃ©nÃ©ration terminÃ©e avec succÃ¨s!');
-      addLog(`Quiz crÃ©Ã© avec l'ID: ${quizId}`);
-      setProgressStage('TerminÃ©');
+      addLog('Génération terminée avec succès !');
+      addLog(`Quiz créé avec l’ID: ${quizId}`);
+      setProgressStage('Terminé');
       setProgressPercent(100);
       
       setQuizCreated(true);
       setCreatedQuizId(quizId);
       setRedirectCounter(5);
       
-      toast.success(`${numQuestions} questions generees a partir de vos documents!`);
+      toast.success(`${numQuestions} questions générées à partir de vos documents !`);
     } catch (error) {
-      console.error("Erreur lors de la creation du quiz:", error);
-      const message = error instanceof Error ? error.message : "Erreur inconnue lors de la creation du quiz";
+      console.error("Erreur lors de la création du quiz:", error);
+      const message = error instanceof Error ? error.message : "Erreur inconnue lors de la création du quiz";
       setError(message);
       addLog(`ERREUR: ${message}`);
-      toast.error(`Impossible de creer le quiz: ${message}`);
+      toast.error(`Impossible de créer le quiz: ${message}`);
       setIsSubmitting(false);
       setQuizCreated(false);
     }
@@ -168,13 +168,13 @@ export const QuizForm = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="glass-card p-6 md:p-8 max-w-xl mx-auto"
+      className="mx-auto max-w-3xl rounded-2xl border border-white/[0.07] bg-[#111111]/70 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] md:p-8"
     >
       <div className="flex items-center space-x-4 mb-6">
-        <div className="p-2 rounded-full bg-primary/10">
-          <BrainCircuit className="h-6 w-6 text-primary" />
+        <div className="rounded-xl border border-orange-300/25 bg-orange-500/15 p-3">
+          <BrainCircuit className="h-6 w-6 text-[#ffb77d]" />
         </div>
-        <h2 className="text-2xl font-bold">CrÃ©er votre Quiz</h2>
+        <h2 className="text-2xl font-bold text-white">Créer votre Quiz</h2>
       </div>
       
       {error && (
@@ -197,7 +197,7 @@ export const QuizForm = () => {
             <Progress value={progressPercent} className="h-2" />
           </div>
           
-          <div className="border rounded-md p-4 bg-muted/30 h-[200px] overflow-y-auto font-mono text-xs">
+          <div className="h-[200px] overflow-y-auto rounded-xl border border-white/[0.07] bg-black/30 p-4 font-mono text-xs text-[#d8d2ce]">
             {progressLogs.length > 0 ? (
               progressLogs.map((log, index) => (
                 <div key={index} className="py-1 border-b border-muted last:border-0">
@@ -215,10 +215,10 @@ export const QuizForm = () => {
           
           {quizCreated && createdQuizId ? (
             <div className="space-y-4">
-              <Alert variant="default" className="bg-green-50 border-green-200">
+              <Alert variant="default" className="border-emerald-400/25 bg-emerald-500/10 text-emerald-100">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800">Quiz crÃ©Ã© avec succÃ¨s</AlertTitle>
-                <AlertDescription className="text-green-700">
+                <AlertTitle>Quiz créé avec succès</AlertTitle>
+                <AlertDescription className="text-emerald-100/80">
                   Redirection automatique vers votre quiz dans {redirectCounter} secondes...
                 </AlertDescription>
               </Alert>
@@ -239,7 +239,7 @@ export const QuizForm = () => {
                     setFile(null);
                   }}
                 >
-                  CrÃ©er un autre quiz
+                  Créer un autre quiz
                 </Button>
               </div>
             </div>
@@ -259,13 +259,13 @@ export const QuizForm = () => {
             <Label htmlFor="file-upload">{t('createQuiz.uploadFile')}</Label>
             <FileUpload onFileSelect={handleFileSelect} />
             <p className="text-xs text-muted-foreground">
-              Formats acceptÃ©s: PDF, DOCX, TXT (max 10MB)
+              Formats acceptés: PDF, DOCX, TXT (max 10MB)
             </p>
           </div>
           
           <div className="space-y-4">
             <Label>{t('createQuiz.aiModel')}</Label>
-            <Card className="border border-muted p-4">
+            <Card className="border-white/[0.07] bg-black/25 p-4">
               <CardContent className="p-0 space-y-4">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {AI_MODELS.map((model) => (
@@ -274,7 +274,7 @@ export const QuizForm = () => {
                       type="button"
                       variant={modelType === model.value ? "default" : "outline"}
                       onClick={() => setModelType(model.value)}
-                      className="min-h-10"
+                      className={modelType === model.value ? 'min-h-10 quizo-copper-button' : 'min-h-10 quizo-outline-button'}
                     >
                       {model.label}
                     </Button>
@@ -296,7 +296,7 @@ export const QuizForm = () => {
                   type="button"
                   variant={difficulty === level ? "default" : "outline"}
                   onClick={() => setDifficulty(level)}
-                  className={difficulty === level ? "flex-1" : "flex-1"}
+                    className={difficulty === level ? "flex-1 quizo-copper-button" : "flex-1 quizo-outline-button"}
                 >
                   {level === 'easy' ? t('createQuiz.easy') : level === 'medium' ? t('createQuiz.medium') : t('createQuiz.hard')}
                 </Button>
@@ -340,13 +340,13 @@ export const QuizForm = () => {
             {enableTimeLimit && (
               <div className="flex items-center space-x-3 pl-6">
                 <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="time-limit">DurÃ©e (minutes)</Label>
+                  <Label htmlFor="time-limit">Durée (minutes)</Label>
                   <Select 
                     value={timeLimit.toString()}
                     onValueChange={(value) => setTimeLimit(parseInt(value))}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="SÃ©lectionner une durÃ©e" />
+                      <SelectValue placeholder="Sélectionner une durée" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="15">15 minutes</SelectItem>
@@ -367,20 +367,20 @@ export const QuizForm = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="additional-info">Informations supplÃ©mentaires (Optionnel)</Label>
+            <Label htmlFor="additional-info">Informations supplémentaires (optionnel)</Label>
             <Textarea
               id="additional-info"
-              placeholder="Ajoutez des sujets spÃ©cifiques Ã  aborder, des styles de questions prÃ©fÃ©rÃ©s, ou d'autres dÃ©tails..."
+              placeholder="Ajoutez des sujets spécifiques à aborder, des styles de questions préférés ou d’autres détails..."
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
-              className="min-h-[100px] resize-none"
+              className="min-h-[100px] resize-none quizo-input"
             />
           </div>
           
           <div className="pt-4 flex flex-col sm:flex-row gap-4">
             <Button 
               type="submit" 
-              className="w-full btn-shine"
+              className="w-full quizo-copper-button"
               disabled={isSubmitting || !file || !user}
             >
               {isSubmitting ? (
@@ -399,7 +399,7 @@ export const QuizForm = () => {
             <Button 
               type="button" 
               variant="outline" 
-              className="w-full hover-scale"
+              className="w-full quizo-outline-button"
               disabled={!user}
               onClick={() => navigate('/history')}
             >

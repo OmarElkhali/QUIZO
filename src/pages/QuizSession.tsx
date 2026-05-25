@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock, Loader2, X } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { StateCard } from '@/components/ui/StateCard';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import {
@@ -19,6 +16,7 @@ import {
   updateParticipantProgress,
 } from '@/services/manualQuizService';
 import { Attempt, ManualQuiz } from '@/types/quiz';
+import { QuizAnswerCard } from '@/components/ui/premium';
 import { cn } from '@/lib/utils';
 
 interface QuizSessionLocationState {
@@ -73,7 +71,7 @@ const QuizSession = () => {
         if (!attemptData) throw new Error('Tentative introuvable');
         if (quizData.status === 'completed') throw new Error('Ce quiz est terminé');
         if (quizData.status === 'draft' && quizData.mode === 'realtime') {
-          throw new Error("Ce quiz n'a pas encore démarré");
+          throw new Error("Ce quiz n’a pas encore démarré");
         }
 
         setQuiz(quizData);
@@ -186,7 +184,7 @@ const QuizSession = () => {
           title="Impossible de charger le quiz"
           description={error || 'Session invalide'}
           action={
-            <Button className="bg-[#d77a36] text-white hover:bg-[#b85f26]" onClick={() => navigate('/join-quiz')}>
+            <Button className="quizo-copper-button" onClick={() => navigate('/join-quiz')}>
               Retour
             </Button>
           }
@@ -198,137 +196,120 @@ const QuizSession = () => {
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
-    <AppShell>
-      <PageHeader
-        eyebrow={quiz.mode === 'realtime' ? 'Session live' : 'Session autonome'}
-        title={quiz.title}
-        description={quiz.description || 'Répondez aux questions, votre progression est sauvegardée automatiquement.'}
-        actions={
-          timeLeft !== null ? (
-            <div className="flex items-center rounded-lg border border-[#d77a36]/30 bg-[#d77a36]/12 px-3 py-2 text-[#f7c693]">
-              <Clock className="mr-2 h-4 w-4" />
-              <span className="font-semibold tabular-nums">{formatTime(timeLeft)}</span>
-            </div>
-          ) : null
-        }
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <section>
-          <div className="mb-4 rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <div className="mb-2 flex justify-between text-sm text-slate-400">
-              <span>Question {currentQuestionIndex + 1} sur {quiz.questions.length}</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2 bg-white/10" />
+    <div className="dark quizo-app-bg min-h-screen">
+      <div className="pointer-events-none fixed inset-0 quizo-ambient" />
+      <header className="relative z-10 flex h-20 items-center justify-between px-5 md:px-10">
+        <div className="flex items-center gap-5">
+          <Button variant="ghost" size="icon" className="text-[#dbc2b0] hover:bg-white/[0.055] hover:text-white" onClick={() => navigate('/join-quiz')}>
+            <X className="h-5 w-5" />
+          </Button>
+          <span className="text-sm font-semibold tracking-wide text-[#dbc2b0]">{quiz.title}</span>
+        </div>
+        {timeLeft !== null && (
+          <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.055] px-5 py-2 text-[#ffb77d] shadow-[0_0_20px_rgba(255,183,125,0.08)]">
+            <Clock className="h-4 w-4" />
+            <span className="font-mono text-sm font-bold tracking-widest">{formatTime(timeLeft)}</span>
           </div>
+        )}
+      </header>
 
-          <Card className="border-white/10 bg-white/[0.04] shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-            <CardHeader className="border-b border-white/10">
-              <CardTitle className="flex flex-col gap-3 text-xl leading-8 text-white sm:flex-row sm:justify-between">
-                <span>{currentQuestion.text}</span>
-                <span className="shrink-0 rounded-md border border-white/10 bg-[#0b0f14] px-2 py-1 text-sm font-medium text-slate-400">
-                  {currentQuestion.points || 1} pt
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-5">
-              <RadioGroup
-                value={answers[currentQuestion.id] || ''}
-                onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-                className="space-y-3"
-              >
-                {currentQuestion.options.map((option) => {
-                  const selected = answers[currentQuestion.id] === option.id;
-                  return (
-                    <Label
-                      key={option.id}
-                      htmlFor={`${currentQuestion.id}-${option.id}`}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-slate-200 transition',
-                        selected
-                          ? 'border-[#d77a36] bg-[#d77a36]/15 text-white shadow-[0_0_0_1px_rgba(215,122,54,0.25)]'
-                          : 'border-white/10 bg-[#0b0f14] hover:border-[#d77a36]/40 hover:bg-white/[0.05]'
-                      )}
-                    >
-                      <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
-                      <span>{option.text}</span>
-                    </Label>
-                  );
-                })}
-              </RadioGroup>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 border-t border-white/10 sm:flex-row sm:justify-between">
-              <Button
-                variant="outline"
-                className="w-full border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.08] sm:w-auto"
-                onClick={() => goToQuestion(currentQuestionIndex - 1)}
-                disabled={currentQuestionIndex === 0 || isSubmitting}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Précédent
-              </Button>
-              {currentQuestionIndex < quiz.questions.length - 1 ? (
-                <Button className="w-full bg-[#d77a36] text-white hover:bg-[#b85f26] sm:w-auto" onClick={() => goToQuestion(currentQuestionIndex + 1)} disabled={isSubmitting}>
-                  Suivant
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto">
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Soumission...
-                    </>
-                  ) : (
-                    <>
-                      Terminer
-                      <Check className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 pb-32 pt-8 md:px-10">
+        <div className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="quizo-label">Question {currentQuestionIndex + 1} / {quiz.questions.length}</span>
+            <span className="quizo-label text-[#ffb77d]">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-px overflow-hidden rounded-full bg-white/10">
+            <div className="h-full bg-[#ffb77d] shadow-[0_0_12px_rgba(255,183,125,0.9)]" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        <section className="quizo-panel relative overflow-hidden p-6 sm:p-10 lg:p-14">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent" />
+          <div className="relative">
+            <h1 className="max-w-4xl text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+              <span className="mr-3 font-light text-[#ffb77d]/70">Q{currentQuestionIndex + 1}.</span>
+              {currentQuestion.text}
+            </h1>
+
+            <RadioGroup
+              value={answers[currentQuestion.id] || ''}
+              onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+              className="mt-10 space-y-4"
+            >
+              {currentQuestion.options.map((option) => {
+                const selected = answers[currentQuestion.id] === option.id;
+                return (
+                  <Label key={option.id} htmlFor={`${currentQuestion.id}-${option.id}`} className="block cursor-pointer">
+                    <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} className="sr-only" />
+                    <QuizAnswerCard selected={selected}>{option.text}</QuizAnswerCard>
+                  </Label>
+                );
+              })}
+            </RadioGroup>
+          </div>
         </section>
 
-        <aside className="space-y-4">
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <h2 className="font-semibold text-white">Navigation</h2>
-            <p className="mt-1 text-sm text-slate-500">{answeredCount} / {quiz.questions.length} réponses enregistrées</p>
-            <div className="mt-4 grid grid-cols-5 gap-2 xl:grid-cols-4">
-              {quiz.questions.map((question, index) => (
-                <Button
-                  key={question.id}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'h-9 border border-white/10 bg-[#0b0f14] text-slate-300 hover:bg-white/[0.08]',
-                    index === currentQuestionIndex && 'border-[#d77a36] bg-[#d77a36]/15 text-[#f7c693]',
-                    answers[question.id] && index !== currentQuestionIndex && 'border-emerald-500/40 text-emerald-300'
-                  )}
-                  onClick={() => goToQuestion(index)}
-                  disabled={isSubmitting}
-                >
-                  {index + 1}
-                </Button>
-              ))}
-            </div>
+        <aside className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-full border border-white/[0.07] bg-white/[0.045] px-4 py-2 text-sm text-[#a79d96]">
+            {answeredCount} / {quiz.questions.length} réponses enregistrées
           </div>
-
-          {answeredCount < quiz.questions.length && (
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 text-amber-300" />
-                <p className="text-sm text-amber-100">
-                  {quiz.questions.length - answeredCount} question(s) sans réponse.
-                </p>
-              </div>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {quiz.questions.map((question, index) => (
+              <Button
+                key={question.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-9 w-9 border border-white/[0.07] bg-white/[0.045] text-[#dbc2b0] hover:bg-white/[0.08]',
+                  index === currentQuestionIndex && 'border-orange-300/50 bg-orange-500/15 text-[#ffb77d]',
+                  answers[question.id] && index !== currentQuestionIndex && 'border-emerald-400/35 text-emerald-300'
+                )}
+                onClick={() => goToQuestion(index)}
+                disabled={isSubmitting}
+              >
+                {index + 1}
+              </Button>
+            ))}
+          </div>
         </aside>
-      </div>
-    </AppShell>
+      </main>
+
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#070707] via-[#070707]/90 to-transparent p-5 md:p-8">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <Button
+            variant="outline"
+            className="rounded-full px-6 quizo-outline-button"
+            onClick={() => goToQuestion(currentQuestionIndex - 1)}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Précédent
+          </Button>
+          {currentQuestionIndex < quiz.questions.length - 1 ? (
+            <Button className="rounded-full px-8 quizo-copper-button" onClick={() => goToQuestion(currentQuestionIndex + 1)} disabled={isSubmitting}>
+              Suivant
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-full bg-emerald-500 px-8 text-[#061a11] hover:bg-emerald-400">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Soumission...
+                </>
+              ) : (
+                <>
+                  Terminer
+                  <Check className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </footer>
+    </div>
   );
 };
 

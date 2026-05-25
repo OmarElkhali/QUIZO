@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { createManualQuiz } from '@/services/manualQuizService';
+import { ActionCard, PremiumPanel } from '@/components/ui/premium';
 
 const CreateManualQuiz = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -62,69 +63,55 @@ const CreateManualQuiz = () => {
         description="Préparez une base solide, puis ajoutez vos questions, options et explications dans le builder."
       />
 
-      <div className="mb-6 grid gap-3 md:grid-cols-3">
-        <Link
-          to="/create-quiz"
-          className="rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:border-[#d77a36]/35 hover:bg-white/[0.065]"
-        >
-          <Sparkles className="mb-3 h-5 w-5 text-[#f7c693]" />
-          <h2 className="font-semibold text-white">Quiz IA</h2>
-          <p className="mt-1 text-sm text-slate-400">Génération depuis un fichier.</p>
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <Link to="/create-quiz">
+          <ActionCard title="Quiz IA" description="Génération depuis un fichier." icon={Sparkles} className="min-h-0" />
         </Link>
-        <div className="rounded-lg border border-[#d77a36]/35 bg-[#d77a36]/12 p-4">
-          <PenLine className="mb-3 h-5 w-5 text-[#f7c693]" />
-          <h2 className="font-semibold text-white">Quiz manuel</h2>
-          <p className="mt-1 text-sm text-slate-400">Contrôle complet des questions.</p>
-        </div>
-        <Link
-          to="/join"
-          className="rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:border-[#d77a36]/35 hover:bg-white/[0.065]"
-        >
-          <Users className="mb-3 h-5 w-5 text-[#f7c693]" />
-          <h2 className="font-semibold text-white">Rejoindre</h2>
-          <p className="mt-1 text-sm text-slate-400">Participer avec un code.</p>
+        <ActionCard title="Quiz manuel" description="Contrôle complet des questions." icon={PenLine} accent className="min-h-0" />
+        <Link to="/join">
+          <ActionCard title="Rejoindre" description="Participer avec un code." icon={Users} className="min-h-0" />
         </Link>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <form onSubmit={handleSubmit} className="rounded-lg border border-white/10 bg-white/[0.04] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:p-6">
-          <div className="space-y-5">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <PremiumPanel className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-slate-200">Titre du quiz</Label>
+              <Label htmlFor="title" className="text-[#e5e2e1]">Titre du quiz</Label>
               <Input
                 id="title"
                 placeholder="Ex. Réseaux TCP/IP - Chapitre 1"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="border-white/10 bg-[#0b0f14] text-white placeholder:text-slate-600 focus-visible:ring-[#d77a36]"
+                className="quizo-input"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-200">Description optionnelle</Label>
+              <Label htmlFor="description" className="text-[#e5e2e1]">Description optionnelle</Label>
               <Textarea
                 id="description"
-                placeholder="Décrivez l'objectif, le niveau ou le chapitre du quiz..."
+                placeholder="Décrivez l’objectif, le niveau ou le chapitre du quiz..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="min-h-[140px] resize-none border-white/10 bg-[#0b0f14] text-white placeholder:text-slate-600 focus-visible:ring-[#d77a36]"
+                className="min-h-[160px] resize-none quizo-input"
               />
             </div>
 
-            <Button type="submit" className="w-full bg-[#d77a36] text-white hover:bg-[#b85f26]" disabled={isLoading}>
+            <Button type="submit" className="w-full quizo-copper-button" disabled={isLoading}>
               {isLoading ? 'Création en cours...' : 'Créer et continuer'}
             </Button>
-          </div>
-        </form>
+          </form>
+        </PremiumPanel>
 
-        <aside className="rounded-lg border border-white/10 bg-[#0f141c] p-5">
-          <BookOpen className="mb-4 h-6 w-6 text-[#f7c693]" />
-          <h2 className="text-lg font-semibold text-white">Structure recommandée</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
+        <PremiumPanel className="p-6">
+          <BookOpen className="mb-5 h-7 w-7 text-[#ffb77d]" />
+          <h2 className="text-xl font-bold text-white">Structure recommandée</h2>
+          <p className="mt-3 text-sm leading-6 text-[#a79d96]">
             Commencez par un titre précis. Vous pourrez ensuite ajouter des questions, créer un code de partage et lancer une compétition.
           </p>
-        </aside>
+        </PremiumPanel>
       </section>
     </AppShell>
   );

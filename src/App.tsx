@@ -36,12 +36,13 @@ const SharedQuiz = React.lazy(() => import('./pages/SharedQuiz'));
 const RealtimeDashboard = React.lazy(() => import('./pages/RealtimeDashboard'));
 const JoinQuiz = React.lazy(() => import('./pages/JoinQuiz'));
 const QuizSession = React.lazy(() => import('./pages/QuizSession'));
+const Pricing = React.lazy(() => import('./pages/Pricing'));
 
 const queryClient = new QueryClient()
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <BrowserRouter>
         <TooltipProvider>
           <QueryClientProvider client={queryClient}>
@@ -69,6 +70,7 @@ function App() {
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/pricing" element={<Pricing />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>

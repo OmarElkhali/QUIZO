@@ -16,9 +16,9 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AIModelType } from '@/types/quiz';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
-  { value: 'gemini', label: 'Gemini', description: 'Fournisseur principal pour la production.' },
-  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur multi-modeles configure cote backend.' },
-  { value: 'groq', label: 'Groq', description: 'Generation rapide si la cle serveur est configuree.' },
+  { value: 'openrouter', label: 'OpenRouter recommandé', description: 'Routeur rapide multi-modèles configuré côté backend.' },
+  { value: 'gemini', label: 'Gemini', description: 'Alternative via le backend Flask.' },
+  { value: 'groq', label: 'Groq', description: 'Génération rapide si la clé serveur est configurée.' },
   { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
   { value: 'ollama', label: 'Ollama', description: 'Modele local si Ollama tourne sur cette machine.' },
 ];
@@ -31,7 +31,7 @@ export const CreateQuizForm = () => {
   const [file, setFile] = useState<File | null>(null);
   const [numQuestions, setNumQuestions] = useState(10);
   const [additionalInfo, setAdditionalInfo] = useState('');
-  const [selectedAI, setSelectedAI] = useState<AIModelType>('gemini');
+  const [selectedAI, setSelectedAI] = useState<AIModelType>('openrouter');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [timeLimit, setTimeLimit] = useState(15); // Default time limit in minutes
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
@@ -53,12 +53,12 @@ export const CreateQuizForm = () => {
     e.preventDefault();
     
     if (!user) {
-      toast.error("Veuillez vous connecter pour crÃ©er un quiz");
+      toast.error("Veuillez vous connecter pour créer un quiz");
       return;
     }
     
     if (!file) {
-      toast.error("Veuillez sÃ©lectionner un fichier");
+      toast.error("Veuillez sélectionner un fichier");
       return;
     }
 
@@ -66,7 +66,7 @@ export const CreateQuizForm = () => {
       console.log('Starting quiz creation process');
       const actualTimeLimit = enableTimeLimit ? timeLimit : undefined;
       
-      // DÃ©finir une fonction de callback pour suivre la progression
+      // Définir une fonction de callback pour suivre la progression
       const progressCallback = (stage: string, percent: number, message?: string) => {
         console.log(`[CreateQuizForm] Progress: ${stage} - ${percent}% - ${message || ''}`);
       };
@@ -81,12 +81,12 @@ export const CreateQuizForm = () => {
         progressCallback
       );
       
-      toast.success(`${numQuestions} questions generees a partir de vos documents!`);
+      toast.success(`${numQuestions} questions générées à partir de vos documents !`);
       navigate(`/quiz-preview/${quizId}`);
     } catch (error) {
       console.error("Error creating quiz:", error);
       const message = error instanceof Error ? error.message : "Erreur inconnue";
-      toast.error(`Impossible de creer le quiz: ${message}`);
+      toast.error(`Impossible de créer le quiz: ${message}`);
     }
   };
   
@@ -101,17 +101,17 @@ export const CreateQuizForm = () => {
         <div className="p-2 rounded-full bg-[#D2691E]/10">
           <BrainCircuit className="h-6 w-6 text-[#D2691E]" />
         </div>
-        <h2 className="text-2xl font-bold">ParamÃ¨tres du Quiz</h2>
+        <h2 className="text-2xl font-bold">Paramètres du Quiz</h2>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="file-upload">TÃ©lÃ©charger votre document</Label>
+          <Label htmlFor="file-upload">Télécharger votre document</Label>
           <FileUpload onFileSelect={handleFileSelect} />
         </div>
         
         <div className="space-y-4">
-          <Label>Niveau de difficultÃ©</Label>
+          <Label>Niveau de difficulté</Label>
           <ToggleGroup 
             type="single" 
             value={difficulty}
@@ -182,7 +182,7 @@ export const CreateQuizForm = () => {
         </div>
         
         <div className="space-y-4">
-          <Label>ModÃ¨le d'IA pour la gÃ©nÃ©ration</Label>
+          <Label>Modèle d'IA pour la génération</Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {AI_MODELS.map((model) => (
               <Card
@@ -228,10 +228,10 @@ export const CreateQuizForm = () => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="additional-info">Informations supplÃ©mentaires (Optionnel)</Label>
+          <Label htmlFor="additional-info">Informations supplémentaires (optionnel)</Label>
           <Textarea
             id="additional-info"
-            placeholder="Ajoutez des sujets spÃ©cifiques Ã  aborder, des styles de questions prÃ©fÃ©rÃ©s, ou d'autres dÃ©tails..."
+            placeholder="Ajoutez des sujets spécifiques à aborder, des styles de questions préférés ou d’autres détails..."
             value={additionalInfo}
             onChange={(e) => setAdditionalInfo(e.target.value)}
             className="min-h-[100px] resize-none"
@@ -247,11 +247,11 @@ export const CreateQuizForm = () => {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generation en cours...
+                Génération en cours...
               </>
             ) : (
               <>
-                CrÃ©er le Quiz
+                Créer le Quiz
                 <ArrowRight className="ml-2 h-4 w-4" />
               </>
             )}

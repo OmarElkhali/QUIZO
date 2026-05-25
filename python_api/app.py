@@ -339,6 +339,207 @@ def validate_question(question):
         return False
     return True
 
+
+def normalize_manual_assistant_question(question, index, difficulty):
+    """Normalise une proposition QCM pour le builder manuel."""
+    if not isinstance(question, dict):
+        return None
+
+    text = str(question.get("text") or "").strip()
+    raw_options = question.get("options")
+    if not text or not isinstance(raw_options, list):
+        return None
+
+    options = []
+    for option_index, option in enumerate(raw_options[:6]):
+        if not isinstance(option, dict):
+            continue
+        option_text = str(option.get("text") or "").strip()
+        if not option_text:
+            continue
+        options.append({
+            "id": f"assistant_q{index + 1}_{chr(97 + len(options))}",
+            "text": option_text,
+            "isCorrect": bool(option.get("isCorrect")),
+        })
+
+    if len(options) < 2:
+        return None
+
+    if not any(option["isCorrect"] for option in options):
+        options[0]["isCorrect"] = True
+
+    if sum(1 for option in options if option["isCorrect"]) > 1:
+        first_correct_seen = False
+        for option in options:
+            if option["isCorrect"] and not first_correct_seen:
+                first_correct_seen = True
+            else:
+                option["isCorrect"] = False
+
+    return {
+        "id": f"assistant_q{index + 1}",
+        "text": text,
+        "options": options,
+        "explanation": str(question.get("explanation") or "Explication a valider.").strip(),
+        "difficulty": question.get("difficulty") if question.get("difficulty") in ["easy", "medium", "hard"] else difficulty,
+        "points": int(question.get("points") or 1),
+    }
+
+
+def build_manual_assistant_prompt(data):
+    action = str(data.get("action") or "generate_from_course").strip()
+    course_text = str(data.get("courseText") or data.get("text") or "").strip()
+    current_question = data.get("question") if isinstance(data.get("question"), dict) else {}
+    num_questions = max(1, min(int(data.get("numQuestions") or 3), 10))
+    difficulty = data.get("difficulty") if data.get("difficulty") in ["easy", "medium", "hard"] else "medium"
+    language = str(data.get("language") or "fr").strip()[:8]
+
+    return f"""
+Tu es l'assistant pedagogique de QUIZO pour construire des QCM.
+Utilise uniquement le contenu fourni par l'enseignant. Reponds en JSON valide, sans markdown.
+
+ACTION: {action}
+LANGUE: {language}
+DIFFICULTE: {difficulty}
+NOMBRE DE PROPOSITIONS: {num_questions}
+
+COURS:
+{course_text[:7000]}
+
+QUESTION ACTUELLE EVENTUELLE:
+{json.dumps(current_question, ensure_ascii=False)[:2500]}
+
+FORMAT JSON STRICT:
+{{
+  "summary": "resume court de ce que tu as fait",
+  "issues": ["probleme detecte ou conseil"],
+  "suggestions": [
+    {{
+      "text": "Question QCM claire",
+      "options": [
+        {{"text": "Bonne reponse", "isCorrect": true}},
+        {{"text": "Distracteur plausible", "isCorrect": false}},
+        {{"text": "Distracteur plausible", "isCorrect": false}},
+        {{"text": "Distracteur plausible", "isCorrect": false}}
+      ],
+      "explanation": "Explication concise basee sur le cours",
+      "difficulty": "{difficulty}",
+      "points": 1
+    }}
+  ]
+}}
+
+CONTRAINTES:
+- Une seule option correcte par question.
+- Les distracteurs doivent etre plausibles mais faux.
+- Evite les formulations ambigues.
+- Si le cours est insuffisant, renvoie au moins un probleme dans "issues".
+"""
+
+
+@app.route('/api/manual-assistant', methods=['POST', 'OPTIONS'])
+@limiter.limit("10 per day;5 per minute")
+@require_auth
+def manual_assistant():
+    """Assistant OpenRouter pour le builder de quiz manuel."""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        data = request.get_json() or {}
+        course_text = str(data.get("courseText") or data.get("text") or "").strip()
+        action = str(data.get("action") or "generate_from_course").strip()
+        difficulty = data.get("difficulty") if data.get("difficulty") in ["easy", "medium", "hard"] else "medium"
+        num_questions = max(1, min(int(data.get("numQuestions") or 3), 10))
+
+        if action == "generate_from_course" and len(course_text) < 80:
+            return jsonify({
+                "error": "Ajoutez un cours plus complet avant de generer des questions.",
+                "details": "Le contenu doit contenir au moins 80 caracteres.",
+            }), 400
+
+        if not OPENROUTER_API_KEY:
+            fallback = generate_fallback_questions(num_questions, difficulty, course_text)
+            return jsonify({
+                "summary": "OpenRouter n'est pas configure. Propositions locales de secours generees.",
+                "issues": ["Configurez OPENROUTER_API_KEY pour activer l'assistant complet."],
+                "suggestions": [
+                    normalize_manual_assistant_question(question, index, difficulty)
+                    for index, question in enumerate(fallback)
+                ],
+                "provider": "local-fallback",
+                "model": "local-fallback",
+                "fallback": True,
+            }), 200
+
+        prompt = build_manual_assistant_prompt({
+            **data,
+            "courseText": course_text,
+            "difficulty": difficulty,
+            "numQuestions": num_questions,
+        })
+        content = generate_with_openrouter(prompt)
+
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if not json_match:
+            raise ValueError("Aucun JSON trouve dans la reponse OpenRouter")
+
+        payload = json.loads(json_match.group())
+        raw_suggestions = payload.get("suggestions", [])
+        if not isinstance(raw_suggestions, list):
+            raw_suggestions = []
+
+        suggestions = [
+            normalized
+            for index, question in enumerate(raw_suggestions[:num_questions])
+            for normalized in [normalize_manual_assistant_question(question, index, difficulty)]
+            if normalized is not None
+        ]
+
+        if not suggestions:
+            raise ValueError("OpenRouter n'a pas retourne de proposition QCM valide")
+
+        issues = payload.get("issues", [])
+        if not isinstance(issues, list):
+            issues = []
+
+        return jsonify({
+            "summary": str(payload.get("summary") or "Propositions generees avec OpenRouter."),
+            "issues": [str(issue) for issue in issues[:6]],
+            "suggestions": suggestions,
+            "provider": "openrouter",
+            "model": OPENROUTER_MODEL,
+            "fallback": False,
+        })
+    except ValueError as e:
+        safe_error = sanitize_error_message(str(e))
+        logger.warning(f"Assistant manuel indisponible: {safe_error}")
+        if 'course_text' in locals() and str(course_text).strip():
+            fallback = generate_fallback_questions(num_questions if 'num_questions' in locals() else 3, difficulty if 'difficulty' in locals() else "medium", course_text)
+            return jsonify({
+                "summary": "OpenRouter est indisponible. Propositions locales de secours generees.",
+                "issues": [safe_error],
+                "suggestions": [
+                    normalize_manual_assistant_question(question, index, difficulty if 'difficulty' in locals() else "medium")
+                    for index, question in enumerate(fallback)
+                ],
+                "provider": "local-fallback",
+                "model": "local-fallback",
+                "fallback": True,
+            }), 200
+        return jsonify({
+            "error": "Assistant OpenRouter indisponible. Veuillez reessayer ou verifier la configuration.",
+            "details": safe_error,
+        }), 503
+    except Exception as e:
+        safe_error = sanitize_error_message(str(e))
+        logger.error(f"Erreur inattendue assistant manuel: {safe_error}", exc_info=True)
+        return jsonify({
+            "error": "Erreur inattendue pendant l'assistance de creation.",
+            "details": safe_error,
+        }), 500
+
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 @limiter.limit("20 per minute")
 @require_auth

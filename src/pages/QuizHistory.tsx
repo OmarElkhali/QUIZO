@@ -1,318 +1,315 @@
+import { useContext, useMemo, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import {
+  ArrowUpRight,
+  BarChart4,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Filter,
+  History,
+  PlusCircle,
+  RefreshCw,
+  Search,
+  Share2,
+  Sparkles,
+  Users2,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
-import { useState, useEffect, useContext } from 'react';
-import { Navbar } from '@/components/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { useQuiz } from '@/hooks/useQuiz';
-import { Navigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { History, PlusCircle, Filter, Search, RefreshCw, BarChart4, Calendar, Clock } from 'lucide-react';
-import { QuizCard } from '@/components/QuizCard';
+import { AppShell } from '@/components/layout/AppShell';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StateCard } from '@/components/ui/StateCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { PremiumPanel } from '@/components/ui/premium';
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { SharedQuizzes } from '@/components/SharedQuizzes';
-import QuizContext from '@/context/QuizContext';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTheme } from 'next-themes';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/AuthContext';
+import QuizContext from '@/context/QuizContext';
+import { useQuiz } from '@/hooks/useQuiz';
+import { Quiz } from '@/types/quiz';
+
+const formatDate = (value?: string) => {
+  if (!value) return 'Date inconnue';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: 'Facile',
+  medium: 'Moyen',
+  hard: 'Difficile',
+};
+
+const QuizHistoryCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
+  const navigate = useNavigate();
+  const completionRate = quiz.completionRate || 0;
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.04, 0.24) }}
+      className="quizo-panel quizo-panel-hover flex h-full flex-col p-5"
+    >
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <Badge className="border-orange-400/25 bg-orange-500/12 text-[#d97706] dark:text-[#ffb77d]">
+            {quiz.questions.length} questions
+          </Badge>
+          {quiz.isShared && (
+            <Badge variant="outline" className="border-sky-400/25 bg-sky-500/10 text-sky-400">
+              <Users2 className="mr-1 h-3.5 w-3.5" />
+              Partagé
+            </Badge>
+          )}
+        </div>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 text-[var(--quizo-muted)] hover:bg-orange-500/10 hover:text-[#d97706]"
+          onClick={() => navigate(`/quiz-preview/${quiz.id}`)}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <h2 className="line-clamp-2 text-xl font-bold tracking-tight text-[var(--quizo-heading)]">{quiz.title}</h2>
+      <p className="mt-3 line-clamp-2 min-h-[44px] text-sm leading-6 text-[var(--quizo-muted)]">
+        {quiz.description || 'Quiz sans description.'}
+      </p>
+
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-[var(--quizo-text)]">Progression</span>
+          <span className="font-bold text-[#d97706]">{completionRate}%</span>
+        </div>
+        <Progress value={completionRate} className="h-2" />
+      </div>
+
+      <div className="mt-6 grid gap-2 text-xs text-[var(--quizo-muted)] sm:grid-cols-2">
+        <span className="flex items-center gap-2">
+          <Calendar className="h-3.5 w-3.5 text-[#d97706]" />
+          {formatDate(quiz.createdAt)}
+        </span>
+        <span className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-[#d97706]" />
+          {quiz.duration || 'Durée libre'}
+        </span>
+        <span className="flex items-center gap-2">
+          <Filter className="h-3.5 w-3.5 text-[#d97706]" />
+          {difficultyLabels[quiz.difficulty || 'medium'] || 'Moyen'}
+        </span>
+        <span className="flex items-center gap-2">
+          <Share2 className="h-3.5 w-3.5 text-[#d97706]" />
+          {quiz.shareCode || 'Privé'}
+        </span>
+      </div>
+
+      <div className="mt-auto pt-6">
+        <Button className="quizo-copper-button w-full" onClick={() => navigate(`/quiz-preview/${quiz.id}`)}>
+          Ouvrir le quiz
+          <ArrowUpRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+    </motion.article>
+  );
+};
 
 const QuizHistory = () => {
   const { user, isLoading: authLoading } = useAuth();
   const { quizzes, isLoading } = useQuiz();
   const quizContext = useContext(QuizContext);
   const navigate = useNavigate();
-  const { theme } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('all');
   const [filterCompletion, setFilterCompletion] = useState('all');
   const [activeTab, setActiveTab] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [stats, setStats] = useState({
-    totalQuizzes: 0,
-    completedQuizzes: 0,
-    averageScore: 0,
-    totalQuestions: 0,
-  });
-  
-  // Ajouter cette fonction
-  const handleRefresh = async () => {
-    // Accéder à fetchQuizzes via le contexte
-    setIsRefreshing(true);
-    if (quizContext && quizContext.fetchQuizzes) {
-      await quizContext.fetchQuizzes();
-    }
-    setTimeout(() => setIsRefreshing(false), 800);
-  };
-  
-  // Calculer les statistiques
-  useEffect(() => {
-    if (quizzes.length > 0) {
-      const completed = quizzes.filter(quiz => quiz.completionRate === 100).length;
-      const totalQuestions = quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
-      const avgScore = completed > 0 
-        ? quizzes.filter(quiz => quiz.completionRate === 100)
-            .reduce((acc, quiz) => acc + quiz.completionRate, 0) / completed
-        : 0;
-      
-      setStats({
-        totalQuizzes: quizzes.length,
-        completedQuizzes: completed,
-        averageScore: Math.round(avgScore),
-        totalQuestions,
-      });
-    }
+
+  const stats = useMemo(() => {
+    const completed = quizzes.filter((quiz) => quiz.completionRate === 100).length;
+    const totalQuestions = quizzes.reduce((acc, quiz) => acc + quiz.questions.length, 0);
+    const averageScore = quizzes.length
+      ? Math.round(quizzes.reduce((acc, quiz) => acc + (quiz.completionRate || 0), 0) / quizzes.length)
+      : 0;
+
+    return {
+      totalQuizzes: quizzes.length,
+      completedQuizzes: completed,
+      averageScore,
+      totalQuestions,
+    };
   }, [quizzes]);
-  
-  // Filtrer les quiz
-  const filteredQuizzes = quizzes.filter(quiz => {
-    // Filtre de recherche
-    const matchesSearch = quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quiz.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Filtre de difficulté - Correction ici
-    const matchesDifficulty = filterDifficulty === 'all' || 
-                           (quiz.difficulty && quiz.difficulty.toLowerCase() === filterDifficulty.toLowerCase());
-    
-    // Filtre de complétion
-    const matchesCompletion = 
-      filterCompletion === 'all' ||
-      (filterCompletion === 'completed' && quiz.completionRate === 100) ||
-      (filterCompletion === 'inProgress' && quiz.completionRate > 0 && quiz.completionRate < 100) ||
-      (filterCompletion === 'notStarted' && quiz.completionRate === 0);
-    
-    // Filtre par onglet
-    const matchesTab = 
-      activeTab === 'all' ||
-      (activeTab === 'shared' && quiz.isShared) ||
-      (activeTab === 'personal' && !quiz.isShared);
-    
-    return matchesSearch && matchesDifficulty && matchesCompletion && matchesTab;
-  });
-  
-  // Rediriger si l'utilisateur n'est pas connecté
+
+  const filteredQuizzes = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return quizzes.filter((quiz) => {
+      const matchesSearch = !normalizedSearch
+        || quiz.title.toLowerCase().includes(normalizedSearch)
+        || (quiz.description || '').toLowerCase().includes(normalizedSearch)
+        || (quiz.shareCode || '').toLowerCase().includes(normalizedSearch);
+
+      const matchesDifficulty = filterDifficulty === 'all' || quiz.difficulty === filterDifficulty;
+      const completion = quiz.completionRate || 0;
+      const matchesCompletion =
+        filterCompletion === 'all'
+        || (filterCompletion === 'completed' && completion === 100)
+        || (filterCompletion === 'inProgress' && completion > 0 && completion < 100)
+        || (filterCompletion === 'notStarted' && completion === 0);
+      const matchesTab =
+        activeTab === 'all'
+        || (activeTab === 'shared' && quiz.isShared)
+        || (activeTab === 'personal' && !quiz.isShared);
+
+      return matchesSearch && matchesDifficulty && matchesCompletion && matchesTab;
+    });
+  }, [activeTab, filterCompletion, filterDifficulty, quizzes, searchTerm]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await quizContext?.fetchQuizzes?.();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
+  };
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setFilterDifficulty('all');
+    setFilterCompletion('all');
+    setActiveTab('all');
+  };
+
   if (authLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
-        </main>
-      </div>
+      <AppShell>
+        <StateCard state="loading" title="Chargement de votre espace" description="Synchronisation de votre session QUIZO." />
+      </AppShell>
     );
   }
 
   if (!user) {
     return <Navigate to="/" />;
   }
-  
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      
-      <main className="flex-1 pt-32 pb-16 px-6">
-        <div className="container mx-auto max-w-6xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center">
-                <div className="bg-primary/10 p-2 rounded-full mr-4">
-                  <History className="h-6 w-6 text-primary" />
-                </div>
-                <h1 className="text-3xl font-bold">Mes Quiz</h1>
-              </div>
-              
-              <Button 
-                onClick={() => navigate('/create-quiz')}
-                className="bg-[#D2691E] hover:bg-[#D2691E]/90"
-              >
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Nouveau Quiz
-              </Button>
-            </div>
-            
-            <p className="text-muted-foreground mb-6">
-              Retrouvez tous vos quiz générés et partagés, classés par date de création.
-            </p>
-            
-            {/* Statistiques */}
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className={`grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 p-4 rounded-lg ${theme === 'dark' ? 'bg-slate-800/40' : 'bg-slate-50'}`}
-            >
-              <div className="flex flex-col items-center justify-center p-4 rounded-md bg-primary/5">
-                <span className="text-3xl font-bold text-primary">{stats.totalQuizzes}</span>
-                <span className="text-sm text-muted-foreground">Quiz Totaux</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-md bg-green-500/5">
-                <span className="text-3xl font-bold text-green-500">{stats.completedQuizzes}</span>
-                <span className="text-sm text-muted-foreground">Quiz Complétés</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-md bg-blue-500/5">
-                <span className="text-3xl font-bold text-blue-500">{stats.averageScore}%</span>
-                <span className="text-sm text-muted-foreground">Score Moyen</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-md bg-amber-500/5">
-                <span className="text-3xl font-bold text-amber-500">{stats.totalQuestions}</span>
-                <span className="text-sm text-muted-foreground">Questions Totales</span>
-              </div>
-            </motion.div>
-            
-            {/* Filtres et recherche */}
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col md:flex-row gap-4 mb-8"
-            >
-              <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un quiz..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-                  <SelectTrigger className="w-[140px]">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Difficulté" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    <SelectItem value="easy">Facile</SelectItem>
-                    <SelectItem value="medium">Moyen</SelectItem>
-                    <SelectItem value="hard">Difficile</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={filterCompletion} onValueChange={setFilterCompletion}>
-                  <SelectTrigger className="w-[140px]">
-                    <BarChart4 className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Progression" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="completed">Complétés</SelectItem>
-                    <SelectItem value="inProgress">En cours</SelectItem>
-                    <SelectItem value="notStarted">Non commencés</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={handleRefresh}
-                  className={`${isRefreshing ? 'animate-spin' : ''}`}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
-            
-            {/* Onglets */}
-            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="all">Tous les Quiz</TabsTrigger>
-                <TabsTrigger value="personal">Mes Quiz</TabsTrigger>
-                <TabsTrigger value="shared">Quiz Partagés</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </motion.div>
-          
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : filteredQuizzes.length > 0 ? (
-            <AnimatePresence>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredQuizzes.map((quiz, index) => (
-                  <motion.div
-                    key={quiz.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ y: -5 }}
-                    className="transform transition-all duration-300"
-                  >
-                    <QuizCard 
-                      id={quiz.id}
-                      title={quiz.title}
-                      description={quiz.description}
-                      questions={quiz.questions.length}
-                      completionRate={quiz.completionRate}
-                      date={quiz.createdAt}
-                      duration={quiz.duration}
-                      participants={quiz.participants}
-                      isHistory={true}
-                      isShared={quiz.isShared}
-                      index={index}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </AnimatePresence>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className={`text-center py-16 border border-dashed rounded-lg ${theme === 'dark' ? 'bg-slate-800/20' : 'bg-muted/30'}`}
-            >
-              <History className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-xl font-medium mb-2">Aucun quiz trouvé</h3>
-              <p className="text-muted-foreground mb-6">
-                {searchTerm || filterDifficulty !== 'all' || filterCompletion !== 'all' 
-                  ? "Aucun quiz ne correspond à vos critères de recherche."
-                  : "Commencez par créer votre premier quiz en téléchargeant un document."}
-              </p>
-              {searchTerm || filterDifficulty !== 'all' || filterCompletion !== 'all' ? (
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setFilterDifficulty('all');
-                    setFilterCompletion('all');
-                  }}
-                >
+    <AppShell>
+      <PageHeader
+        eyebrow="Historique"
+        title="Mes quiz"
+        description="Retrouvez vos quiz générés, manuels et partagés avec une vue claire sur la progression."
+        actions={
+          <>
+            <Button variant="outline" className="quizo-outline-button" onClick={handleRefresh}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Actualiser
+            </Button>
+            <Button className="quizo-copper-button" onClick={() => navigate('/create-quiz')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nouveau quiz
+            </Button>
+          </>
+        }
+      />
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Quiz totaux" value={stats.totalQuizzes} icon={History} detail="Tous vos contenus" />
+        <StatCard label="Complétés" value={stats.completedQuizzes} icon={CheckCircle2} detail="Progression à 100%" />
+        <StatCard label="Progression moyenne" value={`${stats.averageScore}%`} icon={BarChart4} detail="Sur tous les quiz" />
+        <StatCard label="Questions" value={stats.totalQuestions} icon={Sparkles} detail="Banque active" />
+      </section>
+
+      <PremiumPanel className="mt-6 p-4">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto] lg:items-center">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--quizo-muted)]" />
+            <Input
+              placeholder="Rechercher par titre, description ou code..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="quizo-input pl-10"
+            />
+          </div>
+
+          <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
+            <SelectTrigger className="quizo-input min-w-[150px]">
+              <SelectValue placeholder="Difficulté" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="easy">Facile</SelectItem>
+              <SelectItem value="medium">Moyen</SelectItem>
+              <SelectItem value="hard">Difficile</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterCompletion} onValueChange={setFilterCompletion}>
+            <SelectTrigger className="quizo-input min-w-[170px]">
+              <SelectValue placeholder="Progression" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes progressions</SelectItem>
+              <SelectItem value="completed">Complétés</SelectItem>
+              <SelectItem value="inProgress">En cours</SelectItem>
+              <SelectItem value="notStarted">Non commencés</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button variant="outline" className="quizo-outline-button" onClick={resetFilters}>
+            Réinitialiser
+          </Button>
+        </div>
+      </PremiumPanel>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+        <TabsList className="grid w-full grid-cols-3 border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] p-1 md:w-[520px]">
+          <TabsTrigger value="all">Tous</TabsTrigger>
+          <TabsTrigger value="personal">Mes quiz</TabsTrigger>
+          <TabsTrigger value="shared">Partagés</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <section className="mt-6">
+        {isLoading ? (
+          <StateCard state="loading" title="Chargement des quiz" description="Lecture de votre historique Firestore." />
+        ) : filteredQuizzes.length > 0 ? (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {filteredQuizzes.map((quiz, index) => (
+              <QuizHistoryCard key={quiz.id} quiz={quiz} index={index} />
+            ))}
+          </div>
+        ) : (
+          <StateCard
+            state="empty"
+            title="Aucun quiz trouvé"
+            description={
+              searchTerm || filterDifficulty !== 'all' || filterCompletion !== 'all'
+                ? "Aucun quiz ne correspond à vos filtres actuels."
+                : "Créez votre premier quiz IA ou manuel pour alimenter l'historique."
+            }
+            action={
+              searchTerm || filterDifficulty !== 'all' || filterCompletion !== 'all' ? (
+                <Button variant="outline" className="quizo-outline-button" onClick={resetFilters}>
                   Réinitialiser les filtres
                 </Button>
               ) : (
-                <Button 
-                  onClick={() => navigate('/create-quiz')}
-                  className="bg-[#D2691E] hover:bg-[#D2691E]/90"
-                >
-                  <PlusCircle className="mr-2 h-5 w-5" />
-                  Créer un Quiz
+                <Button className="quizo-copper-button" onClick={() => navigate('/create-quiz')}>
+                  Créer un quiz
                 </Button>
-              )}
-            </motion.div>
-          )}
-        </div>
-      </main>
-      
-      <footer className={`py-8 px-6 border-t ${theme === 'dark' ? 'bg-slate-900/30 border-slate-800' : 'bg-muted/30'}`}>
-        <div className="container mx-auto max-w-6xl">
-          <div className="flex justify-center items-center">
-            <p className="text-sm text-muted-foreground">
-              © 2025 QUIZO. Tous droits réservés.
-            </p>
-          </div>
-        </div>
-      </footer>
-    </div>
+              )
+            }
+          />
+        )}
+      </section>
+    </AppShell>
   );
 };
 

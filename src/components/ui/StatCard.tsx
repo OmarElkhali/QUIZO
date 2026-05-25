@@ -13,19 +13,19 @@ interface StatCardProps {
 export const StatCard = ({ label, value, detail, icon: Icon, className }: StatCardProps) => (
   <div
     className={cn(
-      'rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition hover:border-[#d77a36]/35 hover:bg-white/[0.065]',
+      'quizo-panel-subtle quizo-panel-hover p-6',
       className
     )}
   >
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">{label}</p>
+    <div className="mb-6 flex items-center justify-between gap-3">
+      <p className="quizo-label">{label}</p>
       {Icon && (
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#d77a36]/15 text-[#f7c693]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-orange-500/15 text-[#ffb77d]">
           <Icon className="h-4 w-4" />
         </div>
       )}
     </div>
-    <div className="text-2xl font-semibold text-white">{value}</div>
-    {detail && <p className="mt-2 text-sm text-slate-400">{detail}</p>}
+    <div className="text-3xl font-black tracking-tight text-[var(--quizo-heading)]">{value}</div>
+    {detail && <p className="mt-2 text-sm text-[var(--quizo-muted)]">{detail}</p>}
   </div>
 );

@@ -1,17 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, Navigate } from 'react-router-dom';
-import { Navbar } from '@/components/Navbar';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Check, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, ArrowRight, Check, Clock } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { Quiz as QuizType } from '@/types/quiz';
+import { QuizAnswerCard } from '@/components/ui/premium';
+import { StateCard } from '@/components/ui/StateCard';
+import { AppShell } from '@/components/layout/AppShell';
 
 interface QuizQuestion {
   id: string;
@@ -26,6 +24,12 @@ interface QuizData {
   timeLimit?: number;
 }
 
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remaining = seconds % 60;
+  return `${minutes}:${remaining < 10 ? '0' : ''}${remaining}`;
+};
+
 const Quiz = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -39,19 +43,16 @@ const Quiz = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const loadedQuizIdRef = useRef<string | null>(null);
   const timeLeftRef = useRef(timeLeft);
   timeLeftRef.current = timeLeft;
 
-  // Chargement du quiz
   useEffect(() => {
     let isMounted = true;
     const loadQuiz = async () => {
-      if (isAuthLoading || !user?.id) {
-        return;
-      }
+      if (isAuthLoading || !user?.id) return;
 
       if (!id) {
         setError('ID manquant');
@@ -59,9 +60,7 @@ const Quiz = () => {
         return;
       }
 
-      if (loadedQuizIdRef.current === id) {
-        return;
-      }
+      if (loadedQuizIdRef.current === id) return;
 
       try {
         setIsLoading(true);
@@ -76,29 +75,23 @@ const Quiz = () => {
           return;
         }
 
-        // Initialiser le quiz et les réponses
         setQuiz({
           id: data.id,
           title: data.title,
           questions: data.questions.map(q => ({
             id: q.id,
             text: q.text,
-            options: q.options.map(opt => ({
-              id: opt.id,
-              text: opt.text
-            }))
+            options: q.options.map(opt => ({ id: opt.id, text: opt.text })),
           })),
-          timeLimit: data.timeLimit
+          timeLimit: data.timeLimit,
         });
 
-        // Initialiser les réponses avec un objet vide
         const initialAnswers: Record<string, string> = {};
         data.questions.forEach(q => {
           initialAnswers[q.id] = '';
         });
         setAnswers(initialAnswers);
 
-        // Définir le temps restant
         const calculatedTimeLimit = data.timeLimit || Math.ceil(data.questions.length * 1.5);
         setTimeLeft(calculatedTimeLimit * 60);
         loadedQuizIdRef.current = id;
@@ -113,7 +106,7 @@ const Quiz = () => {
     };
 
     loadQuiz();
-    return () => { 
+    return () => {
       isMounted = false;
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -122,7 +115,6 @@ const Quiz = () => {
     };
   }, [getQuiz, id, isAuthLoading, user?.id]);
 
-  // Timer pour le décompte du temps
   useEffect(() => {
     if (isLoading || !quiz?.id || isSubmitting || timeLeftRef.current <= 0) {
       if (timerRef.current) {
@@ -149,235 +141,146 @@ const Quiz = () => {
   const handleSubmit = useCallback(async () => {
     if (isSubmitting || !quiz || !id) return;
 
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
+    if (timerRef.current) clearInterval(timerRef.current);
 
     const unansweredQuestions = quiz.questions.filter(q => !answers[q.id]);
     if (unansweredQuestions.length > 0 && timeLeftRef.current > 10) {
       const confirmSubmit = window.confirm(
         `Il reste ${unansweredQuestions.length} question(s) sans réponse. Voulez-vous vraiment soumettre le quiz ?`
       );
-      if (!confirmSubmit) {
-        return;
-      }
+      if (!confirmSubmit) return;
     }
 
     setIsSubmitting(true);
     try {
-      if (!id) throw new Error("Quiz ID is missing");
       const result = await submitQuizAnswers(id, answers);
-      
+
       if (result) {
         navigate(`/results/${result.quizId}/${result.submissionId}`, {
           state: {
             score: result.score,
             answers,
             totalQuestions: quiz.questions.length,
-            timeSpent: (quiz.timeLimit ?? Math.ceil(quiz.questions.length * 1.5)) * 60 - timeLeftRef.current
-          }
+            timeSpent: (quiz.timeLimit ?? Math.ceil(quiz.questions.length * 1.5)) * 60 - timeLeftRef.current,
+          },
         });
       }
-    } catch (error: any) {
-      toast.error('Erreur lors de la soumission: ' + (error.message || 'Erreur inconnue'));
+    } catch (submitError: any) {
+      toast.error('Erreur lors de la soumission: ' + (submitError.message || 'Erreur inconnue'));
       setIsSubmitting(false);
     }
-  }, [isSubmitting, quiz, answers, submitQuizAnswers, navigate, id]);
+  }, [isSubmitting, quiz, id, answers, submitQuizAnswers, navigate]);
 
-  // Vérifier si le temps est écoulé pour soumettre automatiquement
   useEffect(() => {
     if (timeLeft === 0 && quiz && !isSubmitting && !isLoading) {
       handleSubmit();
     }
   }, [timeLeft, quiz, isSubmitting, isLoading, handleSubmit]);
 
-  // Sélection d'une réponse
   const handleSelectAnswer = useCallback((questionId: string, optionId: string) => {
     setAnswers(prevAnswers => ({
       ...prevAnswers,
-      [questionId]: optionId
+      [questionId]: optionId,
     }));
   }, []);
 
-  // Navigation entre les questions
-  const handlePrev = useCallback(() => {
-    setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
-  }, []);
+  if (isAuthLoading || isLoading) {
+    return (
+      <AppShell>
+        <StateCard state="loading" title="Chargement du quiz" description="Préparation de la session." />
+      </AppShell>
+    );
+  }
 
-  const handleNext = useCallback(() => {
-    if (!quiz) return;
-    setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1));
-  }, [quiz]);
-
-  if (isAuthLoading) return <LoadingScreen />;
   if (!user) return <Navigate to="/" replace />;
-  if (error) return <ErrorScreen error={error} />;
-  if (isLoading || !quiz) return <LoadingScreen />;
+
+  if (error || !quiz) {
+    return (
+      <AppShell>
+        <StateCard
+          state="error"
+          title="Impossible de charger le quiz"
+          description={error || 'Quiz introuvable'}
+          action={<Button className="quizo-copper-button" onClick={() => navigate('/')}>Retour</Button>}
+        />
+      </AppShell>
+    );
+  }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 py-24 px-6">
-        <div className="mx-auto max-w-4xl">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="mb-8"
-          >
-            <QuizHeader
-              title={quiz.title}
-              timeLeft={timeLeft}
-              currentIndex={currentQuestionIndex}
-              totalQuestions={quiz.questions.length}
-              progress={progress}
-            />
-
-            <QuestionCard
-              key={`question-${currentQuestionIndex}`}
-              question={currentQuestion}
-              selectedAnswer={answers[currentQuestion.id] || ''}
-              onSelect={handleSelectAnswer}
-            />
-
-            <NavigationControls
-              currentIndex={currentQuestionIndex}
-              totalQuestions={quiz.questions.length}
-              onPrev={handlePrev}
-              onNext={handleNext}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-            />
-          </motion.div>
+    <div className="dark quizo-app-bg min-h-screen">
+      <div className="pointer-events-none fixed inset-0 quizo-ambient" />
+      <header className="relative z-10 flex h-20 items-center justify-between px-5 md:px-10">
+        <div className="flex items-center gap-5">
+          <Button variant="ghost" size="icon" className="text-[#dbc2b0] hover:bg-white/[0.055] hover:text-white" onClick={() => navigate(`/quiz-preview/${id}`)}>
+            <X className="h-5 w-5" />
+          </Button>
+          <span className="text-sm font-semibold tracking-wide text-[#dbc2b0]">{quiz.title}</span>
         </div>
+        <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.055] px-5 py-2 text-[#ffb77d]">
+          <Clock className="h-4 w-4" />
+          <span className="font-mono text-sm font-bold tracking-widest">{formatTime(timeLeft)}</span>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 pb-32 pt-8 md:px-10">
+        <div className="mb-10">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="quizo-label">Question {currentQuestionIndex + 1} / {quiz.questions.length}</span>
+            <span className="quizo-label text-[#ffb77d]">{Math.round(progress)}%</span>
+          </div>
+          <div className="h-px overflow-hidden rounded-full bg-white/10">
+            <div className="h-full bg-[#ffb77d] shadow-[0_0_12px_rgba(255,183,125,0.9)]" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        <section className="quizo-panel relative overflow-hidden p-6 sm:p-10 lg:p-14">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent" />
+          <div className="relative">
+            <h1 className="max-w-4xl text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+              <span className="mr-3 font-light text-[#ffb77d]/70">Q{currentQuestionIndex + 1}.</span>
+              {currentQuestion.text}
+            </h1>
+            <RadioGroup value={answers[currentQuestion.id] || ''} onValueChange={(value) => handleSelectAnswer(currentQuestion.id, value)} className="mt-10 space-y-4">
+              {currentQuestion.options.map((option) => (
+                <Label key={option.id} htmlFor={`option-${currentQuestion.id}-${option.id}`} className="block cursor-pointer">
+                  <RadioGroupItem value={option.id} id={`option-${currentQuestion.id}-${option.id}`} className="sr-only" />
+                  <QuizAnswerCard selected={answers[currentQuestion.id] === option.id}>{option.text}</QuizAnswerCard>
+                </Label>
+              ))}
+            </RadioGroup>
+          </div>
+        </section>
       </main>
-    </div>
-  );
-};
 
-// Composants enfants
-const ErrorScreen = ({ error }: { error: string }) => (
-  <div className="min-h-screen flex flex-col">
-    <Navbar />
-    <div className="flex-1 flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <p className="text-red-500">{error}</p>
-        <Button variant="outline" onClick={() => window.location.href = '/'}>
-          Retour
-        </Button>
-      </div>
-    </div>
-  </div>
-);
-
-const LoadingScreen = () => (
-  <div className="min-h-screen flex flex-col">
-    <Navbar />
-    <div className="flex-1 flex items-center justify-center">
-      <div className="animate-pulse">Chargement...</div>
-    </div>
-  </div>
-);
-
-const QuizHeader = ({
-  title, timeLeft, currentIndex, totalQuestions, progress
-}: {
-  title: string;
-  timeLeft: number;
-  currentIndex: number;
-  totalQuestions: number;
-  progress: number;
-}) => (
-  <>
-    <div className="flex justify-between items-center mb-4">
-      <h1 className="text-2xl font-bold">{title}</h1>
-      <div className="flex items-center bg-amber-50 text-amber-700 px-3 py-1.5 rounded-md">
-        <Clock className="h-4 w-4 mr-2" />
-        <span className="font-medium">
-          {Math.floor(timeLeft / 60)}:
-          {timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
-        </span>
-      </div>
-    </div>
-    <div className="flex justify-between items-center mb-2 text-sm">
-      <span className="text-muted-foreground">
-        Question {currentIndex + 1} sur {totalQuestions}
-      </span>
-      <span className="font-medium">{Math.round(progress)}%</span>
-    </div>
-    <Progress value={progress} className="h-2 mb-8" />
-  </>
-);
-
-const NavigationControls = ({
-  currentIndex, totalQuestions, onPrev, onNext, onSubmit, isSubmitting
-}: {
-  currentIndex: number;
-  totalQuestions: number;
-  onPrev: () => void;
-  onNext: () => void;
-  onSubmit: () => void;
-  isSubmitting: boolean;
-}) => (
-  <div className="flex justify-between flex-col sm:flex-row gap-2 sm:gap-0">  {/* Ajout de flex-col pour mobile */}
-    <Button variant="outline" onClick={onPrev} disabled={currentIndex === 0 || isSubmitting} className="w-full sm:w-auto">
-      <ArrowLeft className="mr-2 h-4 w-4" /> Précédent
-    </Button>
-    {currentIndex === totalQuestions - 1 ? (
-      <Button 
-        onClick={onSubmit} 
-        disabled={isSubmitting} 
-        className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-      >
-        {isSubmitting ? 'Soumission...' : 'Terminer le quiz'} 
-        <Check className="ml-2 h-4 w-4" />
-      </Button>
-    ) : (
-      <Button onClick={onNext} disabled={isSubmitting} className="w-full sm:w-auto">
-        Suivant <ArrowRight className="ml-2 h-4 w-4" />
-      </Button>
-    )}
-  </div>
-);
-
-const QuestionCard = ({
-  question,
-  selectedAnswer,
-  onSelect,
-}: {
-  question: QuizQuestion;
-  selectedAnswer: string;
-  onSelect: (questionId: string, optionId: string) => void;
-}) => {
-  return (
-    <Card className="mb-8">
-      <CardContent className="pt-6">
-        <div className="space-y-6">
-          <h2 className="text-xl font-medium mb-6">{question.text}</h2>
-          <RadioGroup
-            value={selectedAnswer}
-            onValueChange={(value) => onSelect(question.id, value)}
-            className="space-y-3"
+      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#070707] via-[#070707]/90 to-transparent p-5 md:p-8">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+            disabled={currentQuestionIndex === 0 || isSubmitting}
+            className="rounded-full px-6 quizo-outline-button"
           >
-            {question.options.map((option) => (
-              <Label
-                key={option.id}
-                htmlFor={`option-${question.id}-${option.id}`}
-                className={`
-                  flex items-center space-x-3 border rounded-lg p-3 sm:p-4 transition-all cursor-pointer text-sm sm:text-base
-                  ${selectedAnswer === option.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50'}
-                `}
-              >
-                <RadioGroupItem value={option.id} id={`option-${question.id}-${option.id}`} />
-                <span className="font-normal">{option.text}</span>
-              </Label>
-            ))}
-          </RadioGroup>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Précédent
+          </Button>
+          {currentQuestionIndex === quiz.questions.length - 1 ? (
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-full bg-emerald-500 px-8 text-[#061a11] hover:bg-emerald-400">
+              {isSubmitting ? 'Soumission...' : 'Terminer le quiz'}
+              <Check className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))} disabled={isSubmitting} className="rounded-full px-8 quizo-copper-button">
+              Suivant
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </footer>
+    </div>
   );
 };
 

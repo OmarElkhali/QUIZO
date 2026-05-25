@@ -1,43 +1,24 @@
-import { useState, useEffect } from 'react';
-import { Navigate, useParams, useNavigate } from 'react-router-dom';
-import { Navbar } from '@/components/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { motion } from 'framer-motion';
-import { 
-  Users, 
-  Trophy, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Activity,
-  Play,
-  Pause,
-  BarChart3,
-  Copy
-} from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Activity, BarChart3, CheckCircle, Copy, Pause, Play, Trophy, Users } from 'lucide-react';
+import { toast } from 'sonner';
+import { AppShell } from '@/components/layout/AppShell';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StateCard } from '@/components/ui/StateCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
-import { 
-  getManualQuiz, 
-  getQuizParticipants, 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/context/AuthContext';
+import {
+  getManualQuiz,
+  getQuizParticipants,
   getQuizAttempts,
   updateQuizStatus,
   listenToParticipants,
-  listenToAttempts
+  listenToAttempts,
 } from '@/services/manualQuizService';
 import { ManualQuiz, Participant, Attempt } from '@/types/quiz';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { PremiumMetric, PremiumPanel } from '@/components/ui/premium';
 
 const RealtimeDashboard = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +44,7 @@ const RealtimeDashboard = () => {
     const loadQuizData = async () => {
       try {
         const quizData = await getManualQuiz(id);
-        
+
         if (!quizData) {
           toast.error('Quiz non trouvé');
           navigate('/history');
@@ -79,33 +60,21 @@ const RealtimeDashboard = () => {
         if (cancelled) return;
 
         setQuiz(quizData);
-        setIsLoading(false);
-
-        // Charger les participants et tentatives initiales
         const [participantsData, attemptsData] = await Promise.all([
           getQuizParticipants(id),
-          getQuizAttempts(id)
+          getQuizAttempts(id),
         ]);
 
+        if (cancelled) return;
         setParticipants(participantsData);
         setAttempts(attemptsData);
-
-        // Écouter les changements en temps réel
-        if (cancelled) return;
-
-        unsubscribeParticipants = listenToParticipants(id, (updatedParticipants) => {
-          setParticipants(updatedParticipants);
-        });
-
-        unsubscribeAttempts = listenToAttempts(id, (updatedAttempts) => {
-          setAttempts(updatedAttempts);
-        });
+        unsubscribeParticipants = listenToParticipants(id, setParticipants);
+        unsubscribeAttempts = listenToAttempts(id, setAttempts);
       } catch (error) {
         console.error('Erreur lors du chargement:', error);
         toast.error('Erreur lors du chargement du quiz');
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -120,34 +89,34 @@ const RealtimeDashboard = () => {
 
   const handleStartQuiz = async () => {
     if (!id) return;
-    
+
     try {
       await updateQuizStatus(id, 'active');
       setQuiz(prev => prev ? { ...prev, status: 'active' } : null);
-      toast.success('Quiz démarré ! Les participants peuvent maintenant commencer.');
-    } catch (error) {
+      toast.success('Quiz démarré. Les participants peuvent commencer.');
+    } catch {
       toast.error('Erreur lors du démarrage du quiz');
     }
   };
 
   const handleEndQuiz = async () => {
     if (!id) return;
-    
+
     try {
       await updateQuizStatus(id, 'completed');
       setQuiz(prev => prev ? { ...prev, status: 'completed' } : null);
-      toast.success('Quiz terminé !');
-    } catch (error) {
+      toast.success('Quiz terminé.');
+    } catch {
       toast.error('Erreur lors de la fermeture du quiz');
     }
   };
 
   const copyShareLink = () => {
     if (!quiz?.shareCode) return;
-    
+
     const link = `${window.location.origin}/join-quiz/${quiz.shareCode}`;
     navigator.clipboard.writeText(link);
-    toast.success('Lien copié dans le presse-papier !');
+    toast.success('Lien copié dans le presse-papier');
   };
 
   const getCompletionRate = () => {
@@ -159,375 +128,200 @@ const RealtimeDashboard = () => {
   const getAverageScore = () => {
     const completedAttempts = attempts.filter(a => a.completedAt && a.score !== undefined);
     if (completedAttempts.length === 0) return 0;
-    
     const totalScore = completedAttempts.reduce((sum, a) => sum + (a.score || 0), 0);
     return Math.round(totalScore / completedAttempts.length);
   };
 
-  const getActiveParticipants = () => {
-    return participants.filter(p => p.isActive && !p.completedAt).length;
-  };
+  const getActiveParticipants = () => participants.filter(p => p.isActive && !p.completedAt).length;
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
-        </main>
-      </div>
+      <AppShell>
+        <StateCard state="loading" title="Chargement du dashboard" description="Vérification de votre session." />
+      </AppShell>
     );
   }
 
-  if (!user) {
-    return <Navigate to="/" />;
-  }
+  if (!user) return <Navigate to="/" />;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Activity className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Chargement du dashboard...</p>
-          </div>
-        </main>
-      </div>
+      <AppShell>
+        <StateCard state="loading" title="Chargement du dashboard" description="Connexion aux participants en temps réel." />
+      </AppShell>
     );
   }
 
   if (!quiz) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      
-      <main className="flex-1 py-8 px-6">
-        <div className="max-w-7xl mx-auto">
-          {/* En-tête */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
-                <p className="text-muted-foreground">{quiz.description}</p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <Badge variant={quiz.status === 'active' ? 'default' : quiz.status === 'completed' ? 'secondary' : 'outline'}>
-                  {quiz.status === 'active' ? 'En cours' : quiz.status === 'completed' ? 'Terminé' : 'Brouillon'}
-                </Badge>
-                
-                {quiz.mode === 'realtime' && (
-                  <Badge variant="outline" className="gap-1">
-                    <Activity className="h-3 w-3" />
-                    Temps Réel
-                  </Badge>
-                )}
-                
-                {quiz.status !== 'completed' && (
-                  <>
-                    {quiz.status === 'draft' || quiz.status === 'active' ? (
-                      <Button
-                        onClick={quiz.status === 'draft' ? handleStartQuiz : handleEndQuiz}
-                        className="gap-2"
-                      >
-                        {quiz.status === 'draft' ? (
-                          <>
-                            <Play className="h-4 w-4" />
-                            Démarrer
-                          </>
-                        ) : (
-                          <>
-                            <Pause className="h-4 w-4" />
-                            Terminer
-                          </>
-                        )}
-                      </Button>
-                    ) : null}
-                    
-                    <Button variant="outline" onClick={copyShareLink} className="gap-2">
-                      <Copy className="h-4 w-4" />
-                      Copier le lien
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Statistiques globales */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Participants</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{participants.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getActiveParticipants()} actifs maintenant
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Taux de complétion</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{getCompletionRate()}%</div>
-                  <Progress value={getCompletionRate()} className="mt-2" />
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Score Moyen</CardTitle>
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{getAverageScore()}%</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Sur {attempts.filter(a => a.completedAt).length} tentatives
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Questions</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{quiz.questions.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {quiz.timeLimit ? `${quiz.timeLimit} min` : 'Pas de limite'}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
+    <AppShell>
+      <PageHeader
+        eyebrow="Suivi en direct"
+        title={quiz.title}
+        description={quiz.description || 'Suivez la progression, les scores et l’activité des participants en temps réel.'}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {quiz.status !== 'completed' && (
+              <Button onClick={quiz.status === 'draft' ? handleStartQuiz : handleEndQuiz} className="quizo-copper-button">
+                {quiz.status === 'draft' ? <Play className="mr-2 h-4 w-4" /> : <Pause className="mr-2 h-4 w-4" />}
+                {quiz.status === 'draft' ? 'Démarrer' : 'Terminer'}
+              </Button>
+            )}
+            <Button variant="outline" onClick={copyShareLink} className="quizo-outline-button">
+              <Copy className="mr-2 h-4 w-4" />
+              Copier le lien
+            </Button>
           </div>
+        }
+      />
 
-          {/* Contenu avec onglets */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
-              <TabsTrigger value="participants">Participants</TabsTrigger>
-              <TabsTrigger value="results">Résultats</TabsTrigger>
-            </TabsList>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Badge className="border border-orange-300/25 bg-orange-500/10 text-[#ffb77d] hover:bg-orange-500/10">
+          {quiz.status === 'active' ? 'En cours' : quiz.status === 'completed' ? 'Terminé' : 'Brouillon'}
+        </Badge>
+        {quiz.mode === 'realtime' && (
+          <Badge variant="outline" className="gap-1 border-white/[0.07] text-[#d8d2ce]">
+            <Activity className="h-3 w-3" />
+            Temps réel
+          </Badge>
+        )}
+        {quiz.shareCode && <span className="rounded-lg border border-white/[0.07] bg-white/[0.045] px-3 py-1.5 font-mono text-sm text-white">{quiz.shareCode}</span>}
+      </div>
 
-            {/* Vue d'ensemble */}
-            <TabsContent value="overview">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Participants en temps réel</CardTitle>
-                  <CardDescription>
-                    Suivez la progression de vos participants en direct
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {participants.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">Aucun participant pour le moment</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Partagez le code : <span className="font-mono font-bold">{quiz.shareCode}</span>
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {participants.map((participant, index) => (
-                        <motion.div
-                          key={participant.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className="flex items-center justify-between p-4 border rounded-lg"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`h-3 w-3 rounded-full ${participant.isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
-                            <div>
-                              <p className="font-medium">{participant.name}</p>
-                              <p className="text-sm text-muted-foreground">{participant.email}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-6">
-                            {quiz.mode === 'realtime' && participant.currentQuestionIndex !== undefined && (
-                              <div className="text-sm text-muted-foreground">
-                                Question {participant.currentQuestionIndex + 1}/{quiz.questions.length}
-                              </div>
-                            )}
-                            
-                            {participant.completedAt ? (
-                              <Badge variant="secondary" className="gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                Terminé
-                              </Badge>
-                            ) : participant.isActive ? (
-                              <Badge className="gap-1">
-                                <Activity className="h-3 w-3" />
-                                En cours
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline">En attente</Badge>
-                            )}
-                            
-                            {participant.score !== undefined && (
-                              <div className="text-right">
-                                <div className="text-2xl font-bold">{participant.score}%</div>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+      <section className="mb-6 grid gap-5 md:grid-cols-4">
+        <PremiumMetric label="Participants" value={participants.length} detail={`${getActiveParticipants()} actifs`} icon={Users} tone="blue" />
+        <PremiumMetric label="Complétion" value={`${getCompletionRate()}%`} icon={CheckCircle} tone="green" />
+        <PremiumMetric label="Score moyen" value={`${getAverageScore()}%`} icon={Trophy} tone="copper" />
+        <PremiumMetric label="Questions" value={quiz.questions.length} icon={BarChart3} tone="violet" />
+      </section>
 
-            {/* Liste des participants */}
-            <TabsContent value="participants">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Liste des participants</CardTitle>
-                  <CardDescription>
-                    {participants.length} participant(s) inscrit(s)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Rejoint le</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead className="text-right">Score</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {participants.map((participant) => (
-                        <TableRow key={participant.id}>
-                          <TableCell className="font-medium">{participant.name}</TableCell>
-                          <TableCell>{participant.email || '-'}</TableCell>
-                          <TableCell>{new Date(participant.joinedAt).toLocaleString()}</TableCell>
-                          <TableCell>
-                            {participant.completedAt ? (
-                              <Badge variant="secondary">Terminé</Badge>
-                            ) : participant.isActive ? (
-                              <Badge>En cours</Badge>
-                            ) : (
-                              <Badge variant="outline">En attente</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-bold">
-                            {participant.score !== undefined ? `${participant.score}%` : '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-6 grid h-auto grid-cols-3 gap-2 bg-transparent">
+          <TabsTrigger value="overview" className="border border-white/[0.07] bg-white/[0.045] data-[state=active]:bg-orange-500/15 data-[state=active]:text-[#ffb77d]">Vue d’ensemble</TabsTrigger>
+          <TabsTrigger value="participants" className="border border-white/[0.07] bg-white/[0.045] data-[state=active]:bg-orange-500/15 data-[state=active]:text-[#ffb77d]">Participants</TabsTrigger>
+          <TabsTrigger value="results" className="border border-white/[0.07] bg-white/[0.045] data-[state=active]:bg-orange-500/15 data-[state=active]:text-[#ffb77d]">Résultats</TabsTrigger>
+        </TabsList>
 
-            {/* Résultats détaillés */}
-            <TabsContent value="results">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Résultats détaillés</CardTitle>
-                  <CardDescription>
-                    Analyse des performances de chaque participant
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {attempts.filter(a => a.completedAt).length === 0 ? (
-                    <div className="text-center py-12">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">Aucun résultat disponible</p>
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Participant</TableHead>
-                          <TableHead>Début</TableHead>
-                          <TableHead>Fin</TableHead>
-                          <TableHead>Durée</TableHead>
-                          <TableHead className="text-right">Score</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {attempts
-                          .filter(a => a.completedAt)
-                          .sort((a, b) => (b.score || 0) - (a.score || 0))
-                          .map((attempt) => {
-                            const participant = participants.find(p => p.id === attempt.participantId);
-                            return (
-                              <TableRow key={attempt.id}>
-                                <TableCell className="font-medium">{participant?.name || 'Inconnu'}</TableCell>
-                                <TableCell>{new Date(attempt.startedAt).toLocaleTimeString()}</TableCell>
-                                <TableCell>{attempt.completedAt ? new Date(attempt.completedAt).toLocaleTimeString() : '-'}</TableCell>
-                                <TableCell>
-                                  {attempt.timeSpent 
-                                    ? `${Math.floor(attempt.timeSpent / 60)}:${String(attempt.timeSpent % 60).padStart(2, '0')}`
-                                    : '-'
-                                  }
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <span className={`font-bold ${
-                                    (attempt.score || 0) >= 80 ? 'text-green-600' :
-                                    (attempt.score || 0) >= 60 ? 'text-yellow-600' :
-                                    'text-red-600'
-                                  }`}>
-                                    {attempt.score}%
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="overview">
+          <PremiumPanel className="p-6">
+            <h2 className="text-2xl font-bold text-white">Participants en temps réel</h2>
+            <p className="mt-1 text-sm text-[#a79d96]">Progression live et présence des apprenants.</p>
+            <ParticipantList participants={participants} quiz={quiz} />
+          </PremiumPanel>
+        </TabsContent>
+
+        <TabsContent value="participants">
+          <PremiumPanel className="overflow-hidden">
+            <DashboardTable
+              participants={participants}
+              attempts={attempts}
+              mode="participants"
+            />
+          </PremiumPanel>
+        </TabsContent>
+
+        <TabsContent value="results">
+          <PremiumPanel className="overflow-hidden">
+            <DashboardTable
+              participants={participants}
+              attempts={attempts.filter(a => a.completedAt).sort((a, b) => (b.score || 0) - (a.score || 0))}
+              mode="results"
+            />
+          </PremiumPanel>
+        </TabsContent>
+      </Tabs>
+    </AppShell>
+  );
+};
+
+const ParticipantList = ({ participants, quiz }: { participants: Participant[]; quiz: ManualQuiz }) => {
+  if (participants.length === 0) {
+    return (
+      <div className="py-12 text-center">
+        <Users className="mx-auto mb-4 h-12 w-12 text-[#6f6760]" />
+        <p className="text-[#a79d96]">Aucun participant pour le moment</p>
+        <p className="mt-2 text-sm text-[#8f8580]">Partagez le code : <span className="font-mono font-bold text-white">{quiz.shareCode}</span></p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 space-y-3">
+      {participants.map((participant) => (
+        <div key={participant.id} className="flex flex-col justify-between gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.045] p-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-4">
+            <div className={`h-3 w-3 rounded-full ${participant.isActive ? 'animate-pulse bg-emerald-400' : 'bg-[#6f6760]'}`} />
+            <div>
+              <p className="font-semibold text-white">{participant.name}</p>
+              <p className="text-sm text-[#8f8580]">{participant.email || 'Invité'}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm text-[#a79d96]">
+            {quiz.mode === 'realtime' && participant.currentQuestionIndex !== undefined && (
+              <span>Question {participant.currentQuestionIndex + 1}/{quiz.questions.length}</span>
+            )}
+            <span className="rounded-full border border-white/[0.07] bg-black/25 px-3 py-1">
+              {participant.completedAt ? 'Terminé' : participant.isActive ? 'En cours' : 'En attente'}
+            </span>
+            {participant.score !== undefined && <span className="text-xl font-bold text-white">{participant.score}%</span>}
+          </div>
         </div>
-      </main>
+      ))}
     </div>
   );
 };
+
+const DashboardTable = ({ participants, attempts, mode }: { participants: Participant[]; attempts: Attempt[]; mode: 'participants' | 'results' }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full min-w-[760px]">
+      <thead>
+        <tr className="border-b border-white/[0.07] text-left">
+          {mode === 'participants' ? (
+            <>
+              <th className="px-6 py-4 quizo-label">Nom</th>
+              <th className="px-6 py-4 quizo-label">Email</th>
+              <th className="px-6 py-4 quizo-label">Rejoint le</th>
+              <th className="px-6 py-4 quizo-label">Statut</th>
+              <th className="px-6 py-4 text-right quizo-label">Score</th>
+            </>
+          ) : (
+            <>
+              <th className="px-6 py-4 quizo-label">Participant</th>
+              <th className="px-6 py-4 quizo-label">Début</th>
+              <th className="px-6 py-4 quizo-label">Fin</th>
+              <th className="px-6 py-4 quizo-label">Durée</th>
+              <th className="px-6 py-4 text-right quizo-label">Score</th>
+            </>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {mode === 'participants'
+          ? participants.map((participant) => (
+              <tr key={participant.id} className="border-b border-white/[0.055] last:border-0 hover:bg-white/[0.035]">
+                <td className="px-6 py-4 font-semibold text-white">{participant.name}</td>
+                <td className="px-6 py-4 text-[#a79d96]">{participant.email || '-'}</td>
+                <td className="px-6 py-4 text-[#a79d96]">{new Date(participant.joinedAt).toLocaleString()}</td>
+                <td className="px-6 py-4 text-[#a79d96]">{participant.completedAt ? 'Terminé' : participant.isActive ? 'En cours' : 'En attente'}</td>
+                <td className="px-6 py-4 text-right font-bold text-white">{participant.score !== undefined ? `${participant.score}%` : '-'}</td>
+              </tr>
+            ))
+          : attempts.map((attempt) => {
+              const participant = participants.find(p => p.id === attempt.participantId);
+              return (
+                <tr key={attempt.id} className="border-b border-white/[0.055] last:border-0 hover:bg-white/[0.035]">
+                  <td className="px-6 py-4 font-semibold text-white">{participant?.name || 'Inconnu'}</td>
+                  <td className="px-6 py-4 text-[#a79d96]">{new Date(attempt.startedAt).toLocaleTimeString()}</td>
+                  <td className="px-6 py-4 text-[#a79d96]">{attempt.completedAt ? new Date(attempt.completedAt).toLocaleTimeString() : '-'}</td>
+                  <td className="px-6 py-4 text-[#a79d96]">{attempt.timeSpent ? `${Math.floor(attempt.timeSpent / 60)}:${String(attempt.timeSpent % 60).padStart(2, '0')}` : '-'}</td>
+                  <td className="px-6 py-4 text-right font-bold text-white">{attempt.score}%</td>
+                </tr>
+              );
+            })}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default RealtimeDashboard;

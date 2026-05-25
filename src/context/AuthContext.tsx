@@ -1,13 +1,11 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { 
-  User as FirebaseUser,
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithPopup,
-  updateProfile
+  updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -33,13 +31,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  
-  // Observer for auth state changes
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setIsLoading(true);
       if (firebaseUser) {
-        // Convert Firebase user to our User type
         setUser({
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
@@ -54,12 +50,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return () => unsubscribe();
   }, []);
-  
+
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email, password);
       toast.success('Connexion réussie');
     } catch (error: any) {
       console.error('Erreur de connexion:', error);
@@ -69,10 +65,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
-  
+
   const signInWithGoogle = async () => {
     setIsLoading(true);
-    
+
     try {
       await signInWithPopup(auth, googleProvider);
       toast.success('Connexion avec Google réussie');
@@ -84,18 +80,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
-  
+
   const signUp = async (email: string, password: string, name?: string) => {
     setIsLoading(true);
-    
+
     try {
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update profile with name if provided
+
       if (name && firebaseUser) {
         await updateProfile(firebaseUser, { displayName: name });
       }
-      
+
       toast.success('Compte créé avec succès');
     } catch (error: any) {
       console.error('Erreur de création de compte:', error);
@@ -105,10 +100,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
-  
+
   const signOut = async () => {
     setIsLoading(true);
-    
+
     try {
       await firebaseSignOut(auth);
       toast.success('Déconnexion réussie');
@@ -120,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <AuthContext.Provider
       value={{
@@ -139,10 +134,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
+
   return context;
 };
