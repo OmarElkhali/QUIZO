@@ -1,4 +1,3 @@
-﻿
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -20,12 +19,13 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AIModelType } from '@/types/quiz';
 
-const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
-  { value: 'openrouter', label: 'OpenRouter recommandé', description: 'Routeur rapide multi-modèles configuré côté backend.' },
-  { value: 'gemini', label: 'Gemini', description: 'Google Gemini via le backend Flask.' },
-  { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
-  { value: 'groq', label: 'Groq', description: 'Groq si une clé API est fournie.' },
-  { value: 'ollama', label: 'Ollama', description: 'Modele local si Ollama tourne sur cette machine.' },
+const AI_MODELS: Array<{ value: AIModelType; label: string; description: string; badge?: string }> = [
+  { value: 'groq', label: 'Groq', description: '⚡ Ultra-rapide (3-5s), gratuit et illimité.', badge: 'Recommandé' },
+  { value: 'gemini', label: 'Gemini', description: '🔥 Modèle puissant de Google pour la génération de quiz.' },
+  { value: 'chatgpt', label: 'ChatGPT', description: '🎯 Précis et optimisé pour le français.' },
+  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur rapide multi-modèles (Qwen, Llama, etc.).' },
+  { value: 'qwen', label: 'Qwen', description: 'Modèle puissant d\'Alibaba.' },
+  { value: 'ollama', label: 'Ollama (Local)', description: 'Modèle local gratuit s\'il est installé sur votre machine.' },
 ];
 
 export const QuizForm = () => {
@@ -40,7 +40,7 @@ export const QuizForm = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState(30); // minutes
-  const [modelType, setModelType] = useState<AIModelType>('openrouter');
+  const [modelType, setModelType] = useState<AIModelType>('groq'); // Groq par défaut (ultra-rapide)
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCreated, setQuizCreated] = useState(false);
@@ -139,6 +139,7 @@ export const QuizForm = () => {
         enableTimeLimit ? timeLimit : undefined, 
         additionalInfo,
         modelType,
+        undefined, // apiKey optionnel
         statusCallback
       );
       
@@ -274,15 +275,27 @@ export const QuizForm = () => {
                       type="button"
                       variant={modelType === model.value ? "default" : "outline"}
                       onClick={() => setModelType(model.value)}
-                      className={modelType === model.value ? 'min-h-10 quizo-copper-button' : 'min-h-10 quizo-outline-button'}
+                      className={modelType === model.value 
+                        ? 'min-h-12 quizo-copper-button flex flex-col justify-center items-center py-1' 
+                        : 'min-h-12 quizo-outline-button flex flex-col justify-center items-center py-1'
+                      }
                     >
-                      {model.label}
+                      <span className="text-sm font-bold">{model.label}</span>
+                      {model.badge && <span className="text-[10px] opacity-75">{model.badge}</span>}
                     </Button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {AI_MODELS.find((model) => model.value === modelType)?.description}
-                </p>
+                <div className="bg-muted/50 rounded-lg p-3 border border-muted">
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {AI_MODELS.find((model) => model.value === modelType)?.description}
+                  </p>
+                  {modelType === 'groq' && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Gratuit • Ultra-rapide • Illimité</span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -296,7 +309,7 @@ export const QuizForm = () => {
                   type="button"
                   variant={difficulty === level ? "default" : "outline"}
                   onClick={() => setDifficulty(level)}
-                    className={difficulty === level ? "flex-1 quizo-copper-button" : "flex-1 quizo-outline-button"}
+                  className={difficulty === level ? "flex-1 quizo-copper-button" : "flex-1 quizo-outline-button"}
                 >
                   {level === 'easy' ? t('createQuiz.easy') : level === 'medium' ? t('createQuiz.medium') : t('createQuiz.hard')}
                 </Button>

@@ -3,7 +3,8 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { AIModelType, Question } from '@/types/quiz';
 
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+// URL de l'API Flask - utiliser le proxy Vite en dev, variable d'env en prod
+const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 /** Returns headers with the current user's Firebase ID token for backend auth. */
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -200,10 +201,12 @@ export const generateQuestionsWithAI = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  progressCallback?: (progress: number) => void
+  progressCallback?: (progress: number) => void,
+  apiKey?: string
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
 
+  // Vérification de l'état du serveur Flask (non bloquant)
   try {
     const health = await axios.get(`${FLASK_API_URL}/health`, { timeout: 5000 });
     console.log('Backend health:', health.data);
@@ -215,15 +218,19 @@ export const generateQuestionsWithAI = async (
 
   const authHeaders = await getAuthHeaders();
 
+  // Timeout adapté au modèle (Groq ultra-rapide, Gemini/ChatGPT plus lents)
+  const timeoutMs = modelType === 'groq' ? 60000 : 240000;
+
   const response = await axios.post(`${FLASK_API_URL}/generate`, {
     text,
     numQuestions,
     difficulty,
     additionalInfo,
     modelType,
+    apiKey: modelType === 'chatgpt' ? apiKey : undefined
   }, {
     headers: authHeaders,
-    timeout: 240000,
+    timeout: timeoutMs,
   });
 
   if (response.data?.warning) {
@@ -242,6 +249,20 @@ export const generateQuestionsWithAI = async (
 
   if (questions.length === 0) {
     throw new Error('Aucune question valide n a ete generee.');
+  }
+
+  // Compléter avec des questions de secours si nécessaire
+  if (questions.length < numQuestions) {
+    console.log(`Complétion de ${numQuestions - questions.length} questions manquantes avec la base de secours...`);
+    const backupQuestions = await getFirebaseBackupQuestions();
+    const remaining = backupQuestions
+      .filter(bq => !questions.some(q => q.text === bq.text))
+      .slice(0, numQuestions - questions.length)
+      .map(bq => ({ ...bq, difficulty }));
+    
+    const finalQuestions = [...questions, ...remaining];
+    progressCallback?.(1);
+    return finalQuestions.slice(0, numQuestions);
   }
 
   progressCallback?.(1);

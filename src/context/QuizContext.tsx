@@ -1,4 +1,3 @@
-
 import { createContext } from 'react';
 import { AIModelType, Quiz } from '@/types/quiz';
 
@@ -17,6 +16,7 @@ interface QuizContextType {
     timeLimit?: number,
     additionalInfo?: string, 
     modelType?: AIModelType,
+    apiKey?: string,
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;

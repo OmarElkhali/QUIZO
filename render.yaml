@@ -10,7 +10,7 @@ services:
     branch: main
     rootDir: python_api
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 180 --max-requests 1000 --max-requests-jitter 50
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 300 --max-requests 1000 --max-requests-jitter 50 --keep-alive 5
     envVars:
       - key: PORT
         value: 5000
@@ -28,15 +28,21 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         sync: false
-      - key: OPENROUTER_API_KEY
-        sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: CHATGPT_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
         sync: false
       - key: QWEN_API_KEY
         sync: false
       - key: MAX_UPLOAD_SIZE_MB
-        value: 10
+        value: "10"
       - key: MAX_AI_QUESTIONS_PER_QUIZ
-        value: 20
+        value: "20"
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: true  # Déploiement automatique sur push GitHub
+    disk:
+      name: quizo-data
+      mountPath: /data
+      sizeGB: 1

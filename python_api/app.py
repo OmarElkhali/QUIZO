@@ -128,23 +128,29 @@ def require_auth(f):
 
     return decorated_function
 
-# ClÃ©s API depuis les variables d'environnement (SANS valeurs par dÃ©faut hardcodÃ©es)
+
+# Clés API depuis les variables d'environnement
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 QWEN_API_KEY = os.getenv("QWEN_API_KEY")
+CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
 
+# Configuration des modèles
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3.6-flash")
 OPENROUTER_QWEN_MODEL = os.getenv("OPENROUTER_QWEN_MODEL", os.getenv("QWEN_MODEL", "qwen/qwen3.6-flash"))
-GROQ_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
-GROQ_BASE_URL = os.getenv("GROQ_BASE_URL") or "https://api.groq.com/" + "open" + "ai/v1"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL") or "https://api.groq.com/openai/v1"
 QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
 QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+DEFAULT_OLLAMA_MODEL = OLLAMA_MODEL
+DEFAULT_GROQ_MODEL = GROQ_MODEL
 
-SUPPORTED_MODELS = {"gemini", "openrouter", "groq", "ollama", "qwen"}
-PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq", "qwen", "ollama"]
+SUPPORTED_MODELS = {"gemini", "openrouter", "groq", "ollama", "qwen", "chatgpt"}
+PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq", "qwen", "chatgpt", "ollama"]
+
 
 def sanitize_error_message(message):
     """Remove API key values from provider errors before logging or returning them."""
@@ -157,81 +163,24 @@ def sanitize_error_message(message):
     sanitized = re.sub(r"gsk_[0-9A-Za-z_\-]{20,}", "[redacted-groq-api-key]", sanitized)
     return sanitized
 
+
 # Configuration de l'API Gemini
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    logger.info("API Gemini configurÃ©e avec succÃ¨s")
+    logger.info("API Gemini configurée avec succès")
 else:
-    logger.warning("GEMINI_API_KEY n'est pas configurÃ©e - la gÃ©nÃ©ration avec Gemini sera dÃ©sactivÃ©e")
+    logger.warning("GEMINI_API_KEY n'est pas configurée - la génération avec Gemini sera désactivée")
     
 if not OPENROUTER_API_KEY:
     logger.warning("OPENROUTER_API_KEY n'est pas configuree - OpenRouter/Qwen via OpenRouter seront desactives")
 
-if not GROQ_API_KEY:
-    logger.warning("GROQ_API_KEY n'est pas configuree - Groq sera desactive")
+if GROQ_API_KEY:
+    logger.info("API Groq configurée - LLM ultra-rapide disponible (gratuit)")
+else:
+    logger.warning("GROQ_API_KEY n'est pas configurée - la génération avec Groq sera désactivée")
 
-if not QWEN_API_KEY:
-    logger.warning("QWEN_API_KEY n'est pas configuree - Qwen direct sera desactive; OpenRouter peut etre utilise")
+logger.info(f"Ollama configuré sur: {OLLAMA_BASE_URL} avec modèle par défaut: {DEFAULT_OLLAMA_MODEL}")
 
-
-def get_provider_configured_state():
-    return {
-        "gemini": bool(GEMINI_API_KEY),
-        "openrouter": bool(OPENROUTER_API_KEY),
-        "groq": bool(GROQ_API_KEY),
-        "ollama": bool(os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_MODEL")),
-        "qwen": bool(QWEN_API_KEY or OPENROUTER_API_KEY),
-    }
-
-
-def get_provider_model(model_type):
-    if model_type == "gemini":
-        return "gemini-2.5-flash"
-    if model_type == "openrouter":
-        return OPENROUTER_MODEL
-    if model_type == "groq":
-        return GROQ_MODEL
-    if model_type == "ollama":
-        return OLLAMA_MODEL
-    if model_type == "qwen":
-        return QWEN_MODEL if QWEN_API_KEY else OPENROUTER_QWEN_MODEL
-    return model_type
-
-
-def assert_provider_ready(model_type):
-    if model_type == "gemini" and not GEMINI_API_KEY:
-        raise ValueError("Cle API Gemini non configuree")
-    if model_type == "openrouter" and not OPENROUTER_API_KEY:
-        raise ValueError("Cle API OpenRouter non configuree")
-    if model_type == "groq" and not GROQ_API_KEY:
-        raise ValueError("Cle API Groq non configuree")
-    if model_type == "qwen" and not QWEN_API_KEY and not OPENROUTER_API_KEY:
-        raise ValueError("Cle API Qwen ou OpenRouter non configuree")
-
-
-def get_provider_attempt_order(requested_model):
-    """Return provider attempts in the free-beta fallback order."""
-    if requested_model in PROVIDER_FALLBACK_ORDER:
-        return [requested_model] + [
-            provider for provider in PROVIDER_FALLBACK_ORDER if provider != requested_model
-        ]
-    return list(PROVIDER_FALLBACK_ORDER)
-
-
-def generate_with_provider(model_type, prompt):
-    """Call one configured provider without exposing provider credentials."""
-    assert_provider_ready(model_type)
-    if model_type == "gemini":
-        return generate_with_gemini(prompt)
-    if model_type == "openrouter":
-        return generate_with_openrouter(prompt)
-    if model_type == "groq":
-        return generate_with_groq(prompt)
-    if model_type == "qwen":
-        return generate_with_qwen(prompt)
-    if model_type == "ollama":
-        return generate_with_ollama(prompt)
-    raise ValueError(f"Modele IA non supporte: {model_type}")
 
 def get_upload_extension(filename):
     _, extension = os.path.splitext((filename or "").lower())
@@ -250,52 +199,49 @@ def assert_allowed_upload(file):
 def extract_text_from_file(file):
     """Extrait le texte des fichiers PDF/DOCX/TXT"""
     filename, extension = assert_allowed_upload(file)
-    logger.debug(f"DÃ©but de l'extraction du texte pour le fichier: {filename}")
+    logger.debug(f"Début de l'extraction du texte pour le fichier: {filename}")
     
     try:
         if extension == '.pdf':
             logger.info(f"Extraction du texte du PDF: {filename}")
             pdf_reader = PdfReader(io.BytesIO(file.read()))
-            logger.debug(f"PDF chargÃ© avec {len(pdf_reader.pages)} pages")
+            logger.debug(f"PDF chargé avec {len(pdf_reader.pages)} pages")
             text = '\n'.join([page.extract_text() for page in pdf_reader.pages])
-            logger.debug(f"Extraction PDF terminÃ©e: {len(text)} caractÃ¨res extraits")
-            return text if text.strip() else "Aucun texte dÃ©tectÃ© dans le PDF"
+            logger.debug(f"Extraction PDF terminée: {len(text)} caractères extraits")
+            return text if text.strip() else "Aucun texte détecté dans le PDF"
         
         elif extension == '.docx':
             logger.info(f"Extraction du texte du document Word: {filename}")
             doc = docx.Document(io.BytesIO(file.read()))
-            logger.debug(f"Document Word chargÃ© avec {len(doc.paragraphs)} paragraphes")
+            logger.debug(f"Document Word chargé avec {len(doc.paragraphs)} paragraphes")
             text = '\n'.join([para.text for para in doc.paragraphs if para.text])
-            logger.debug(f"Extraction Word terminÃ©e: {len(text)} caractÃ¨res extraits")
+            logger.debug(f"Extraction Word terminée: {len(text)} caractères extraits")
             return text
         
         elif extension == '.txt':
-            logger.info(f"Extraction du texte du fichier TXT: {filename}")
+            logger.info(f"Extraction du texte brut: {filename}")
             text = file.read().decode('utf-8', errors='ignore')
-            logger.debug(f"Extraction TXT terminÃ©e: {len(text)} caractÃ¨res extraits")
+            logger.debug(f"Extraction TXT terminée: {len(text)} caractères extraits")
             return text
-        
-        logger.error(f"Format de fichier non supportÃ©: {filename}")
-        raise ValueError("Format de fichier non supportÃ©")
-    
+            
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction du texte: {str(e)}")
-        raise ValueError(f"Ã‰chec de l'extraction: {str(e)}")
+        raise ValueError(f"Échec de l'extraction: {str(e)}")
+
 
 @app.route('/api/extract-text', methods=['POST', 'OPTIONS'])
 @limiter.limit("10 per minute")
 @require_auth
 def handle_text_extraction():
     """Endpoint pour l'extraction de texte depuis un fichier"""
-    # GÃ©rer les requÃªtes preflight CORS
     if request.method == 'OPTIONS':
         return '', 204
     
     try:
-        logger.info("RequÃªte d'extraction de texte reÃ§ue")
+        logger.info("Requête d'extraction de texte reçue")
         
         if 'file' not in request.files:
-            logger.warning("Aucun fichier fourni dans la requÃªte")
+            logger.warning("Aucun fichier fourni dans la requête")
             return jsonify({'error': 'Aucun fichier fourni'}), 400
 
         file = request.files['file']
@@ -303,9 +249,9 @@ def handle_text_extraction():
             logger.warning("Nom de fichier vide")
             return jsonify({'error': 'Nom de fichier vide'}), 400
 
-        logger.info(f"DÃ©but de l'extraction pour le fichier: {file.filename}")
+        logger.info(f"Début de l'extraction pour le fichier: {file.filename}")
         text = extract_text_from_file(file)
-        logger.info(f"Extraction rÃ©ussie: {len(text)} caractÃ¨res extraits")
+        logger.info(f"Extraction réussie: {len(text)} caractères extraits")
         
         return jsonify({
             'text': text,
@@ -314,28 +260,27 @@ def handle_text_extraction():
         })
 
     except ValueError as e:
-        # Erreur spÃ©cifique liÃ©e au format du fichier
         logger.error(f"Erreur de format de fichier: {str(e)}")
         return jsonify({
-            'error': f'Format de fichier non supportÃ© ou fichier corrompu: {str(e)}',
+            'error': f'Format de fichier non supporté ou fichier corrompu: {str(e)}',
             'details': str(e)
         }), 422
     except Exception as e:
-        # Erreur inattendue
         logger.error(f"Erreur inattendue lors de l'extraction: {str(e)}", exc_info=True)
         return jsonify({
-            'error': 'Impossible d\'extraire le texte du fichier. Veuillez vÃ©rifier que le fichier est valide.',
+            'error': 'Impossible d\'extraire le texte du fichier. Veuillez vérifier que le fichier est valide.',
             'details': str(e)
         }), 500
 
+
 def validate_question(question):
-    """Valide la structure d'une question gÃ©nÃ©rÃ©e"""
+    """Valide la structure d'une question générée"""
     required_fields = ['text', 'options', 'explanation', 'difficulty']
     if not all(field in question for field in required_fields):
         logger.warning(f"Question invalide: champs manquants - {question.get('text', 'Sans texte')}")
         return False
     if len(question['options']) != 4 or sum(opt.get('isCorrect', False) for opt in question['options']) != 1:
-        logger.warning(f"Question invalide: problÃ¨me avec les options - {question.get('text', 'Sans texte')}")
+        logger.warning(f"Question invalide: problème avec les options - {question.get('text', 'Sans texte')}")
         return False
     return True
 
@@ -540,25 +485,24 @@ def manual_assistant():
             "details": safe_error,
         }), 500
 
+
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 @limiter.limit("20 per minute")
 @require_auth
 def generate_quiz():
-    """Endpoint principal pour la gÃ©nÃ©ration de quiz"""
-    # GÃ©rer les requÃªtes preflight CORS
+    """Endpoint principal pour la génération de quiz"""
     if request.method == 'OPTIONS':
         return '', 204
     
     try:
-        logger.info("RequÃªte de gÃ©nÃ©ration de quiz reÃ§ue")
+        logger.info("Requête de génération de quiz reçue")
         
-        # Gestion des entrÃ©es multiples
+        # Gestion des entrées multiples
         data = {}
         if 'file' in request.files:
             file = request.files['file']
-            logger.info(f"Extraction du texte Ã  partir du fichier: {file.filename}")
+            logger.info(f"Extraction du texte à partir du fichier: {file.filename}")
             text = extract_text_from_file(file)
-            # RÃ©cupÃ©rer les paramÃ¨tres depuis form-data
             data = {
                 'numQuestions': request.form.get('numQuestions'),
                 'difficulty': request.form.get('difficulty'),
@@ -567,14 +511,13 @@ def generate_quiz():
         else:
             data = request.get_json() or {}
             text = data.get('text', '')
-            logger.info(f"Texte reÃ§u directement: {len(text)} caractÃ¨res")
+            logger.info(f"Texte reçu directement: {len(text)} caractères")
 
-        # Validation des paramÃ¨tres
+        # Validation des paramètres
         if not text or not text.strip():
-            logger.warning("Aucun contenu textuel fourni pour la gÃ©nÃ©ration")
+            logger.warning("Aucun contenu textuel fourni pour la génération")
             return jsonify({'error': 'Aucun contenu fourni'}), 400
 
-        # ParamÃ¨tres de gÃ©nÃ©ration avec validation
         try:
             num_questions = int(data.get('numQuestions', 5))
             if num_questions < 1 or num_questions > MAX_AI_QUESTIONS_PER_QUIZ:
@@ -589,18 +532,38 @@ def generate_quiz():
             difficulty = 'medium'
 
         model_type = (data.get('modelType') or 'gemini').strip().lower()
+        # "local" mapping to "ollama" for compatibility
+        if model_type == "local":
+            model_type = "ollama"
+
         if model_type not in SUPPORTED_MODELS:
             return jsonify({
                 'error': f"Modele IA non supporte: {model_type}",
                 'supportedModels': sorted(SUPPORTED_MODELS),
             }), 400
 
-        logger.info(f"ParamÃ¨tres de gÃ©nÃ©ration: {num_questions} questions, difficultÃ© {difficulty}, modÃ¨le {model_type}")
+        api_key = data.get('apiKey', '')
+        local_model = data.get('localModel', DEFAULT_OLLAMA_MODEL)
+        groq_model = data.get('groqModel', DEFAULT_GROQ_MODEL)
+        
+        logger.info(f"Paramètres de génération: {num_questions} questions, difficulté {difficulty}, modèle {model_type}")
+
+        # Vérifier que la clé API nécessaire est disponible
+        if model_type == 'gemini' and not GEMINI_API_KEY:
+            return jsonify({'error': 'Clé API Gemini non configurée dans python_api/.env'}), 503
+        if model_type == 'chatgpt' and not api_key and not CHATGPT_API_KEY:
+            return jsonify({'error': 'Clé API ChatGPT requise'}), 400
+        if model_type == 'groq' and not GROQ_API_KEY:
+            return jsonify({'error': 'Clé API Groq non configurée dans python_api/.env'}), 503
+        if model_type == 'openrouter' and not OPENROUTER_API_KEY:
+            return jsonify({'error': 'Clé API OpenRouter non configurée dans python_api/.env'}), 503
+        if model_type == 'qwen' and not QWEN_API_KEY and not OPENROUTER_API_KEY:
+            return jsonify({'error': 'Clé API Qwen ou OpenRouter non configurée dans python_api/.env'}), 503
 
         # Construction du prompt
-        logger.debug(f"Construction du prompt avec {len(text[:5000])} caractÃ¨res de texte")
+        logger.debug(f"Construction du prompt avec {len(text[:5000])} caractères de texte")
         prompt = f"""
-        GÃ©nÃ¨re {num_questions} questions QCM complexes en franÃ§ais selon ces rÃ¨gles STRICTES :
+        Généree {num_questions} questions QCM complexes en français selon ces règles STRICTES :
 
         TEXTE SOURCE :
         {text[:5000]}
@@ -616,20 +579,20 @@ def generate_quiz():
                 {{"text": "...", "isCorrect": false}},
                 {{"text": "...", "isCorrect": false}}
               ],
-              "explanation": "Explication basÃ©e sur le texte",
+              "explanation": "Explication basée sur le texte",
               "difficulty": "{difficulty}"
             }}
           ]
         }}
 
         CONTRAINTES :
-        - Une seule rÃ©ponse correcte par question
-        - Les options doivent Ãªtre plausibles
+        - Une seule réponse correcte par question
+        - Les options doivent être plausibles
         - Les explications doivent citer le texte
         - Ne pas inclure de markdown
         {f"- Contraintes supplementaires: {data.get('additionalInfo')}" if data.get('additionalInfo') else ""}
         """
-        logger.debug("Prompt construit avec succÃ¨s")
+        logger.debug("Prompt construit avec succès")
 
         content = None
         used_provider = model_type
@@ -637,7 +600,7 @@ def generate_quiz():
         for provider in get_provider_attempt_order(model_type):
             try:
                 logger.info(f"Tentative de generation avec {provider}")
-                content = generate_with_provider(provider, prompt)
+                content = generate_with_provider(provider, prompt, api_key)
                 used_provider = provider
                 break
             except ValueError as e:
@@ -648,101 +611,115 @@ def generate_quiz():
         if not content:
             raise ValueError("Service IA indisponible: " + " | ".join(provider_errors))
 
-        logger.debug(f"Contenu brut reÃ§u: {len(content)} caractÃ¨res")
-        logger.debug(f"AperÃ§u du contenu: {content[:200]}")
+        logger.debug(f"Contenu brut reçu: {len(content)} caractères")
+        logger.debug(f"Aperçu du contenu: {content[:200]}")
         
-        # Chercher le JSON dans la rÃ©ponse
+        # Chercher le JSON dans la réponse
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
         if not json_match:
-            logger.error("Aucun JSON trouvÃ© dans la rÃ©ponse")
+            logger.error("Aucun JSON trouvé dans la réponse")
             logger.error(f"Contenu complet: {content}")
-            raise ValueError("Aucun JSON trouvÃ© dans la rÃ©ponse de l'IA")
-        
-        json_str = json_match.group()
-        logger.debug(f"JSON extrait: {len(json_str)} caractÃ¨res")
+            raise ValueError("Aucun JSON trouvé dans la réponse de l'IA")
         
         try:
-            questions_data = json.loads(json_str).get('questions', [])
+            quiz_data = json.loads(json_match.group())
         except json.JSONDecodeError as e:
-            logger.error(f"Erreur de parsing JSON: {str(e)}")
-            logger.error(f"JSON problÃ©matique: {json_str[:500]}")
-            raise ValueError(f"Erreur de parsing JSON: {str(e)}")
-        logger.info(f"{len(questions_data)} questions extraites de la rÃ©ponse")
+            logger.error(f"Erreur de décodage JSON: {e}")
+            logger.error(f"Contenu extrait: {json_match.group()}")
+            raise ValueError(f"JSON mal formé retourné par l'IA: {e}")
 
-        # Validation et formatage
-        validated_questions = []
-        for idx, q in enumerate(questions_data[:num_questions]):
-            if validate_question(q):
-                q['id'] = f"q{idx+1}"
-                for opt_idx, opt in enumerate(q['options']):
-                    opt['id'] = f"{q['id']}_{chr(97 + opt_idx)}"
-                validated_questions.append(q)
-                logger.debug(f"Question validÃ©e: {q['text'][:50]}...")
-            else:
-                logger.warning(f"Question ignorÃ©e car invalide: {q.get('text', 'Sans texte')[:50]}...")
+        # Validation et formatage des questions
+        questions = quiz_data.get('questions', [])
+        if not isinstance(questions, list) or len(questions) == 0:
+            logger.warning("Aucune question trouvée dans le JSON généré")
+            raise ValueError("Le JSON de l'IA ne contient pas de liste de questions")
 
-        logger.info(f"{len(validated_questions)} questions validÃ©es sur {len(questions_data)}")
-        if not validated_questions:
-            logger.error("Aucune question valide gÃ©nÃ©rÃ©e")
-            raise ValueError("Aucune question valide gÃ©nÃ©rÃ©e")
+        valid_questions = []
+        for index, q in enumerate(questions):
+            # Normaliser et vérifier la validité minimale
+            if not isinstance(q, dict) or 'text' not in q or 'options' not in q:
+                continue
+
+            q_text = str(q.get('text', '')).strip()
+            raw_options = q.get('options', [])
+
+            if not q_text or not isinstance(raw_options, list) or len(raw_options) < 2:
+                continue
+
+            # Valider les options et injecter les IDs
+            options = []
+            for option_index, opt in enumerate(raw_options[:4]):
+                if not isinstance(opt, dict):
+                    continue
+                opt_text = str(opt.get('text', '')).strip()
+                if not opt_text:
+                    continue
+                options.append({
+                    'id': f"q{len(valid_questions) + 1}_{chr(97 + option_index)}",
+                    'text': opt_text,
+                    'isCorrect': bool(opt.get('isCorrect', False))
+                })
+
+            if len(options) < 2:
+                continue
+
+            # S'assurer qu'au moins une réponse est correcte
+            if not any(opt['isCorrect'] for opt in options):
+                options[0]['isCorrect'] = True
+
+            # S'assurer d'une seule réponse correcte
+            if sum(1 for opt in options if opt['isCorrect']) > 1:
+                first_correct = False
+                for opt in options:
+                    if opt['isCorrect'] and not first_correct:
+                        first_correct = True
+                    else:
+                        opt['isCorrect'] = False
+
+            valid_questions.append({
+                'id': f"gen_q{len(valid_questions) + 1}",
+                'text': q_text,
+                'options': options,
+                'explanation': str(q.get('explanation') or 'Explication à retenir.').strip(),
+                'difficulty': q.get('difficulty') if q.get('difficulty') in ['easy', 'medium', 'hard'] else difficulty
+            })
+
+        logger.info(f"Génération terminée: {len(valid_questions)} questions valides sur {num_questions} demandées")
+
+        if len(valid_questions) == 0:
+            raise ValueError("L'IA n'a produit aucune question syntaxiquement correcte.")
+
+        # Compléter si insuffisant
+        warning = None
+        if len(valid_questions) < num_questions:
+            warning = f"Seulement {len(valid_questions)} questions valides ont été générées sur {num_questions} demandées."
+            logger.warning(warning)
+            # Génération locale fallback
+            fallback = generate_fallback_questions(num_questions - len(valid_questions), difficulty, text)
+            valid_questions.extend(fallback)
 
         return jsonify({
-            "questions": validated_questions,
-            "provider": used_provider,
-            "requestedProvider": model_type,
-            "model": get_provider_model(used_provider),
-            "fallback": used_provider != model_type,
+            'questions': valid_questions[:num_questions],
+            'warning': warning,
+            'provider': used_provider,
+            'fallback_used': len(valid_questions) > num_questions
         })
 
     except ValueError as e:
-        # Erreurs de validation ou d'API
-        error_msg = sanitize_error_message(str(e))
-        logger.error(f"Erreur de validation: {error_msg}")
-        if (
-            "Service Gemini indisponible" in error_msg
-            or "Service OpenRouter indisponible" in error_msg
-            or "Service Groq indisponible" in error_msg
-            or "Service Ollama indisponible" in error_msg
-            or "Service Qwen" in error_msg
-            or "Service IA indisponible" in error_msg
-            or "Qwen via OpenRouter" in error_msg
-            or "Reponse invalide de" in error_msg
-            or "Erreur lors de l'appel" in error_msg
-            or "Cle API" in error_msg
-            or "ClÃ© API" in error_msg
-        ):
-            logger.warning("API IA indisponible, generation fallback contextuelle")
-            fallback_questions = generate_fallback_questions(num_questions, difficulty, text)
-            return jsonify({
-                "questions": fallback_questions,
-                "warning": "Generation IA indisponible. Quiz cree avec le generateur local de secours.",
-                "details": error_msg,
-                "provider": model_type if 'model_type' in locals() else "fallback",
-                "model": "local-fallback",
-                "fallback": True,
-            }), 200
-        elif "Aucun JSON trouvÃ©" in error_msg or "Erreur de parsing JSON" in error_msg:
-            return jsonify({
-                "error": "Le modÃ¨le d'IA n'a pas gÃ©nÃ©rÃ© de rÃ©ponse valide. Veuillez rÃ©essayer.",
-                "details": error_msg
-            }), 422
-        elif "Aucune question valide gÃ©nÃ©rÃ©e" in error_msg:
-            return jsonify({
-                "error": "Impossible de gÃ©nÃ©rer des questions valides Ã  partir de ce contenu. Veuillez vÃ©rifier votre fichier et rÃ©essayer.",
-                "details": error_msg
-            }), 422
-        else:
-            return jsonify({
-                "error": error_msg
-            }), 400
-    except Exception as e:
-        # Erreurs inattendues
         safe_error = sanitize_error_message(str(e))
-        logger.error(f"Erreur inattendue lors de la gÃ©nÃ©ration: {safe_error}", exc_info=True)
+        logger.error(f"Erreur fonctionnelle lors de la génération: {safe_error}")
         return jsonify({
-            "error": "Une erreur inattendue s'est produite lors de la gÃ©nÃ©ration des questions. Veuillez rÃ©essayer.",
+            'error': 'Impossible de générer le quiz à partir de ce texte.',
+            'details': safe_error
+        }), 422
+    except Exception as e:
+        safe_error = sanitize_error_message(str(e))
+        logger.error(f"Erreur inattendue lors de la génération: {safe_error}", exc_info=True)
+        return jsonify({
+            "error": "Une erreur inattendue s'est produite lors de la génération des questions. Veuillez réessayer.",
             "details": safe_error
         }), 500
+
 
 def generate_with_gemini(prompt):
     try:
@@ -850,37 +827,84 @@ def generate_with_qwen(prompt):
     )
 
 
-def generate_with_ollama(prompt):
-    endpoint = f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate"
+def generate_with_chatgpt(prompt, api_key=None):
+    key = api_key or CHATGPT_API_KEY
+    if not key:
+        raise ValueError("Clé API ChatGPT manquante")
+    return generate_with_chat_completions_api(
+        "ChatGPT",
+        "https://api.openai.com/v1",
+        key,
+        "gpt-4o-mini",
+        prompt,
+    )
+
+
+def generate_with_ollama(prompt, model=DEFAULT_OLLAMA_MODEL):
+    """Génère du contenu en utilisant Ollama (LLM local)"""
     try:
-        logger.info(f"Envoi de la requete a Ollama avec le modele {OLLAMA_MODEL}")
+        logger.info(f"Envoi de la requête à Ollama, modèle: {model}")
+        
+        # D'abord vérifier si Ollama est accessible
+        try:
+            health_check = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=2)
+            if health_check.status_code != 200:
+                raise ValueError("Ollama n'est pas accessible")
+        except requests.exceptions.RequestException:
+            raise ValueError(
+                "Ollama n'est pas disponible. "
+                "Assurez-vous qu'Ollama est installé et en cours d'exécution (ollama serve). "
+                "Installation: https://ollama.com/download"
+            )
+        
+        # Envoyer la requête de génération
         response = requests.post(
-            endpoint,
+            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
             json={
-                "model": OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                "options": {"temperature": 0.2},
+                'model': model,
+                'prompt': prompt,
+                'stream': False,
+                'format': 'json',
+                'options': {
+                    'temperature': 0.2,
+                    'top_p': 0.9,
+                    'top_k': 40,
+                    'num_predict': 2048,
+                }
             },
-            timeout=120,
+            timeout=180  # 3 minutes max pour la génération
         )
+        
+        if response.status_code == 404:
+            raise ValueError(
+                f"Le modèle '{model}' n'est pas disponible. "
+                f"Téléchargez-le avec: ollama pull {model}"
+            )
+        
         response.raise_for_status()
-        payload = response.json()
-        content = payload.get("response")
-        if not content:
-            raise ValueError("Champ response absent dans la reponse Ollama")
-        return content
+        result = response.json()
+        
+        generated_text = result.get('response', '')
+        logger.info(f"Réponse reçue d'Ollama: {len(generated_text)} caractères")
+        
+        if not generated_text:
+            raise ValueError("Ollama n'a pas généré de contenu")
+        
+        return generated_text
+        
+    except requests.exceptions.Timeout:
+        logger.error("Timeout lors de la génération Ollama")
+        raise ValueError(
+            "La génération a pris trop de temps (>3 minutes). "
+            "Essayez avec un texte plus court ou un modèle plus rapide."
+        )
     except requests.exceptions.RequestException as e:
-        safe_error = sanitize_error_message(str(e))
-        if getattr(e, "response", None) is not None:
-            safe_error = f"{safe_error} | {sanitize_error_message(e.response.text[:800])}"
-        logger.error(f"Erreur lors de l'appel a Ollama: {safe_error}")
-        raise ValueError(f"Service Ollama indisponible: {safe_error}")
-    except (KeyError, TypeError, ValueError) as e:
-        safe_error = sanitize_error_message(str(e))
-        logger.error(f"Reponse invalide de Ollama: {safe_error}")
-        raise ValueError(f"Reponse invalide de Ollama: {safe_error}")
+        logger.error(f"Erreur lors de l'appel à Ollama: {str(e)}")
+        raise ValueError(f"Erreur Ollama: {str(e)}")
+    except Exception as e:
+        logger.error(f"Erreur inattendue avec Ollama: {str(e)}")
+        raise ValueError(f"Erreur lors de la génération avec Ollama: {str(e)}")
+
 
 def generate_fallback_questions(num, difficulty, source_text=""):
     """Genere des questions de secours a partir du texte extrait."""
@@ -936,17 +960,96 @@ def generate_fallback_questions(num, difficulty, source_text=""):
 
     return questions
 
+
+def get_provider_configured_state():
+    return {
+        "gemini": bool(GEMINI_API_KEY),
+        "openrouter": bool(OPENROUTER_API_KEY),
+        "groq": bool(GROQ_API_KEY),
+        "qwen": bool(QWEN_API_KEY or OPENROUTER_API_KEY),
+        "chatgpt": bool(CHATGPT_API_KEY),
+        "ollama": True,
+    }
+
+
+def get_provider_model(provider):
+    if provider == "gemini":
+        return "gemini-2.5-flash"
+    if provider == "openrouter":
+        return OPENROUTER_MODEL
+    if provider == "groq":
+        return GROQ_MODEL
+    if provider == "qwen":
+        return QWEN_MODEL if QWEN_API_KEY else f"{OPENROUTER_QWEN_MODEL} (via OR)"
+    if provider == "chatgpt":
+        return "gpt-4o-mini"
+    if provider == "ollama":
+        return OLLAMA_MODEL
+    return "unknown"
+
+
+def get_provider_attempt_order(requested_model):
+    """Return provider attempts in the free-beta fallback order."""
+    if requested_model in PROVIDER_FALLBACK_ORDER:
+        return [requested_model] + [
+            provider for provider in PROVIDER_FALLBACK_ORDER if provider != requested_model
+        ]
+    return list(PROVIDER_FALLBACK_ORDER)
+
+
+def assert_provider_ready(provider_name):
+    states = get_provider_configured_state()
+    if provider_name not in states:
+        raise ValueError(f"Fournisseur IA inconnu: {provider_name}")
+    if not states[provider_name]:
+        raise ValueError(f"Le fournisseur {provider_name} n'est pas configuré (clé manquante)")
+
+
+def generate_with_provider(model_type, prompt, api_key=None):
+    """Call one configured provider without exposing provider credentials."""
+    assert_provider_ready(model_type)
+    if model_type == "gemini":
+        return generate_with_gemini(prompt)
+    if model_type == "openrouter":
+        return generate_with_openrouter(prompt)
+    if model_type == "groq":
+        return generate_with_groq(prompt)
+    if model_type == "qwen":
+        return generate_with_qwen(prompt)
+    if model_type == "ollama":
+        return generate_with_ollama(prompt)
+    if model_type == "chatgpt":
+        return generate_with_chatgpt(prompt, api_key)
+    raise ValueError(f"Modele IA non supporte: {model_type}")
+
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Endpoint de verification de l'etat du service"""
+    ollama_available = False
+    ollama_models = []
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=2)
+        if response.status_code == 200:
+            ollama_available = True
+            data = response.json()
+            ollama_models = [model['name'] for model in data.get('models', [])]
+    except Exception:
+        pass
+
+    services = get_provider_configured_state()
+    services["ollama"] = ollama_available
+    services["ollama_models"] = ollama_models
+
     return jsonify({
         "status": "ok",
         "version": "1.1.0",
-        "services": get_provider_configured_state(),
+        "services": services,
         "models": {
             provider: get_provider_model(provider)
             for provider in sorted(SUPPORTED_MODELS)
         },
+        "groq": bool(GROQ_API_KEY)
     })
 
 
@@ -989,6 +1092,37 @@ def providers_check():
             for provider in sorted(SUPPORTED_MODELS)
         }
     })
+
+
+@app.route('/api/ollama/models', methods=['GET'])
+def list_ollama_models():
+    """Liste les modèles Ollama disponibles"""
+    try:
+        response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        models = data.get('models', [])
+        
+        return jsonify({
+            "available": True,
+            "models": [
+                {
+                    "name": model['name'],
+                    "size": model.get('size', 0),
+                    "modified_at": model.get('modified_at', '')
+                }
+                for model in models
+            ],
+            "count": len(models)
+        })
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des modèles Ollama: {e}")
+        return jsonify({
+            "available": False,
+            "models": [],
+            "error": str(e),
+            "message": "Ollama n'est pas disponible. Installez-le depuis https://ollama.com"
+        }), 503
 
 
 # --- Request logging middleware ---
