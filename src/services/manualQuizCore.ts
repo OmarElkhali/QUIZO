@@ -16,7 +16,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, signInAnonymously } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
   Attempt,
   Competition,
@@ -98,6 +98,18 @@ export const generateShareCode = (): string => {
 };
 
 export const ensureParticipantSession = async (): Promise<string> => {
+  // Attendre que l'état d'authentification initial de Firebase soit chargé
+  if (typeof auth.authStateReady === 'function') {
+    await auth.authStateReady();
+  } else {
+    await new Promise<void>((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, () => {
+        unsubscribe();
+        resolve();
+      });
+    });
+  }
+
   if (auth.currentUser) return auth.currentUser.uid;
 
   try {

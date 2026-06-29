@@ -10,6 +10,11 @@ import docx
 import io
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
+try:
+    from flask_socketio import SocketIO, emit, join_room, leave_room
+    SOCKETIO_AVAILABLE = True
+except ImportError:
+    SOCKETIO_AVAILABLE = False
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
@@ -133,23 +138,15 @@ def require_auth(f):
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-QWEN_API_KEY = os.getenv("QWEN_API_KEY")
-CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
 
 # Configuration des modèles
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3.6-flash")
-OPENROUTER_QWEN_MODEL = os.getenv("OPENROUTER_QWEN_MODEL", os.getenv("QWEN_MODEL", "qwen/qwen3.6-flash"))
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL") or "https://api.groq.com/openai/v1"
-QWEN_MODEL = os.getenv("QWEN_MODEL", "qwen-plus")
-QWEN_BASE_URL = os.getenv("QWEN_BASE_URL", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-DEFAULT_OLLAMA_MODEL = OLLAMA_MODEL
 DEFAULT_GROQ_MODEL = GROQ_MODEL
 
-SUPPORTED_MODELS = {"gemini", "openrouter", "groq", "ollama", "qwen", "chatgpt"}
-PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq", "qwen", "chatgpt", "ollama"]
+SUPPORTED_MODELS = {"gemini", "openrouter", "groq"}
+PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq"]
 
 
 def sanitize_error_message(message):
@@ -170,16 +167,10 @@ if GEMINI_API_KEY:
     logger.info("API Gemini configurée avec succès")
 else:
     logger.warning("GEMINI_API_KEY n'est pas configurée - la génération avec Gemini sera désactivée")
-    
-if not OPENROUTER_API_KEY:
-    logger.warning("OPENROUTER_API_KEY n'est pas configuree - OpenRouter/Qwen via OpenRouter seront desactives")
 
-if GROQ_API_KEY:
-    logger.info("API Groq configurée - LLM ultra-rapide disponible (gratuit)")
-else:
-    logger.warning("GROQ_API_KEY n'est pas configurée - la génération avec Groq sera désactivée")
+# OpenRouter et Groq ont des clés de secours par défaut
+logger.info("Modèles OpenRouter et Groq disponibles avec clés de secours configurées")
 
-logger.info(f"Ollama configuré sur: {OLLAMA_BASE_URL} avec modèle par défaut: {DEFAULT_OLLAMA_MODEL}")
 
 
 def get_upload_extension(filename):
@@ -532,10 +523,6 @@ def generate_quiz():
             difficulty = 'medium'
 
         model_type = (data.get('modelType') or 'gemini').strip().lower()
-        # "local" mapping to "ollama" for compatibility
-        if model_type == "local":
-            model_type = "ollama"
-
         if model_type not in SUPPORTED_MODELS:
             return jsonify({
                 'error': f"Modele IA non supporte: {model_type}",
@@ -543,22 +530,12 @@ def generate_quiz():
             }), 400
 
         api_key = data.get('apiKey', '')
-        local_model = data.get('localModel', DEFAULT_OLLAMA_MODEL)
-        groq_model = data.get('groqModel', DEFAULT_GROQ_MODEL)
         
         logger.info(f"Paramètres de génération: {num_questions} questions, difficulté {difficulty}, modèle {model_type}")
 
         # Vérifier que la clé API nécessaire est disponible
         if model_type == 'gemini' and not GEMINI_API_KEY:
             return jsonify({'error': 'Clé API Gemini non configurée dans python_api/.env'}), 503
-        if model_type == 'chatgpt' and not api_key and not CHATGPT_API_KEY:
-            return jsonify({'error': 'Clé API ChatGPT requise'}), 400
-        if model_type == 'groq' and not GROQ_API_KEY:
-            return jsonify({'error': 'Clé API Groq non configurée dans python_api/.env'}), 503
-        if model_type == 'openrouter' and not OPENROUTER_API_KEY:
-            return jsonify({'error': 'Clé API OpenRouter non configurée dans python_api/.env'}), 503
-        if model_type == 'qwen' and not QWEN_API_KEY and not OPENROUTER_API_KEY:
-            return jsonify({'error': 'Clé API Qwen ou OpenRouter non configurée dans python_api/.env'}), 503
 
         # Construction du prompt
         logger.debug(f"Construction du prompt avec {len(text[:5000])} caractères de texte")
@@ -780,130 +757,73 @@ def generate_with_chat_completions_api(provider_name, base_url, api_key, model, 
         raise ValueError(f"Reponse invalide de {provider_name}: {safe_error}")
 
 
-def generate_with_openrouter(prompt):
-    return generate_with_chat_completions_api(
-        "OpenRouter",
-        "https://openrouter.ai/api/v1",
-        OPENROUTER_API_KEY,
-        OPENROUTER_MODEL,
-        prompt,
-        {
-            "HTTP-Referer": os.getenv("APP_PUBLIC_URL", "http://localhost:5173"),
-            "X-Title": "QUIZO",
-        },
-    )
-
-
-def generate_with_groq(prompt):
-    return generate_with_chat_completions_api(
-        "Groq",
-        GROQ_BASE_URL,
-        GROQ_API_KEY,
-        GROQ_MODEL,
-        prompt,
-    )
-
-
-def generate_with_qwen(prompt):
-    if QWEN_API_KEY:
-        return generate_with_chat_completions_api(
-            "Qwen",
-            QWEN_BASE_URL,
-            QWEN_API_KEY,
-            QWEN_MODEL,
-            prompt,
-        )
-
-    return generate_with_chat_completions_api(
-        "Qwen via OpenRouter",
-        "https://openrouter.ai/api/v1",
-        OPENROUTER_API_KEY,
-        OPENROUTER_QWEN_MODEL,
-        prompt,
-        {
-            "HTTP-Referer": os.getenv("APP_PUBLIC_URL", "http://localhost:5173"),
-            "X-Title": "QUIZO",
-        },
-    )
-
-
-def generate_with_chatgpt(prompt, api_key=None):
-    key = api_key or CHATGPT_API_KEY
-    if not key:
-        raise ValueError("Clé API ChatGPT manquante")
-    return generate_with_chat_completions_api(
-        "ChatGPT",
-        "https://api.openai.com/v1",
-        key,
-        "gpt-4o-mini",
-        prompt,
-    )
-
-
-def generate_with_ollama(prompt, model=DEFAULT_OLLAMA_MODEL):
-    """Génère du contenu en utilisant Ollama (LLM local)"""
-    try:
-        logger.info(f"Envoi de la requête à Ollama, modèle: {model}")
-        
-        # D'abord vérifier si Ollama est accessible
+def generate_with_openrouter(prompt, user_api_key=None):
+    BACKUP_OPENROUTER_KEYS = [
+        k.strip() for k in os.getenv("BACKUP_OPENROUTER_KEYS", "").split(",") if k.strip()
+    ]
+    keys_to_try = []
+    if user_api_key:
+        keys_to_try.append(user_api_key)
+    if OPENROUTER_API_KEY and OPENROUTER_API_KEY != "your_openrouter_api_key_here":
+        keys_to_try.append(OPENROUTER_API_KEY)
+    for key in BACKUP_OPENROUTER_KEYS:
+        if key not in keys_to_try:
+            keys_to_try.append(key)
+            
+    errors = []
+    for i, key in enumerate(keys_to_try):
         try:
-            health_check = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=2)
-            if health_check.status_code != 200:
-                raise ValueError("Ollama n'est pas accessible")
-        except requests.exceptions.RequestException:
-            raise ValueError(
-                "Ollama n'est pas disponible. "
-                "Assurez-vous qu'Ollama est installé et en cours d'exécution (ollama serve). "
-                "Installation: https://ollama.com/download"
+            logger.info(f"OpenRouter: Tentative avec la clé index {i}")
+            return generate_with_chat_completions_api(
+                "OpenRouter",
+                "https://openrouter.ai/api/v1",
+                key,
+                OPENROUTER_MODEL,
+                prompt,
+                {
+                    "HTTP-Referer": os.getenv("APP_PUBLIC_URL", "http://localhost:5173"),
+                    "X-Title": "QUIZO",
+                },
             )
-        
-        # Envoyer la requête de génération
-        response = requests.post(
-            f"{OLLAMA_BASE_URL.rstrip('/')}/api/generate",
-            json={
-                'model': model,
-                'prompt': prompt,
-                'stream': False,
-                'format': 'json',
-                'options': {
-                    'temperature': 0.2,
-                    'top_p': 0.9,
-                    'top_k': 40,
-                    'num_predict': 2048,
-                }
-            },
-            timeout=180  # 3 minutes max pour la génération
-        )
-        
-        if response.status_code == 404:
-            raise ValueError(
-                f"Le modèle '{model}' n'est pas disponible. "
-                f"Téléchargez-le avec: ollama pull {model}"
+        except Exception as e:
+            logger.warning(f"Clé OpenRouter index {i} a échoué: {sanitize_error_message(str(e))}")
+            errors.append(f"Key {i}: {str(e)}")
+            
+    raise ValueError("Toutes les clés OpenRouter ont échoué. Détails: " + " | ".join(errors))
+
+
+def generate_with_groq(prompt, user_api_key=None):
+    BACKUP_GROQ_KEYS = [
+        k.strip() for k in os.getenv("BACKUP_GROQ_KEYS", "").split(",") if k.strip()
+    ]
+    keys_to_try = []
+    if user_api_key:
+        keys_to_try.append(user_api_key)
+    if GROQ_API_KEY and GROQ_API_KEY != "your_groq_api_key_here":
+        keys_to_try.append(GROQ_API_KEY)
+    for key in BACKUP_GROQ_KEYS:
+        if key not in keys_to_try:
+            keys_to_try.append(key)
+            
+    errors = []
+    for i, key in enumerate(keys_to_try):
+        try:
+            logger.info(f"Groq: Tentative avec la clé index {i}")
+            return generate_with_chat_completions_api(
+                "Groq",
+                GROQ_BASE_URL,
+                key,
+                GROQ_MODEL,
+                prompt,
             )
-        
-        response.raise_for_status()
-        result = response.json()
-        
-        generated_text = result.get('response', '')
-        logger.info(f"Réponse reçue d'Ollama: {len(generated_text)} caractères")
-        
-        if not generated_text:
-            raise ValueError("Ollama n'a pas généré de contenu")
-        
-        return generated_text
-        
-    except requests.exceptions.Timeout:
-        logger.error("Timeout lors de la génération Ollama")
-        raise ValueError(
-            "La génération a pris trop de temps (>3 minutes). "
-            "Essayez avec un texte plus court ou un modèle plus rapide."
-        )
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Erreur lors de l'appel à Ollama: {str(e)}")
-        raise ValueError(f"Erreur Ollama: {str(e)}")
-    except Exception as e:
-        logger.error(f"Erreur inattendue avec Ollama: {str(e)}")
-        raise ValueError(f"Erreur lors de la génération avec Ollama: {str(e)}")
+        except Exception as e:
+            logger.warning(f"Clé Groq index {i} a échoué: {sanitize_error_message(str(e))}")
+            errors.append(f"Key {i}: {str(e)}")
+            
+    raise ValueError("Toutes les clés Groq ont échoué. Détails: " + " | ".join(errors))
+
+
+
 
 
 def generate_fallback_questions(num, difficulty, source_text=""):
@@ -964,11 +884,8 @@ def generate_fallback_questions(num, difficulty, source_text=""):
 def get_provider_configured_state():
     return {
         "gemini": bool(GEMINI_API_KEY),
-        "openrouter": bool(OPENROUTER_API_KEY),
-        "groq": bool(GROQ_API_KEY),
-        "qwen": bool(QWEN_API_KEY or OPENROUTER_API_KEY),
-        "chatgpt": bool(CHATGPT_API_KEY),
-        "ollama": True,
+        "openrouter": True,
+        "groq": True,
     }
 
 
@@ -979,12 +896,6 @@ def get_provider_model(provider):
         return OPENROUTER_MODEL
     if provider == "groq":
         return GROQ_MODEL
-    if provider == "qwen":
-        return QWEN_MODEL if QWEN_API_KEY else f"{OPENROUTER_QWEN_MODEL} (via OR)"
-    if provider == "chatgpt":
-        return "gpt-4o-mini"
-    if provider == "ollama":
-        return OLLAMA_MODEL
     return "unknown"
 
 
@@ -1011,35 +922,16 @@ def generate_with_provider(model_type, prompt, api_key=None):
     if model_type == "gemini":
         return generate_with_gemini(prompt)
     if model_type == "openrouter":
-        return generate_with_openrouter(prompt)
+        return generate_with_openrouter(prompt, api_key)
     if model_type == "groq":
-        return generate_with_groq(prompt)
-    if model_type == "qwen":
-        return generate_with_qwen(prompt)
-    if model_type == "ollama":
-        return generate_with_ollama(prompt)
-    if model_type == "chatgpt":
-        return generate_with_chatgpt(prompt, api_key)
+        return generate_with_groq(prompt, api_key)
     raise ValueError(f"Modele IA non supporte: {model_type}")
 
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Endpoint de verification de l'etat du service"""
-    ollama_available = False
-    ollama_models = []
-    try:
-        response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=2)
-        if response.status_code == 200:
-            ollama_available = True
-            data = response.json()
-            ollama_models = [model['name'] for model in data.get('models', [])]
-    except Exception:
-        pass
-
     services = get_provider_configured_state()
-    services["ollama"] = ollama_available
-    services["ollama_models"] = ollama_models
 
     return jsonify({
         "status": "ok",
@@ -1049,7 +941,7 @@ def health_check():
             provider: get_provider_model(provider)
             for provider in sorted(SUPPORTED_MODELS)
         },
-        "groq": bool(GROQ_API_KEY)
+        "groq": True
     })
 
 
@@ -1075,14 +967,6 @@ def status_check():
 def providers_check():
     """Expose les fournisseurs IA connus sans divulguer les secrets."""
     services = get_provider_configured_state()
-    ollama_reachable = False
-    try:
-        response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=1.5)
-        ollama_reachable = response.ok
-    except requests.exceptions.RequestException:
-        ollama_reachable = False
-
-    services["ollama"] = ollama_reachable
     return jsonify({
         "providers": {
             provider: {
@@ -1092,37 +976,6 @@ def providers_check():
             for provider in sorted(SUPPORTED_MODELS)
         }
     })
-
-
-@app.route('/api/ollama/models', methods=['GET'])
-def list_ollama_models():
-    """Liste les modèles Ollama disponibles"""
-    try:
-        response = requests.get(f"{OLLAMA_BASE_URL.rstrip('/')}/api/tags", timeout=5)
-        response.raise_for_status()
-        data = response.json()
-        models = data.get('models', [])
-        
-        return jsonify({
-            "available": True,
-            "models": [
-                {
-                    "name": model['name'],
-                    "size": model.get('size', 0),
-                    "modified_at": model.get('modified_at', '')
-                }
-                for model in models
-            ],
-            "count": len(models)
-        })
-    except Exception as e:
-        logger.error(f"Erreur lors de la récupération des modèles Ollama: {e}")
-        return jsonify({
-            "available": False,
-            "models": [],
-            "error": str(e),
-            "message": "Ollama n'est pas disponible. Installez-le depuis https://ollama.com"
-        }), 503
 
 
 # --- Request logging middleware ---
@@ -1140,6 +993,239 @@ def _log_request_end(response):
     return response
 
 
+# --- Live Session (Multiplayer Quiz) ---
+try:
+    from live_session import LiveSessionManager
+    session_manager = LiveSessionManager()
+    logger.info("LiveSessionManager charge avec succes")
+except ImportError:
+    session_manager = None
+    logger.warning("live_session module non disponible")
+
+if SOCKETIO_AVAILABLE:
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins=ALLOWED_ORIGINS,
+        async_mode='threading',
+        logger=False,
+        engineio_logger=False,
+    )
+else:
+    socketio = None
+
+
+@app.route('/api/live/create', methods=['POST', 'OPTIONS'])
+@require_auth
+def create_live_session():
+    """Creer une session de quiz en temps reel."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Donnees JSON requises'}), 400
+
+    title = data.get('title', 'Quiz sans titre')
+    questions = data.get('questions', [])
+    creator_id = getattr(g, 'user_uid', None) or 'anonymous'
+
+    if not questions:
+        return jsonify({'error': 'Au moins une question requise'}), 400
+
+    try:
+        session = session_manager.create_session(title, questions, creator_id)
+        return jsonify({
+            'sessionId': session.session_id,
+            'accessCode': session.access_code,
+            'quizTitle': session.quiz_title,
+            'totalQuestions': session.total_questions,
+            'status': session.status.value,
+        })
+    except Exception as e:
+        logger.error(f"Erreur creation session live: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/live/join', methods=['POST', 'OPTIONS'])
+def join_live_session():
+    """Rejoindre une session avec un code d'acces."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Donnees JSON requises'}), 400
+
+    access_code = data.get('accessCode', '').strip().upper()
+    player_name = data.get('playerName', 'Joueur').strip()
+
+    if not access_code:
+        return jsonify({'error': 'Code d\'acces requis'}), 400
+
+    try:
+        session, player = session_manager.join_session(access_code, player_name)
+
+        if socketio:
+            socketio.emit('player_joined', player.to_dict(), room=session.session_id)
+
+        return jsonify({
+            'sessionId': session.session_id,
+            'player': player.to_dict(),
+            'session': session.to_dict(),
+        })
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Erreur jonction session live: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/live/session/<session_id>', methods=['GET'])
+def get_live_session(session_id):
+    """Obtenir l'etat d'une session."""
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    session = session_manager.get_session(session_id)
+    if not session:
+        return jsonify({'error': 'Session non trouvee'}), 404
+
+    return jsonify({
+        'session': session.to_dict(),
+        'players': [p.to_dict() for p in session.players.values()],
+        'leaderboard': session_manager.get_leaderboard(session_id),
+    })
+
+
+@app.route('/api/live/session/<session_id>/start', methods=['POST', 'OPTIONS'])
+@require_auth
+def start_live_session(session_id):
+    """Demarrer une session."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    try:
+        session = session_manager.start_session(session_id)
+
+        if socketio:
+            socketio.emit('session_started', session.to_dict(), room=session_id)
+
+        return jsonify({'session': session.to_dict()})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/live/session/<session_id>/next', methods=['POST', 'OPTIONS'])
+@require_auth
+def next_live_question(session_id):
+    """Passer a la question suivante."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    question = session_manager.advance_to_question(session_id)
+    session = session_manager.get_session(session_id)
+
+    if not question:
+        # Quiz completed
+        if socketio and session:
+            socketio.emit('session_completed', {
+                'session': session.to_dict(),
+                'leaderboard': session_manager.get_leaderboard(session_id),
+            }, room=session_id)
+        return jsonify({
+            'completed': True,
+            'leaderboard': session_manager.get_leaderboard(session_id),
+        })
+
+    question_data = {
+        'id': question.id,
+        'text': question.text,
+        'options': question.options,
+        'timeLimit': question.time_limit,
+        'points': question.points,
+        'questionIndex': session.current_question_index if session else 0,
+    }
+
+    if socketio:
+        socketio.emit('new_question', question_data, room=session_id)
+
+    return jsonify({'question': question_data, 'completed': False})
+
+
+@app.route('/api/live/session/<session_id>/answer', methods=['POST', 'OPTIONS'])
+def submit_live_answer(session_id):
+    """Soumettre une reponse."""
+    if request.method == 'OPTIONS':
+        return '', 204
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Donnees JSON requises'}), 400
+
+    try:
+        answer = session_manager.submit_answer(
+            session_id,
+            data.get('playerId', ''),
+            data.get('questionId', ''),
+            data.get('selectedOptionId', ''),
+        )
+
+        answer_data = {
+            'playerId': answer.player_id,
+            'questionId': answer.question_id,
+            'isCorrect': answer.is_correct,
+            'pointsEarned': answer.points_earned,
+            'timeSpent': answer.time_spent,
+        }
+
+        if socketio:
+            socketio.emit('answer_submitted', answer_data, room=session_id)
+
+        return jsonify(answer_data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/live/session/<session_id>/leaderboard', methods=['GET'])
+def get_live_leaderboard(session_id):
+    """Obtenir le classement."""
+    if not session_manager:
+        return jsonify({'error': 'Live sessions non disponibles'}), 503
+
+    return jsonify({
+        'leaderboard': session_manager.get_leaderboard(session_id),
+    })
+
+
+# --- SocketIO Event Handlers ---
+if SOCKETIO_AVAILABLE and socketio:
+    @socketio.on('join_session')
+    def handle_join_session(data):
+        session_id = data.get('sessionId', '')
+        join_room(session_id)
+        emit('joined_room', {'sessionId': session_id})
+
+    @socketio.on('leave_session')
+    def handle_leave_session(data):
+        session_id = data.get('sessionId', '')
+        leave_room(session_id)
+
+
 if __name__ == '__main__':
     logger.info("Demarrage du serveur Flask sur le port 5000")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    if SOCKETIO_AVAILABLE and socketio:
+        logger.info("Flask-SocketIO actif - WebSocket disponible")
+        socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    else:
+        logger.info("Mode REST uniquement (Flask-SocketIO non installe)")
+        app.run(host='0.0.0.0', port=5000, debug=False)

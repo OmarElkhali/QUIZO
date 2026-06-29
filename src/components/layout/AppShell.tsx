@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   BadgeEuro,
   BookOpen,
@@ -28,12 +29,12 @@ interface AppShellProps {
 }
 
 const navigation = [
-  { label: 'Accueil', href: '/', icon: Home },
-  { label: 'Créer un Quiz IA', href: '/create-quiz', icon: Sparkles },
-  { label: 'Créer un Quiz Manuel', href: '/create-manual-quiz', icon: PenLine },
-  { label: 'Rejoindre par Code', href: '/join', icon: Users },
-  { label: 'Historique', href: '/history', icon: History },
-  { label: 'Tarifs', href: '/pricing', icon: BadgeEuro },
+  { key: 'nav.home', label: 'Accueil', href: '/', icon: Home },
+  { key: 'nav.createQuizAI', label: 'Créer un Quiz IA', href: '/create-quiz', icon: Sparkles },
+  { key: 'nav.createQuizManual', label: 'Créer un Quiz Manuel', href: '/create-manual-quiz', icon: PenLine },
+  { key: 'nav.joinByCode', label: 'Rejoindre par Code', href: '/join', icon: Users },
+  { key: 'nav.history', label: 'Historique', href: '/history', icon: History },
+  { key: 'nav.pricing', label: 'Tarifs', href: '/pricing', icon: BadgeEuro },
 ];
 
 const getInitials = (name?: string | null, email?: string | null) => {
@@ -50,6 +51,7 @@ const getInitials = (name?: string | null, email?: string | null) => {
 export const AppShell = ({ children, actions }: AppShellProps) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 
@@ -76,7 +78,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           }
         >
           <item.icon className="h-4 w-4" />
-          <span>{item.label}</span>
+          <span>{t(item.key)}</span>
         </NavLink>
       ))}
     </nav>
@@ -112,7 +114,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
               {user ? (
                 <div className="flex items-center gap-2">
                   <div className="hidden text-right xl:block">
-                    <p className="text-sm font-semibold text-[var(--quizo-heading)]">{user.name || 'Utilisateur'}</p>
+                    <p className="text-sm font-semibold text-[var(--quizo-heading)]">{user.name || t('nav.user')}</p>
                     <p className="max-w-44 truncate text-xs text-[var(--quizo-muted)]">{user.email}</p>
                   </div>
                   <Avatar className="h-9 w-9 border border-orange-400/35">
@@ -133,7 +135,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 </div>
               ) : (
                 <Button type="button" className="quizo-copper-button hidden sm:inline-flex" onClick={() => setAuthOpen(true)}>
-                  Connexion
+                  {t('nav.login')}
                 </Button>
               )}
               <Button
@@ -153,7 +155,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           <div className="fixed inset-0 z-50 lg:hidden">
             <button
               type="button"
-              aria-label="Fermer le menu"
+              aria-label={t('common.close')}
               className="absolute inset-0 bg-black/70"
               onClick={() => setMobileOpen(false)}
             />

@@ -10,7 +10,8 @@
     "myQuizzes": "我的测验",
     "settings": "设置",
     "createQuiz": "创建测验",
-    "user": "用户"
+    "user": "用户",
+    "pricing": "价格"
   },
   "home": {
     "title": "欢迎来到 QUIZO",
@@ -51,7 +52,21 @@
     "extractingText": "提取文本",
     "generatingQuestions": "生成问题",
     "validatingQuestions": "验证问题",
-    "savingQuiz": "保存测验"
+    "savingQuiz": "保存测验",
+    "eyebrow": "创建测验",
+    "description": "上传您的课程文档，让人工智能生成自定义测验以测试您的知识。",
+    "configTitle": "推荐配置",
+    "configDesc": "每个测验仅包含一个章节、清晰的标题和完整的定义会带来更好的效果。",
+    "modelsTitle": "可用模型",
+    "modelsDesc": "可以根据您的配置使用 Gemini、OpenRouter 和 Groq。",
+    "viewMyQuizzes": "查看我的测验",
+    "enableTimeLimit": "启用时间限制",
+    "durationMinutes": "时长 (分钟)",
+    "selectDuration": "选择时长",
+    "additionalInfo": "附加信息 (可选)",
+    "additionalInfoPlaceholder": "添加要覆盖的具体主题、首选的问题样式或其他详细信息...",
+    "hour": "小时",
+    "hours": "小时"
   },
   "quiz": {
     "question": "问题",
@@ -61,7 +76,8 @@
     "submit": "提交",
     "timeRemaining": "剩余时间",
     "selectAnswer": "选择答案",
-    "multipleAnswers": "选择所有正确答案"
+    "multipleAnswers": "选择所有正确答案",
+    "unansweredConfirm": "还有 {{count}} 道题未回答。您确定要提交测验吗？"
   },
   "results": {
     "title": "测验结果",
@@ -76,7 +92,19 @@
     "tryAgain": "再试一次",
     "backToHome": "返回首页",
     "viewDetails": "查看详情",
-    "shareResults": "分享结果"
+    "shareResults": "分享结果",
+    "recapDesc": "您的尝试摘要、总分和答案详情。",
+    "filterDesc": "按回答状态过滤问题。",
+    "unanswered": "未回答",
+    "all": "全部",
+    "yourAnswer": "您的回答",
+    "correctAnswer": "正确答案",
+    "explanation": "解释",
+    "noAnswer": "未回答",
+    "excellent": "优秀！",
+    "veryGood": "非常好！",
+    "goodJob": "做得好",
+    "keepPracticingText": "需加强"
   },
   "history": {
     "title": "测验历史",
@@ -192,5 +220,28 @@
     "privacy": "隐私",
     "terms": "服务条款",
     "allRightsReserved": "版权所有"
+  },
+  "dashboardHome": {
+    "workspace": "工作区",
+    "titleUser": "仪表板",
+    "titleGuest": "QUIZO, 现代测验工作室",
+    "descUser": "管理您的教育内容并分析群组表现。",
+    "descGuest": "从课程中创建测验，发起现场竞赛并在优质的 SaaS 界面中跟踪结果。",
+    "seeTariffs": "查看价格",
+    "totalQuiz": "测验总数",
+    "questions": "问题",
+    "participations": "参与度",
+    "completion": "完成度",
+    "myQuizzes": "我的测验",
+    "myQuizzesDesc": "您最新的测验，准备好重新开始、共享或分析。",
+    "active": "活跃",
+    "shareCode": "分享码",
+    "questionsCount": "{{count}} 道题",
+    "generateAi": "使用人工智能生成",
+    "generateAiDesc": "导入课程并使用 Gemini、OpenRouter 或 Groq 生成结构化的选择题。",
+    "createManual": "手动创建",
+    "createManualDesc": "完全控制构建您的问题、选项、解释和共享模式。",
+    "joinLive": "加入现场",
+    "viewHistory": "查看历史"
   }
 }

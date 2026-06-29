@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart3, Clock, Copy, FileText, PenLine, Sparkles, Trophy, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StateCard } from '@/components/ui/StateCard';
@@ -12,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 const Index = () => {
   const { quizzes, sharedQuizzes, isLoading } = useQuiz();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const recentQuizzes = quizzes.slice(0, 4);
   const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
@@ -42,45 +44,45 @@ const Index = () => {
       }
     >
       <PageHeader
-        eyebrow="Espace de travail"
-        title={user ? 'Tableau de bord' : 'QUIZO, studio moderne de quiz'}
+        eyebrow={t('dashboardHome.workspace')}
+        title={user ? t('dashboardHome.titleUser') : t('dashboardHome.titleGuest')}
         description={
           user
-            ? 'Gérez votre contenu pédagogique et analysez les performances de vos cohortes.'
-            : 'Créez des quiz à partir de cours, lancez des compétitions live et suivez les résultats dans une interface SaaS premium.'
+            ? t('dashboardHome.descUser')
+            : t('dashboardHome.descGuest')
         }
         actions={
           <div className="flex flex-wrap gap-3">
             <Button asChild className="quizo-copper-button">
               <Link to={user ? '/create-quiz' : '/join'}>
-                Commencer
+                {t('home.getStarted')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="quizo-outline-button">
-              <Link to="/pricing">Voir les tarifs</Link>
+              <Link to="/pricing">{t('dashboardHome.seeTariffs')}</Link>
             </Button>
           </div>
         }
       />
 
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <PremiumMetric label="Total quiz" value={quizzes.length} detail="+3" icon={FileText} tone="blue" />
-        <PremiumMetric label="Questions" value={totalQuestions} icon={PenLine} tone="copper" />
-        <PremiumMetric label="Participations" value={sharedCount} detail="+12%" icon={Users} tone="violet" />
-        <PremiumMetric label="Complétion" value={`${averageCompletion}%`} icon={BarChart3} tone="green" />
+        <PremiumMetric label={t('dashboardHome.totalQuiz')} value={quizzes.length} detail="+3" icon={FileText} tone="blue" />
+        <PremiumMetric label={t('dashboardHome.questions')} value={totalQuestions} icon={PenLine} tone="copper" />
+        <PremiumMetric label={t('dashboardHome.participations')} value={sharedCount} detail="+12%" icon={Users} tone="violet" />
+        <PremiumMetric label={t('dashboardHome.completion')} value={`${averageCompletion}%`} icon={BarChart3} tone="green" />
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <PremiumPanel className="p-6">
           <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
             <div>
-              <h2 className="text-2xl font-bold text-white">Mes Quiz</h2>
-              <p className="mt-1 text-sm text-[#a79d96]">Vos derniers quiz prêts à être repris, partagés ou analysés.</p>
+              <h2 className="text-2xl font-bold text-white">{t('dashboardHome.myQuizzes')}</h2>
+              <p className="mt-1 text-sm text-[#a79d96]">{t('dashboardHome.myQuizzesDesc')}</p>
             </div>
             <Button asChild variant="ghost" className="text-[#ffb77d] hover:bg-orange-500/10 hover:text-[#ffdcc3]">
               <Link to="/history">
-                Voir tout
+                {t('dashboardHome.viewHistory')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -110,13 +112,13 @@ const Index = () => {
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="line-clamp-2 text-xl font-bold text-white group-hover:text-[#ffb77d]">{quiz.title}</h3>
                     <span className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-xs font-bold text-emerald-300">
-                      Actif
+                      {t('dashboardHome.active')}
                     </span>
                   </div>
                   <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#a79d96]">{quiz.description || 'Quiz sans description'}</p>
                   <div className="mt-auto flex items-end justify-between border-t border-white/[0.07] pt-5">
                     <div>
-                      <p className="quizo-label">Code de partage</p>
+                      <p className="quizo-label">{t('dashboardHome.shareCode')}</p>
                       <button
                         type="button"
                         onClick={(event) => {
@@ -130,7 +132,7 @@ const Index = () => {
                       </button>
                     </div>
                     <div className="text-right text-sm text-[#a79d96]">
-                      <p>{quiz.questions.length} questions</p>
+                      <p>{t('dashboardHome.questionsCount', { count: quiz.questions.length })}</p>
                       <p>{quiz.duration}</p>
                     </div>
                   </div>
@@ -142,32 +144,32 @@ const Index = () => {
 
         <div className="grid gap-4">
           <ActionCard
-            title="Générer avec l’IA"
-            description="Importez un cours et générez un QCM structuré avec Gemini, OpenRouter, Groq, Qwen ou Ollama."
+            title={t('dashboardHome.generateAi')}
+            description={t('dashboardHome.generateAiDesc')}
             icon={Sparkles}
             accent
           >
             <Button asChild className="w-full quizo-copper-button">
-              <Link to="/create-quiz">Créer un Quiz IA</Link>
+              <Link to="/create-quiz">{t('nav.createQuizAI')}</Link>
             </Button>
           </ActionCard>
           <ActionCard
-            title="Créer manuellement"
-            description="Construisez vos questions, options, explications et modes de partage avec un contrôle complet."
+            title={t('dashboardHome.createManual')}
+            description={t('dashboardHome.createManualDesc')}
             icon={PenLine}
           >
             <Button asChild variant="outline" className="w-full quizo-outline-button">
-              <Link to="/create-manual-quiz">Nouveau manuel</Link>
+              <Link to="/create-manual-quiz">{t('nav.createQuizManual')}</Link>
             </Button>
           </ActionCard>
           <div className="grid grid-cols-2 gap-4">
             <Link to="/join" className="quizo-panel-subtle quizo-panel-hover p-5 text-sm font-semibold text-[#d8d2ce]">
               <Trophy className="mb-4 h-5 w-5 text-[#ffb77d]" />
-              Rejoindre un live
+              {t('dashboardHome.joinLive')}
             </Link>
             <Link to="/history" className="quizo-panel-subtle quizo-panel-hover p-5 text-sm font-semibold text-[#d8d2ce]">
               <Clock className="mb-4 h-5 w-5 text-[#ffb77d]" />
-              Voir l’historique
+              {t('dashboardHome.viewHistory')}
             </Link>
           </div>
         </div>

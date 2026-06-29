@@ -11,7 +11,7 @@ export interface Question {
   correctAnswer?: string;
 }
 
-export type AIModelType = 'gemini' | 'openrouter' | 'groq' | 'ollama' | 'qwen';
+export type AIModelType = 'gemini' | 'openrouter' | 'groq';
 
 export interface Quiz {
   id: string;
@@ -48,6 +48,7 @@ export interface QuizContextType {
     timeLimit?: number,
     additionalInfo?: string,
     modelType?: AIModelType,
+    apiKey?: string,
     progressCallback?: ProgressCallback
   ) => Promise<string>;
   getQuiz: (id: string) => Promise<Quiz | null>;

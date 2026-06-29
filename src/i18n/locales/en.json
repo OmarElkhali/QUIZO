@@ -10,7 +10,8 @@
     "myQuizzes": "My quizzes",
     "settings": "Settings",
     "createQuiz": "Create quiz",
-    "user": "User"
+    "user": "User",
+    "pricing": "Pricing"
   },
   "home": {
     "title": "Welcome to QUIZO",
@@ -51,7 +52,21 @@
     "extractingText": "Extracting text",
     "generatingQuestions": "Generating questions",
     "validatingQuestions": "Validating questions",
-    "savingQuiz": "Saving quiz"
+    "savingQuiz": "Saving quiz",
+    "eyebrow": "Quiz Creation",
+    "description": "Upload your course documents and let AI generate a custom quiz to test your knowledge.",
+    "configTitle": "Recommended Setup",
+    "configDesc": "A single chapter per quiz, clear titles and complete definitions yield better results.",
+    "modelsTitle": "Available Models",
+    "modelsDesc": "Gemini, OpenRouter and Groq can be used depending on your server configuration.",
+    "viewMyQuizzes": "View my quizzes",
+    "enableTimeLimit": "Enable time limit",
+    "durationMinutes": "Duration (minutes)",
+    "selectDuration": "Select duration",
+    "additionalInfo": "Additional information (optional)",
+    "additionalInfoPlaceholder": "Add specific topics to cover, preferred question styles or other details...",
+    "hour": "hour",
+    "hours": "hours"
   },
   "quiz": {
     "question": "Question",
@@ -61,7 +76,8 @@
     "submit": "Submit",
     "timeRemaining": "Time remaining",
     "selectAnswer": "Select an answer",
-    "multipleAnswers": "Select all correct answers"
+    "multipleAnswers": "Select all correct answers",
+    "unansweredConfirm": "There are {{count}} unanswered question(s) remaining. Do you really want to submit the quiz?"
   },
   "results": {
     "title": "Quiz results",
@@ -76,7 +92,19 @@
     "tryAgain": "Try again",
     "backToHome": "Back to home",
     "viewDetails": "View details",
-    "shareResults": "Share results"
+    "shareResults": "Share results",
+    "recapDesc": "Summary of your attempt, overall score and details of answers.",
+    "filterDesc": "Filter questions by response state.",
+    "unanswered": "Unanswered",
+    "all": "All",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "explanation": "Explanation",
+    "noAnswer": "No answer",
+    "excellent": "Excellent!",
+    "veryGood": "Very good!",
+    "goodJob": "Good job",
+    "keepPracticingText": "To reinforce"
   },
   "history": {
     "title": "Quiz history",
@@ -192,5 +220,28 @@
     "privacy": "Privacy",
     "terms": "Terms of Service",
     "allRightsReserved": "All rights reserved"
+  },
+  "dashboardHome": {
+    "workspace": "Workspace",
+    "titleUser": "Dashboard",
+    "titleGuest": "QUIZO, modern quiz studio",
+    "descUser": "Manage your educational content and analyze cohort performance.",
+    "descGuest": "Create quizzes from courses, launch live competitions and track results in a premium SaaS interface.",
+    "seeTariffs": "View pricing",
+    "totalQuiz": "Total quizzes",
+    "questions": "Questions",
+    "participations": "Participations",
+    "completion": "Completion",
+    "myQuizzes": "My Quizzes",
+    "myQuizzesDesc": "Your latest quizzes ready to be resumed, shared or analyzed.",
+    "active": "Active",
+    "shareCode": "Share code",
+    "questionsCount": "{{count}} questions",
+    "generateAi": "Generate with AI",
+    "generateAiDesc": "Import a course and generate a structured MCQ with Gemini, OpenRouter or Groq.",
+    "createManual": "Create manually",
+    "createManualDesc": "Build your questions, options, explanations and sharing modes with complete control.",
+    "joinLive": "Join a live",
+    "viewHistory": "View history"
   }
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, ArrowRight, Check, Clock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,7 @@ const Quiz = () => {
   const navigate = useNavigate();
   const { submitQuizAnswers, getQuiz } = useQuiz();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { t } = useTranslation();
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -146,7 +148,7 @@ const Quiz = () => {
     const unansweredQuestions = quiz.questions.filter(q => !answers[q.id]);
     if (unansweredQuestions.length > 0 && timeLeftRef.current > 10) {
       const confirmSubmit = window.confirm(
-        `Il reste ${unansweredQuestions.length} question(s) sans réponse. Voulez-vous vraiment soumettre le quiz ?`
+        t('quiz.unansweredConfirm', { count: unansweredQuestions.length })
       );
       if (!confirmSubmit) return;
     }
@@ -166,7 +168,7 @@ const Quiz = () => {
         });
       }
     } catch (submitError: any) {
-      toast.error('Erreur lors de la soumission: ' + (submitError.message || 'Erreur inconnue'));
+      toast.error(t('errors.generic'));
       setIsSubmitting(false);
     }
   }, [isSubmitting, quiz, id, answers, submitQuizAnswers, navigate]);
@@ -187,7 +189,7 @@ const Quiz = () => {
   if (isAuthLoading || isLoading) {
     return (
       <AppShell>
-        <StateCard state="loading" title="Chargement du quiz" description="Préparation de la session." />
+        <StateCard state="loading" title={t('common.loading')} description={t('common.loading')} />
       </AppShell>
     );
   }
@@ -199,9 +201,9 @@ const Quiz = () => {
       <AppShell>
         <StateCard
           state="error"
-          title="Impossible de charger le quiz"
-          description={error || 'Quiz introuvable'}
-          action={<Button className="quizo-copper-button" onClick={() => navigate('/')}>Retour</Button>}
+          title={t('errors.notFound')}
+          description={error || t('errors.generic')}
+          action={<Button className="quizo-copper-button" onClick={() => navigate('/')}>{t('common.back')}</Button>}
         />
       </AppShell>
     );
@@ -229,7 +231,7 @@ const Quiz = () => {
       <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 pb-32 pt-8 md:px-10">
         <div className="mb-10">
           <div className="mb-4 flex items-center justify-between">
-            <span className="quizo-label">Question {currentQuestionIndex + 1} / {quiz.questions.length}</span>
+            <span className="quizo-label">{t('quiz.question')} {currentQuestionIndex + 1} {t('quiz.of')} {quiz.questions.length}</span>
             <span className="quizo-label text-[#ffb77d]">{Math.round(progress)}%</span>
           </div>
           <div className="h-px overflow-hidden rounded-full bg-white/10">
@@ -265,16 +267,16 @@ const Quiz = () => {
             className="rounded-full px-6 quizo-outline-button"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Précédent
+            {t('quiz.previous')}
           </Button>
           {currentQuestionIndex === quiz.questions.length - 1 ? (
             <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-full bg-emerald-500 px-8 text-[#061a11] hover:bg-emerald-400">
-              {isSubmitting ? 'Soumission...' : 'Terminer le quiz'}
+              {isSubmitting ? t('common.loading') : t('common.finish')}
               <Check className="ml-2 h-4 w-4" />
             </Button>
           ) : (
             <Button onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))} disabled={isSubmitting} className="rounded-full px-8 quizo-copper-button">
-              Suivant
+              {t('quiz.next')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           )}

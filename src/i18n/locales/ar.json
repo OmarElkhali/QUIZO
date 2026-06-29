@@ -10,7 +10,8 @@
     "myQuizzes": "اختباراتي",
     "settings": "الإعدادات",
     "createQuiz": "إنشاء اختبار",
-    "user": "المستخدم"
+    "user": "المستخدم",
+    "pricing": "الأسعار"
   },
   "home": {
     "title": "مرحباً بك في QUIZO",
@@ -51,7 +52,21 @@
     "extractingText": "استخراج النص",
     "generatingQuestions": "إنشاء الأسئلة",
     "validatingQuestions": "التحقق من الأسئلة",
-    "savingQuiz": "حفظ الاختبار"
+    "savingQuiz": "حفظ الاختبار",
+    "eyebrow": "إنشاء اختبار",
+    "description": "قم بتحميل مستندات الدورة التدريبية الخاصة بك ودع الذكاء الاصطناعي ينشئ اختبارًا مخصصًا لاختبار معرفتك.",
+    "configTitle": "الإعداد الموصى به",
+    "configDesc": "يعطي الفصل الواحد لكل اختبار والعناوين الواضحة والتعريفات الكاملة نتائج أفضل.",
+    "modelsTitle": "النماذج المتاحة",
+    "modelsDesc": "يمكن استخدام Gemini و OpenRouter و Groq بناءً على إعداداتك.",
+    "viewMyQuizzes": "عرض اختباراتي",
+    "enableTimeLimit": "تفعيل حد زمني",
+    "durationMinutes": "المدة (بالدقائق)",
+    "selectDuration": "اختر المدة",
+    "additionalInfo": "معلومات إضافية (اختياري)",
+    "additionalInfoPlaceholder": "أضف مواضيع معينة لتغطيتها، أو أنماط الأسئلة المفضلة، أو تفاصيل أخرى...",
+    "hour": "ساعة",
+    "hours": "ساعات"
   },
   "quiz": {
     "question": "سؤال",
@@ -61,7 +76,8 @@
     "submit": "إرسال",
     "timeRemaining": "الوقت المتبقي",
     "selectAnswer": "اختر إجابة",
-    "multipleAnswers": "اختر جميع الإجابات الصحيحة"
+    "multipleAnswers": "اختر جميع الإجابات الصحيحة",
+    "unansweredConfirm": "تبقت {{count}} أسئلة بدون إجابة. هل تريد فعلاً إرسال الاختبار؟"
   },
   "results": {
     "title": "نتائج الاختبار",
@@ -76,7 +92,19 @@
     "tryAgain": "حاول مرة أخرى",
     "backToHome": "العودة إلى الرئيسية",
     "viewDetails": "عرض التفاصيل",
-    "shareResults": "مشاركة النتائج"
+    "shareResults": "مشاركة النتائج",
+    "recapDesc": "ملخص لمحاولتك، والنتيجة الإجمالية وتفاصيل الإجابات.",
+    "filterDesc": "تصفية الأسئلة حسب حالة الإجابة.",
+    "unanswered": "بدون إجابة",
+    "all": "الكل",
+    "yourAnswer": "إجابتك",
+    "correctAnswer": "الإجابة الصحيحة",
+    "explanation": "التفسير",
+    "noAnswer": "لم تتم الإجابة",
+    "excellent": "ممتاز!",
+    "veryGood": "جيد جداً!",
+    "goodJob": "عمل جيد",
+    "keepPracticingText": "بحاجة إلى تعزيز"
   },
   "history": {
     "title": "سجل الاختبارات",
@@ -192,5 +220,28 @@
     "privacy": "الخصوصية",
     "terms": "شروط الخدمة",
     "allRightsReserved": "جميع الحقوق محفوظة"
+  },
+  "dashboardHome": {
+    "workspace": "مساحة العمل",
+    "titleUser": "لوحة التحكم",
+    "titleGuest": "كويزو، استوديو كويز حديث",
+    "descUser": "إدارة المحتوى التعليمي وتحليل أداء المجموعات.",
+    "descGuest": "أنشئ مسابقات من الدورات، واطلق مسابقات مباشرة وتتبع النتائج في واجهة SaaS ممتازة.",
+    "seeTariffs": "عرض الأسعار",
+    "totalQuiz": "إجمالي المسابقات",
+    "questions": "أسئلة",
+    "participations": "المشاركات",
+    "completion": "الإكمال",
+    "myQuizzes": "مسابقاتي",
+    "myQuizzesDesc": "مسابقاتك الأخيرة جاهزة للاستئناف أو المشاركة أو التحليل.",
+    "active": "نشط",
+    "shareCode": "رمز المشاركة",
+    "questionsCount": "{{count}} أسئلة",
+    "generateAi": "توليد باستخدام الذكاء الاصطناعي",
+    "generateAiDesc": "استورد مساقًا وقم بتوليد أسئلة اختيار من متعدد منظمة باستخدام Gemini أو OpenRouter أو Groq.",
+    "createManual": "إنشاء يدوي",
+    "createManualDesc": "ابنِ أسئلتك، خياراتك، تفسيراتك وأنماط مشاركتك بتحكم كامل.",
+    "joinLive": "الانضمام إلى مسابقة مباشرة",
+    "viewHistory": "عرض السجل"
   }
 }

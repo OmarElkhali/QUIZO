@@ -22,10 +22,7 @@ import { AIModelType } from '@/types/quiz';
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string; badge?: string }> = [
   { value: 'groq', label: 'Groq', description: '⚡ Ultra-rapide (3-5s), gratuit et illimité.', badge: 'Recommandé' },
   { value: 'gemini', label: 'Gemini', description: '🔥 Modèle puissant de Google pour la génération de quiz.' },
-  { value: 'chatgpt', label: 'ChatGPT', description: '🎯 Précis et optimisé pour le français.' },
-  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur rapide multi-modèles (Qwen, Llama, etc.).' },
-  { value: 'qwen', label: 'Qwen', description: 'Modèle puissant d\'Alibaba.' },
-  { value: 'ollama', label: 'Ollama (Local)', description: 'Modèle local gratuit s\'il est installé sur votre machine.' },
+  { value: 'openrouter', label: 'OpenRouter', description: 'Routeur rapide multi-modèles (Llama, etc.).' },
 ];
 
 export const QuizForm = () => {
@@ -41,6 +38,7 @@ export const QuizForm = () => {
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState(30); // minutes
   const [modelType, setModelType] = useState<AIModelType>('groq'); // Groq par défaut (ultra-rapide)
+  const [openRouterApiKey, setOpenRouterApiKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCreated, setQuizCreated] = useState(false);
@@ -50,6 +48,11 @@ export const QuizForm = () => {
   const [progressStage, setProgressStage] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressLogs, setProgressLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('quizo_openrouter_api_key') || '';
+    setOpenRouterApiKey(savedKey);
+  }, []);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -139,7 +142,7 @@ export const QuizForm = () => {
         enableTimeLimit ? timeLimit : undefined, 
         additionalInfo,
         modelType,
-        undefined, // apiKey optionnel
+        openRouterApiKey,
         statusCallback
       );
       
@@ -296,6 +299,27 @@ export const QuizForm = () => {
                     </div>
                   )}
                 </div>
+                {modelType === 'openrouter' && (
+                  <div className="space-y-2 mt-4 pt-2 border-t border-white/[0.07]">
+                    <Label htmlFor="openrouter-api-key" className="text-xs text-[#a79d96]">
+                      Clé API OpenRouter (Optionnel)
+                    </Label>
+                    <input
+                      id="openrouter-api-key"
+                      type="password"
+                      placeholder="sk-or-v1-..."
+                      value={openRouterApiKey}
+                      onChange={(e) => {
+                        setOpenRouterApiKey(e.target.value);
+                        localStorage.setItem('quizo_openrouter_api_key', e.target.value);
+                      }}
+                      className="flex h-10 w-full rounded-xl border border-white/[0.07] bg-black/40 px-3 py-2 text-sm text-white placeholder-[#a79d96]/50 focus:border-[#ffb77d]/50 focus:outline-none focus:ring-1 focus:ring-[#ffb77d]/20 transition-all duration-300"
+                    />
+                    <p className="text-[10px] text-[#a79d96]/70 leading-normal">
+                      Si vous ne fournissez pas de clé, les clés de secours du serveur seront utilisées automatiquement.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -347,27 +371,27 @@ export const QuizForm = () => {
                 checked={enableTimeLimit}
                 onCheckedChange={(checked) => setEnableTimeLimit(checked === true)}
               />
-              <Label htmlFor="enable-time-limit">Activer une limite de temps</Label>
+              <Label htmlFor="enable-time-limit">{t('createQuiz.enableTimeLimit')}</Label>
             </div>
             
             {enableTimeLimit && (
               <div className="flex items-center space-x-3 pl-6">
                 <div className="grid gap-1.5 flex-1">
-                  <Label htmlFor="time-limit">Durée (minutes)</Label>
+                  <Label htmlFor="time-limit">{t('createQuiz.durationMinutes')}</Label>
                   <Select 
                     value={timeLimit.toString()}
                     onValueChange={(value) => setTimeLimit(parseInt(value))}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner une durée" />
+                      <SelectValue placeholder={t('createQuiz.selectDuration')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="15">15 minutes</SelectItem>
-                      <SelectItem value="30">30 minutes</SelectItem>
-                      <SelectItem value="45">45 minutes</SelectItem>
-                      <SelectItem value="60">1 heure</SelectItem>
+                      <SelectItem value="15">15 min</SelectItem>
+                      <SelectItem value="30">30 min</SelectItem>
+                      <SelectItem value="45">45 min</SelectItem>
+                      <SelectItem value="60">1 {t('createQuiz.hour')}</SelectItem>
                       <SelectItem value="90">1h30</SelectItem>
-                      <SelectItem value="120">2 heures</SelectItem>
+                      <SelectItem value="120">2 {t('createQuiz.hours')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -380,10 +404,10 @@ export const QuizForm = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="additional-info">Informations supplémentaires (optionnel)</Label>
+            <Label htmlFor="additional-info">{t('createQuiz.additionalInfo')}</Label>
             <Textarea
               id="additional-info"
-              placeholder="Ajoutez des sujets spécifiques à aborder, des styles de questions préférés ou d’autres détails..."
+              placeholder={t('createQuiz.additionalInfoPlaceholder')}
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
               className="min-h-[100px] resize-none quizo-input"

@@ -43,14 +43,13 @@ i18n
 
 export default i18n;
 
-// Export des langues disponibles avec leurs métadonnées
 export const languages = [
-  { code: 'fr', name: 'Français', flag: '🇫🇷', nativeName: 'Français' },
-  { code: 'en', name: 'English', flag: '🇬🇧', nativeName: 'English' },
-  { code: 'es', name: 'Español', flag: '🇪🇸', nativeName: 'Español' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦', nativeName: 'العربية', rtl: true },
-  { code: 'zh', name: '中文', flag: '🇨🇳', nativeName: '中文简体' },
-  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳', nativeName: 'हिन्दी' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷', nativeName: 'Português' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪', nativeName: 'Deutsch' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷', countryCode: 'fr', nativeName: 'Français' },
+  { code: 'en', name: 'English', flag: '🇬🇧', countryCode: 'gb', nativeName: 'English' },
+  { code: 'es', name: 'Español', flag: '🇪🇸', countryCode: 'es', nativeName: 'Español' },
+  { code: 'ar', name: 'العربية', flag: '🇸🇦', countryCode: 'sa', nativeName: 'العربية', rtl: true },
+  { code: 'zh', name: '中文', flag: '🇨🇳', countryCode: 'cn', nativeName: '中文简体' },
+  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳', countryCode: 'in', nativeName: 'हिन्दी' },
+  { code: 'pt', name: 'Português', flag: '🇧🇷', countryCode: 'br', nativeName: 'Português' },
+  { code: 'de', name: 'Deutsch', flag: '🇩🇪', countryCode: 'de', nativeName: 'Deutsch' },
 ] as const;

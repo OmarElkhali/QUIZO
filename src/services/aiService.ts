@@ -148,6 +148,7 @@ export const processFileAndGenerateQuestions = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
+  apiKey?: string,
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
@@ -186,6 +187,7 @@ export const processFileAndGenerateQuestions = async (
       difficulty,
       additionalInfo,
       modelType,
+      apiKey,
       progress => progressCallback?.(0.3 + progress * 0.7)
     );
 
@@ -201,8 +203,8 @@ export const generateQuestionsWithAI = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  progressCallback?: (progress: number) => void,
-  apiKey?: string
+  apiKey?: string,
+  progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
 
@@ -218,7 +220,7 @@ export const generateQuestionsWithAI = async (
 
   const authHeaders = await getAuthHeaders();
 
-  // Timeout adapté au modèle (Groq ultra-rapide, Gemini/ChatGPT plus lents)
+  // Timeout adapté au modèle (Groq ultra-rapide, Gemini/OpenRouter plus lents)
   const timeoutMs = modelType === 'groq' ? 60000 : 240000;
 
   const response = await axios.post(`${FLASK_API_URL}/generate`, {
@@ -227,7 +229,7 @@ export const generateQuestionsWithAI = async (
     difficulty,
     additionalInfo,
     modelType,
-    apiKey: modelType === 'chatgpt' ? apiKey : undefined
+    apiKey,
   }, {
     headers: authHeaders,
     timeout: timeoutMs,

@@ -10,7 +10,8 @@
     "myQuizzes": "Meine Quiz",
     "settings": "Einstellungen",
     "createQuiz": "Quiz erstellen",
-    "user": "Benutzer"
+    "user": "Benutzer",
+    "pricing": "Tarife"
   },
   "home": {
     "title": "Willkommen bei QUIZO",
@@ -51,7 +52,21 @@
     "extractingText": "Text extrahieren",
     "generatingQuestions": "Fragen generieren",
     "validatingQuestions": "Fragen validieren",
-    "savingQuiz": "Quiz speichern"
+    "savingQuiz": "Quiz speichern",
+    "eyebrow": "Quiz-Erstellung",
+    "description": "Laden Sie Ihre Kursunterlagen hoch und lassen Sie die KI ein maßgeschneidertes Quiz erstellen, um Ihr Wissen zu testen.",
+    "configTitle": "Empfohlenes Setup",
+    "configDesc": "Ein einziges Kapitel pro Quiz, klare Titel und vollständige Definitionen führen zu besseren Ergebnissen.",
+    "modelsTitle": "Verfügbare Modelle",
+    "modelsDesc": "Gemini, OpenRouter und Groq können je nach Konfiguration verwendet werden.",
+    "viewMyQuizzes": "Meine Quiz anzeigen",
+    "enableTimeLimit": "Zeitlimit aktivieren",
+    "durationMinutes": "Dauer (Minuten)",
+    "selectDuration": "Dauer auswählen",
+    "additionalInfo": "Zusätzliche Informationen (optional)",
+    "additionalInfoPlaceholder": "Fügen Sie spezifische Themen hinzu, die abgedeckt werden sollen, bevorzugte Fragenstile oder andere Details...",
+    "hour": "Stunde",
+    "hours": "Stunden"
   },
   "quiz": {
     "question": "Frage",
@@ -61,7 +76,8 @@
     "submit": "Absenden",
     "timeRemaining": "Verbleibende Zeit",
     "selectAnswer": "Wählen Sie eine Antwort",
-    "multipleAnswers": "Wählen Sie alle richtigen Antworten"
+    "multipleAnswers": "Wählen Sie alle richtigen Antworten",
+    "unansweredConfirm": "Es verbleiben {{count}} unbeantwortete Frage(n). Möchten Sie das Quiz wirklich absenden?"
   },
   "results": {
     "title": "Quiz-Ergebnisse",
@@ -76,7 +92,19 @@
     "tryAgain": "Nochmal versuchen",
     "backToHome": "Zurück zur Startseite",
     "viewDetails": "Details anzeigen",
-    "shareResults": "Ergebnisse teilen"
+    "shareResults": "Ergebnisse teilen",
+    "recapDesc": "Zusammenfassung Ihres Versuchs, Gesamtpunktzahl und Antwortdetails.",
+    "filterDesc": "Fragen nach Antwortstatus filtern.",
+    "unanswered": "Unbeantwortet",
+    "all": "Alle",
+    "yourAnswer": "Ihre Antwort",
+    "correctAnswer": "Richtige Antwort",
+    "explanation": "Erklärung",
+    "noAnswer": "Nicht beantwortet",
+    "excellent": "Ausgezeichnet!",
+    "veryGood": "Sehr gut!",
+    "goodJob": "Gute Arbeit",
+    "keepPracticingText": "Zu verbessern"
   },
   "history": {
     "title": "Quiz-Verlauf",
@@ -192,5 +220,28 @@
     "privacy": "Datenschutz",
     "terms": "Nutzungsbedingungen",
     "allRightsReserved": "Alle Rechte vorbehalten"
+  },
+  "dashboardHome": {
+    "workspace": "Arbeitsbereich",
+    "titleUser": "Dashboard",
+    "titleGuest": "QUIZO, modernes Quiz-Studio",
+    "descUser": "Verwalten Sie Ihre Bildungsinhalte und analysieren Sie die Leistung der Gruppen.",
+    "descGuest": "Erstellen Sie Quiz aus Kursen, starten Sie Live-Wettbewerbe und verfolgen Sie die Ergebnisse in einer Premium-SaaS-Schnittstelle.",
+    "seeTariffs": "Tarife anzeigen",
+    "totalQuiz": "Quiz insgesamt",
+    "questions": "Fragen",
+    "participations": "Teilnahmen",
+    "completion": "Abschluss",
+    "myQuizzes": "Meine Quiz",
+    "myQuizzesDesc": "Ihre neuesten Quiz, bereit zum Fortsetzen, Teilen oder Analysieren.",
+    "active": "Aktiv",
+    "shareCode": "Freigabecode",
+    "questionsCount": "{{count}} Fragen",
+    "generateAi": "Mit KI generieren",
+    "generateAiDesc": "Importieren Sie einen Kurs und generieren Sie ein strukturiertes MCQ mit Gemini, OpenRouter oder Groq.",
+    "createManual": "Manuell erstellen",
+    "createManualDesc": "Erstellen Sie Ihre Fragen, Optionen, Erklärungen und Freigabemodi mit voller Kontrolle.",
+    "joinLive": "Live beitreten",
+    "viewHistory": "Verlauf anzeigen"
   }
 }

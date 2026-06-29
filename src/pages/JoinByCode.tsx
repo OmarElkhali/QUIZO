@@ -21,7 +21,7 @@ interface RecentCompetition {
 }
 
 const JoinByCode = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { shareCode: urlShareCode } = useParams<{ shareCode?: string }>();
 
@@ -31,6 +31,12 @@ const JoinByCode = () => {
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [isCheckingCode, setIsCheckingCode] = useState(false);
   const [recentCompetitions, setRecentCompetitions] = useState<RecentCompetition[]>([]);
+
+  useEffect(() => {
+    if (user?.name && !participantName) {
+      setParticipantName(user.name);
+    }
+  }, [user, participantName]);
 
   useEffect(() => {
     if (shareCode.length === 6) {
@@ -196,10 +202,10 @@ const JoinByCode = () => {
               </div>
             </div>
 
-            {isCheckingCode && (
+            {(isCheckingCode || authLoading) && (
               <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.045] p-3 text-sm text-[#a79d96]">
                 <Loader2 className="h-4 w-4 animate-spin text-[#ffb77d]" />
-                Vérification du code...
+                {authLoading ? 'Initialisation de la session...' : 'Vérification du code...'}
               </div>
             )}
 
@@ -241,9 +247,9 @@ const JoinByCode = () => {
               />
             </div>
 
-            <Button type="submit" className="h-12 w-full quizo-copper-button" disabled={isLoading || !shareCode || shareCode.length !== 6}>
-              {isLoading ? 'Chargement...' : 'Rejoindre la session'}
-              {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
+            <Button type="submit" className="h-12 w-full quizo-copper-button" disabled={isLoading || authLoading || !shareCode || shareCode.length !== 6}>
+              {isLoading || authLoading ? 'Chargement...' : 'Rejoindre la session'}
+              {!(isLoading || authLoading) && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
           </form>
         </PremiumPanel>

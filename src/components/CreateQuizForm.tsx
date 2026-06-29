@@ -1,4 +1,4 @@
-﻿
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,8 +19,6 @@ const AI_MODELS: Array<{ value: AIModelType; label: string; description: string 
   { value: 'openrouter', label: 'OpenRouter recommandé', description: 'Routeur rapide multi-modèles configuré côté backend.' },
   { value: 'gemini', label: 'Gemini', description: 'Alternative via le backend Flask.' },
   { value: 'groq', label: 'Groq', description: 'Génération rapide si la clé serveur est configurée.' },
-  { value: 'qwen', label: 'Qwen', description: 'Qwen direct ou via OpenRouter.' },
-  { value: 'ollama', label: 'Ollama', description: 'Modele local si Ollama tourne sur cette machine.' },
 ];
 
 export const CreateQuizForm = () => {

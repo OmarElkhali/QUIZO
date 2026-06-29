@@ -74,6 +74,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     timeLimit?: number,
     additionalInfo?: string,
     modelType: AIModelType = 'gemini',
+    apiKey?: string,
     progressCallback?: ProgressCallback
   ) => {
     try {
@@ -117,6 +118,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
           difficulty,
           additionalInfo,
           modelType,
+          apiKey,
           (progress: number) => {
             const percent = 30 + Math.round(progress * 45);
             progressCallback?.('Génération des questions', percent, `Progression: ${Math.round(progress * 100)}%`);

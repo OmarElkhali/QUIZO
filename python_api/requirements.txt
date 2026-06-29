@@ -21,3 +21,7 @@ groq==0.33.0  # LLM ultra-rapide et gratuit (14,400 req/jour) - Version 2025
 # Sécurité
 flask-limiter==3.5.0
 firebase-admin>=6.0.0
+
+# WebSocket temps réel
+flask-socketio>=5.6.0
+python-socketio>=5.12.0

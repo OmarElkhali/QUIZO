@@ -37,6 +37,7 @@ const RealtimeDashboard = React.lazy(() => import('./pages/RealtimeDashboard'));
 const JoinQuiz = React.lazy(() => import('./pages/JoinQuiz'));
 const QuizSession = React.lazy(() => import('./pages/QuizSession'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
+const LiveSessionDashboard = React.lazy(() => import('./pages/LiveSessionDashboard'));
 
 const queryClient = new QueryClient()
 
@@ -71,6 +72,7 @@ function App() {
                     <Route path="/terms-of-service" element={<TermsOfService />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/pricing" element={<Pricing />} />
+                    <Route path="/live-session/:sessionId" element={<LiveSessionDashboard />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
