@@ -18,7 +18,7 @@ import { AIModelType, Quiz, Question } from '@/types/quiz';
 import { uploadFileToSupabase } from './storageService';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 const getErrorMessage = (error: unknown): string => (
   error instanceof Error ? error.message : String(error)

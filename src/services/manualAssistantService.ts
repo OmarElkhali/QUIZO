@@ -2,7 +2,7 @@ import axios from 'axios';
 import { auth } from '@/lib/firebase';
 import { ManualQuestion } from '@/types/quiz';
 
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
 
 export type ManualAssistantAction =
   | 'generate_from_course'
