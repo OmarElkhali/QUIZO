@@ -147,19 +147,29 @@ export const mapManualQuiz = (id: string, data: Record<string, unknown>): Manual
     : undefined,
 });
 
-export const mapCompetition = (id: string, data: Record<string, unknown>): Competition => ({
-  id,
-  quizId: String(data.quizId || ''),
-  creatorId: String(data.creatorId || data.ownerId || ''),
-  title: String(data.title || 'Competition'),
-  description: typeof data.description === 'string' ? data.description : '',
-  startDate: toIso(data.startDate),
-  endDate: toIso(data.endDate),
-  shareCode: String(data.shareCode || ''),
-  isActive: data.isActive !== false,
-  participantsCount: typeof data.participantsCount === 'number' ? data.participantsCount : 0,
-  status: data.status === 'completed' ? 'completed' : 'active',
-});
+export const mapCompetition = (id: string, data: Record<string, unknown>): Competition => {
+  const liveStateData = data.liveState && typeof data.liveState === 'object' ? (data.liveState as Record<string, unknown>) : undefined;
+  return {
+    id,
+    quizId: String(data.quizId || ''),
+    creatorId: String(data.creatorId || data.ownerId || ''),
+    title: String(data.title || 'Competition'),
+    description: typeof data.description === 'string' ? data.description : '',
+    startDate: toIso(data.startDate),
+    endDate: toIso(data.endDate),
+    shareCode: String(data.shareCode || ''),
+    isActive: data.isActive !== false,
+    participantsCount: typeof data.participantsCount === 'number' ? data.participantsCount : 0,
+    status: data.status === 'completed' ? 'completed' : 'active',
+    mode: data.mode === 'teacher_led' ? 'teacher_led' : 'classic',
+    liveState: liveStateData ? {
+      status: (liveStateData.status as 'waiting' | 'countdown' | 'question' | 'reveal' | 'leaderboard' | 'completed') || 'waiting',
+      currentQuestionIndex: typeof liveStateData.currentQuestionIndex === 'number' ? liveStateData.currentQuestionIndex : 0,
+      questionStartTime: liveStateData.questionStartTime ? toIso(liveStateData.questionStartTime) : undefined,
+      questionEndTime: liveStateData.questionEndTime ? toIso(liveStateData.questionEndTime) : undefined,
+    } : undefined,
+  };
+};
 
 export const mapParticipant = (id: string, data: Record<string, unknown>): Participant => ({
   id,

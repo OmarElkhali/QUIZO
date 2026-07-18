@@ -405,3 +405,16 @@ const updateQuizStats = async (quizId: string): Promise<void> => {
     updatedAt: serverTimestamp(),
   });
 };
+
+export const updateCompetitionParticipantScore = async (
+  competitionId: string,
+  participantId: string,
+  score: number,
+  currentQuestionIndex: number
+): Promise<void> => {
+  await updateDoc(doc(db, 'competitions', competitionId, 'participants', participantId), {
+    score,
+    currentQuestionIndex,
+    lastActivityAt: serverTimestamp(),
+  });
+};

@@ -343,10 +343,15 @@ const ManualQuizBuilder = () => {
 
     setIsCreatingCompetition(true);
     try {
-      const competitionId = await createCompetition(id, user.id, competitionTitle, competitionDescription, start, end);
+      const modeParam = competitionMode === 'teacher_led' ? 'teacher_led' : 'classic';
+      const competitionId = await createCompetition(id, user.id, competitionTitle, competitionDescription, start, end, modeParam);
       toast.success(`Compétition créée en mode ${competitionMode === 'classic' ? 'classique' : competitionMode === 'teacher_led' ? 'teacher-led' : 'équipe'}`);
       setShowCompetitionDialog(false);
-      navigate(`/creator-dashboard/${competitionId}`);
+      if (modeParam === 'teacher_led') {
+        navigate(`/live-session/${competitionId}`);
+      } else {
+        navigate(`/creator-dashboard/${competitionId}`);
+      }
     } catch (error) {
       console.error('Erreur lors de la création de la compétition:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de la compétition');

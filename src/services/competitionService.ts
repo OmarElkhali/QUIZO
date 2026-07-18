@@ -1,6 +1,6 @@
 import { auth, db } from '@/lib/firebase';
 import { addDoc, collection, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
-import { Attempt, Competition, ManualQuestion, ManualQuiz, Participant, ShareCodeDoc } from '@/types/quiz';
+import { Attempt, Competition, LiveState, ManualQuestion, ManualQuiz, Participant, ShareCodeDoc } from '@/types/quiz';
 import { QuizStatus, ShareCodeType, CompetitionStats, toIso, normalizeCode, isFirestorePermissionError, isAnonymousAuthDisabled, stripUndefinedDeep, generateShareCode, ensureParticipantSession, mapManualQuiz, mapCompetition, mapParticipant, mapAttempt, getAvailableShareCode, writeShareCode, getShareCode, resolveShareCode } from './manualQuizCore';
 
 export const createCompetition = async (
@@ -9,7 +9,8 @@ export const createCompetition = async (
   title: string,
   description: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  mode: 'classic' | 'teacher_led' = 'classic'
 ): Promise<string> => {
   try {
     const shareCode = await getAvailableShareCode('competition');
@@ -26,6 +27,11 @@ export const createCompetition = async (
       status: 'active',
       createdAt: serverTimestamp(),
       participantsCount: 0,
+      mode,
+      liveState: mode === 'teacher_led' ? {
+        status: 'waiting',
+        currentQuestionIndex: 0,
+      } : null,
     };
 
     const docRef = await addDoc(collection(db, 'competitions'), competitionData);
@@ -128,4 +134,36 @@ export const listenToCompetitionAttempts = (
   return onSnapshot(attemptsQuery, (snapshot) => {
     callback(snapshot.docs.map((attemptDoc) => mapAttempt(attemptDoc.id, attemptDoc.data())));
   });
+};
+
+export const listenToCompetition = (
+  competitionId: string,
+  callback: (competition: Competition) => void
+): (() => void) => {
+  const docRef = doc(db, 'competitions', competitionId);
+  return onSnapshot(docRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(mapCompetition(snapshot.id, snapshot.data()));
+    }
+  });
+};
+
+export const updateCompetitionLiveState = async (
+  competitionId: string,
+  liveState: Partial<LiveState>
+): Promise<void> => {
+  try {
+    const docRef = doc(db, 'competitions', competitionId);
+    
+    // Construct updates with nested liveState fields
+    const updates: Record<string, unknown> = {};
+    Object.entries(liveState).forEach(([key, value]) => {
+      updates[`liveState.${key}`] = value;
+    });
+
+    await updateDoc(docRef, updates);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de liveState:', error);
+    throw new Error(`Echec de la mise à jour de liveState: ${error instanceof Error ? error.message : String(error)}`);
+  }
 };

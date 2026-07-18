@@ -41,7 +41,4 @@ services:
         value: "20"
     healthCheckPath: /api/health
     autoDeploy: true  # Déploiement automatique sur push GitHub
-    disk:
-      name: quizo-data
-      mountPath: /data
-      sizeGB: 1
+

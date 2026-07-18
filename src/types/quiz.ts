@@ -105,6 +105,13 @@ export interface ManualQuiz {
   };
 }
 
+export interface LiveState {
+  status: 'waiting' | 'countdown' | 'question' | 'reveal' | 'leaderboard' | 'completed';
+  currentQuestionIndex: number;
+  questionStartTime?: string;
+  questionEndTime?: string;
+}
+
 export interface Competition {
   id: string;
   quizId: string;
@@ -117,6 +124,8 @@ export interface Competition {
   isActive: boolean;
   participantsCount: number;
   status?: 'active' | 'completed';
+  liveState?: LiveState;
+  mode?: 'classic' | 'teacher_led';
 }
 
 export interface Participant {
