@@ -156,10 +156,10 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
             <button
               type="button"
               aria-label={t('common.close')}
-              className="absolute inset-0 bg-black/70"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col border-r border-[var(--quizo-border)]">
+            <aside className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col border-r border-[var(--quizo-border)] overflow-y-auto">
               <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
                 <div className="flex items-center gap-3">
                   <BookOpen className="h-6 w-6 text-orange-500" />
@@ -170,14 +170,65 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 </Button>
               </div>
               {navLinks(true)}
-              <div className="m-4 mt-auto rounded-xl border border-orange-400/20 bg-orange-500/10 p-4">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#d97706] dark:text-[#ffb77d]">
-                  <ShieldCheck className="h-4 w-4" />
-                  Bêta gratuite
+              
+              <div className="m-4 mt-auto space-y-3">
+                <div className="flex items-center justify-between rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] p-3">
+                  <span className="text-xs font-semibold text-[var(--quizo-muted)]">Thème & Langue</span>
+                  <div className="flex items-center gap-2">
+                    <LanguageSelector />
+                    <ThemeToggle />
+                  </div>
                 </div>
-                <p className="text-xs leading-5 text-[var(--quizo-muted)]">
-                  Quotas protégés, compétitions live et génération IA fiable pour vos cours.
-                </p>
+
+                {user ? (
+                  <div className="rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] p-3 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border border-orange-400/35">
+                        {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.name || user.email} /> : null}
+                        <AvatarFallback className="bg-orange-500/15 text-[#d97706]">
+                          {getInitials(user.name, user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="truncate">
+                        <p className="text-sm font-semibold text-[var(--quizo-heading)] truncate">{user.name || t('nav.user')}</p>
+                        <p className="text-xs text-[var(--quizo-muted)] truncate">{user.email}</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-start quizo-outline-button text-xs"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        handleSignOut();
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {t('nav.logout')}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    className="w-full quizo-copper-button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      setAuthOpen(true);
+                    }}
+                  >
+                    {t('nav.login')}
+                  </Button>
+                )}
+
+                <div className="rounded-xl border border-orange-400/20 bg-orange-500/10 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#d97706] dark:text-[#ffb77d]">
+                    <ShieldCheck className="h-4 w-4" />
+                    Bêta gratuite
+                  </div>
+                  <p className="text-xs leading-5 text-[var(--quizo-muted)]">
+                    Quotas protégés, compétitions live et génération IA fiable pour vos cours.
+                  </p>
+                </div>
               </div>
             </aside>
           </div>
