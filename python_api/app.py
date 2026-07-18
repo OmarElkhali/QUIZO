@@ -60,25 +60,24 @@ limiter = Limiter(
 # --- CORS ---
 configured_origins = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080",
+    "*",
 ).split(",")
 local_dev_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://quizo-tau.vercel.app",
     "https://quizo-ruddy.vercel.app",
     "https://quizo.vercel.app",
 ]
-ALLOWED_ORIGINS = list(dict.fromkeys(
-    origin.strip()
-    for origin in [*configured_origins, *local_dev_origins]
-    if origin.strip()
-))
+raw_origins = [origin.strip() for origin in [*configured_origins, *local_dev_origins] if origin.strip()]
+ALLOWED_ORIGINS = "*" if "*" in raw_origins or os.getenv("FLASK_ENV") != "development" else list(dict.fromkeys(raw_origins))
+
 CORS(app, resources={
     r"/*": {
         "origins": ALLOWED_ORIGINS,
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["GET", "POST", "OPTIONS", "HEAD"],
         "allow_headers": ["Content-Type", "Authorization"],
         "max_age": 3600
     }
