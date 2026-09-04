@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
+import { BACKEND_API_URL } from '@/lib/backendUrl';
 import { AIModelType, Question } from '@/types/quiz';
 
-// URL de l'API Flask - utiliser le proxy Vite en dev, variable d'env en prod
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const FLASK_API_URL = BACKEND_API_URL;
 
 /** Returns headers with the current user's Firebase ID token for backend auth. */
 const getAuthHeaders = async (): Promise<Record<string, string>> => {

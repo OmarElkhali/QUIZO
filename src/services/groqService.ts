@@ -4,9 +4,10 @@
  */
 
 import axios from 'axios';
+import { BACKEND_API_URL } from '@/lib/backendUrl';
 import { Question } from '@/types/quiz';
 
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const FLASK_API_URL = BACKEND_API_URL;
 
 // Simple in-memory cache pour éviter les requêtes identiques
 interface CacheEntry {

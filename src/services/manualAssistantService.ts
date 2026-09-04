@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { auth } from '@/lib/firebase';
+import { BACKEND_API_URL } from '@/lib/backendUrl';
 import { ManualQuestion } from '@/types/quiz';
 
-const FLASK_API_URL = import.meta.env.VITE_BACKEND_URL || '/api';
+const FLASK_API_URL = BACKEND_API_URL;
 
 export type ManualAssistantAction =
   | 'generate_from_course'
