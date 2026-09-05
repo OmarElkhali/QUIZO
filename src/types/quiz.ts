@@ -80,6 +80,8 @@ export interface ManualQuestion {
   }[];
   explanation?: string;
   points: number;
+  /** Optional duration in seconds (independent of the whole-quiz minute limit). */
+  timeLimit?: number;
 }
 
 export interface ManualQuiz {

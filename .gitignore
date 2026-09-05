@@ -63,4 +63,5 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 .vercel
+.test-build/
 *.zip

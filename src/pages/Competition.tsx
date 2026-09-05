@@ -298,7 +298,7 @@ const CompetitionPlay = () => {
       setTimeLeft((current) => {
         if (current === null || current <= 1) {
           clearInterval(interval);
-          if (quiz?.questions[currentQuestionIndex]) {
+          if (quiz?.questions[currentQuestionIndex] && !answers[quiz.questions[currentQuestionIndex].id]) {
             handleAnswerChange(quiz.questions[currentQuestionIndex].id, '__timeout__');
           }
           return 0;
@@ -308,7 +308,7 @@ const CompetitionPlay = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [competition?.mode, competition?.liveState?.status, timeLeft, quiz, currentQuestionIndex]);
+  }, [competition?.mode, competition?.liveState?.status, timeLeft, quiz, currentQuestionIndex, answers]);
 
   // Sync Progress in self-paced mode
   useEffect(() => {
@@ -490,7 +490,7 @@ const CompetitionPlay = () => {
                         "h-full transition-all duration-1000",
                         timeLeft !== null && timeLeft <= 5 ? "bg-red-500" : "bg-orange-500"
                       )} 
-                      style={{ width: `${(timeLeft || 20) / (currentQuestion.timeLimit || 20) * 100}%` }} 
+                      style={{ width: `${Math.max(0, Math.min(100, (timeLeft ?? 0) / (currentQuestion.timeLimit || 20) * 100))}%` }}
                     />
                   </div>
                 </div>

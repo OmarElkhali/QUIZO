@@ -3,18 +3,17 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "devCommand": "npm run dev",
   "regions": ["cdg1"],
-  "build": {
-    "env": {
-      "NODE_VERSION": "18"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://quizo-nued.onrender.com/api/:path*"
+      "source": "/api/:route(health|status|providers|extract-text|generate|manual-assistant)",
+      "destination": "https://quizo-nued.onrender.com/api/:route"
+    },
+    {
+      "source": "/api/live/:path*",
+      "destination": "https://quizo-nued.onrender.com/api/live/:path*"
     },
     {
       "source": "/((?!api/).*)",

@@ -1,4 +1,5 @@
 import { auth, db } from '@/lib/firebase';
+import { validateQuizQuestions } from '@/domain/quizRules';
 import { addDoc, collection, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { Attempt, Competition, LiveState, ManualQuestion, ManualQuiz, Participant, ShareCodeDoc } from '@/types/quiz';
 import { QuizStatus, ShareCodeType, CompetitionStats, toIso, normalizeCode, isFirestorePermissionError, isAnonymousAuthDisabled, stripUndefinedDeep, generateShareCode, ensureParticipantSession, mapManualQuiz, mapCompetition, mapParticipant, mapAttempt, getAvailableShareCode, writeShareCode, getShareCode, resolveShareCode } from './manualQuizCore';
@@ -13,6 +14,10 @@ export const createCompetition = async (
   mode: 'classic' | 'teacher_led' = 'classic'
 ): Promise<string> => {
   try {
+    const quizDoc = await getDoc(doc(db, 'quizzes', quizId));
+    if (!quizDoc.exists()) throw new Error('Quiz introuvable');
+    const errors = validateQuizQuestions(mapManualQuiz(quizDoc.id, quizDoc.data()).questions, mode === 'teacher_led' ? 'teacher_led' : 'async');
+    if (errors.length) throw new Error(errors[0]);
     const shareCode = await getAvailableShareCode('competition');
     const competitionData = {
       quizId,

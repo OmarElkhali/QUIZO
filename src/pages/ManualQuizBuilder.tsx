@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -52,6 +52,8 @@ import {
   runManualAssistant,
 } from '@/services/manualAssistantService';
 import { ManualQuestion, ManualQuiz } from '@/types/quiz';
+import { validateQuizQuestions } from '@/domain/quizRules';
+import { liveCapabilities, liveRequest } from '@/services/liveClient';
 
 type OptionDraft = ManualQuestion['options'][number];
 
@@ -95,6 +97,8 @@ const ManualQuizBuilder = () => {
   const [explanation, setExplanation] = useState('');
   const [points, setPoints] = useState(1);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const savingQuestionRef = useRef(false);
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
 
   const [timeLimit, setTimeLimit] = useState<number | undefined>(undefined);
   const [isPublic, setIsPublic] = useState(false);
@@ -103,10 +107,11 @@ const ManualQuizBuilder = () => {
 
   const [competitionTitle, setCompetitionTitle] = useState('');
   const [competitionDescription, setCompetitionDescription] = useState('');
-  const [competitionMode, setCompetitionMode] = useState<'classic' | 'teacher_led' | 'team'>('classic');
+  const [competitionMode, setCompetitionMode] = useState<'classic' | 'teacher_led'>('classic');
   const [startDate, setStartDate] = useState(() => toLocalDateTimeValue(new Date()));
   const [endDate, setEndDate] = useState(() => toLocalDateTimeValue(new Date(Date.now() + 60 * 60 * 1000)));
   const [isCreatingCompetition, setIsCreatingCompetition] = useState(false);
+  const liveCreationId = useRef<string | null>(null);
 
   const [assistantText, setAssistantText] = useState('');
   const [assistantFileName, setAssistantFileName] = useState('');
@@ -185,6 +190,10 @@ const ManualQuizBuilder = () => {
   };
 
   const handleAddOption = () => {
+    if (options.length >= 6) {
+      toast.error('Maximum 6 options, dont 4 maximum pour jouer en live.');
+      return;
+    }
     setOptions((current) => [...current, { id: `opt_${Date.now()}`, text: '', isCorrect: false }]);
   };
 
@@ -222,13 +231,13 @@ const ManualQuizBuilder = () => {
     setOptions(question.options?.length ? question.options : createDefaultOptions());
     setExplanation(question.explanation || '');
     setPoints(question.points || 1);
-    setEditingQuestionId(question.id || null);
+    setEditingQuestionId(quiz?.questions.some(existing => existing.id === question.id) ? question.id! : null);
     setShowAddQuestion(true);
     setActiveTab('questions');
   };
 
   const handleSaveQuestion = async () => {
-    if (!id || !quiz) return;
+    if (!id || !quiz || savingQuestionRef.current) return;
 
     if (!questionText.trim()) {
       toast.error('Veuillez saisir le texte de la question');
@@ -246,6 +255,13 @@ const ManualQuizBuilder = () => {
       return;
     }
 
+    const validationErrors = validateQuizQuestions([{ id: editingQuestionId || 'new', text: questionText, options: filledOptions, points }]);
+    if (validationErrors.length) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    savingQuestionRef.current = true;
+    setIsSavingQuestion(true);
     try {
       if (editingQuestionId) {
         await updateQuestionInManualQuiz(id, editingQuestionId, {
@@ -273,6 +289,9 @@ const ManualQuizBuilder = () => {
     } catch (error) {
       console.error("Erreur lors de l'enregistrement de la question:", error);
       toast.error(error instanceof Error ? error.message : "Erreur lors de l'enregistrement");
+    } finally {
+      savingQuestionRef.current = false;
+      setIsSavingQuestion(false);
     }
   };
 
@@ -328,6 +347,11 @@ const ManualQuizBuilder = () => {
 
   const handleCreateCompetition = async () => {
     if (!id || !quiz) return;
+    const validationErrors = validateQuizQuestions(quiz.questions, competitionMode === 'teacher_led' ? 'teacher_led' : 'async');
+    if (validationErrors.length) {
+      toast.error(validationErrors[0]);
+      return;
+    }
 
     if (!competitionTitle.trim()) {
       toast.error('Veuillez saisir un titre pour la compétition');
@@ -343,9 +367,18 @@ const ManualQuizBuilder = () => {
 
     setIsCreatingCompetition(true);
     try {
+      if (competitionMode === 'teacher_led') {
+        const capabilities = await liveCapabilities();
+        if (capabilities.ready) {
+          liveCreationId.current ||= crypto.randomUUID();
+          const session = await liveRequest<{ sessionId: string }>({ operation: 'create', quizId: id, commandId: liveCreationId.current });
+          navigate(`/session/${session.sessionId}`);
+          return;
+        }
+      }
       const modeParam = competitionMode === 'teacher_led' ? 'teacher_led' : 'classic';
       const competitionId = await createCompetition(id, user.id, competitionTitle, competitionDescription, start, end, modeParam);
-      toast.success(`Compétition créée en mode ${competitionMode === 'classic' ? 'classique' : competitionMode === 'teacher_led' ? 'teacher-led' : 'équipe'}`);
+      toast.success(`Compétition créée en mode ${competitionMode === 'classic' ? 'classique' : 'teacher-led'}`);
       setShowCompetitionDialog(false);
       if (modeParam === 'teacher_led') {
         navigate(`/live-session/${competitionId}`);
@@ -483,7 +516,7 @@ const ManualQuizBuilder = () => {
             {quiz.shareCode && <Badge className="border-orange-400/25 bg-orange-500/10 px-3 py-2 font-mono text-[#d97706]">{quiz.shareCode}</Badge>}
             <Button variant="outline" className="quizo-outline-button" onClick={handleGenerateShareCode}>
               <Share2 className="mr-2 h-4 w-4" />
-              {quiz.shareCode ? 'Nouveau code' : 'Générer code'}
+              {quiz.shareCode ? 'Afficher le code' : 'Générer code'}
             </Button>
             <Button variant="outline" className="quizo-outline-button" onClick={() => setShowSettingsDialog(true)}>
               <Settings className="mr-2 h-4 w-4" />
@@ -620,9 +653,9 @@ const ManualQuizBuilder = () => {
                     >
                       Annuler
                     </Button>
-                    <Button className="quizo-copper-button" onClick={handleSaveQuestion}>
+                    <Button className="quizo-copper-button" onClick={handleSaveQuestion} disabled={isSavingQuestion}>
                       <Save className="mr-2 h-4 w-4" />
-                      {editingQuestionId ? 'Mettre à jour' : 'Ajouter'}
+                      {isSavingQuestion ? 'Enregistrement…' : editingQuestionId ? 'Mettre à jour' : 'Ajouter'}
                     </Button>
                   </div>
                 </PremiumPanel>
@@ -962,7 +995,6 @@ const ManualQuizBuilder = () => {
               {[
                 { id: 'classic', title: 'Classic student-paced', text: 'Chaque participant avance à son rythme.' },
                 { id: 'teacher_led', title: 'Teacher-led', text: 'Structure prête pour pilotage enseignant.' },
-                { id: 'team', title: 'Team mode', text: 'Prépare une compétition par équipes.' },
               ].map((mode) => (
                 <button
                   key={mode.id}

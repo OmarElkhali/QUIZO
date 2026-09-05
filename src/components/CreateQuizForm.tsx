@@ -76,6 +76,7 @@ export const CreateQuizForm = () => {
         actualTimeLimit,
         additionalInfo,
         selectedAI,
+        undefined,
         progressCallback
       );
       

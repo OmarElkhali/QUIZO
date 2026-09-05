@@ -33,6 +33,18 @@ MAX_AI_QUESTIONS_PER_QUIZ = int(os.getenv("MAX_AI_QUESTIONS_PER_QUIZ", "20"))
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".txt"}
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
+# The old process-local live engine is not used by the Firestore frontend.
+# It cannot be shared safely by Gunicorn workers and must not accept public games.
+LEGACY_LIVE_ENABLED = os.getenv("ENABLE_LEGACY_LIVE", "false").lower() == "true"
+
+@app.before_request
+def reject_disabled_legacy_live():
+    if request.path.startswith("/api/live/") and not LEGACY_LIVE_ENABLED:
+        return jsonify({
+            "error": "Ce moteur live historique est désactivé. Utilisez le parcours quiz du site.",
+            "code": "LEGACY_LIVE_DISABLED",
+        }), 410
+
 # --- Firebase Admin SDK Initialization ---
 _firebase_app = None
 service_account_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
@@ -942,7 +954,9 @@ def health_check():
             provider: get_provider_model(provider)
             for provider in sorted(SUPPORTED_MODELS)
         },
-        "groq": True
+        "groq": services.get("groq", False),
+        "release": os.getenv("RENDER_GIT_COMMIT", "local")[:12],
+        "legacy_live_enabled": LEGACY_LIVE_ENABLED,
     })
 
 
@@ -1003,7 +1017,7 @@ except ImportError:
     session_manager = None
     logger.warning("live_session module non disponible")
 
-if SOCKETIO_AVAILABLE:
+if SOCKETIO_AVAILABLE and LEGACY_LIVE_ENABLED:
     socketio = SocketIO(
         app,
         cors_allowed_origins=ALLOWED_ORIGINS,

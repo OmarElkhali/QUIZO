@@ -18,6 +18,7 @@ import {
 import { Attempt, ManualQuiz } from '@/types/quiz';
 import { QuizAnswerCard } from '@/components/ui/premium';
 import { cn } from '@/lib/utils';
+import { remainingSeconds } from '@/domain/quizRules';
 
 interface QuizSessionLocationState {
   participantId?: string;
@@ -46,6 +47,7 @@ const QuizSession = () => {
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const submittedRef = useRef(false);
+  const deadlineRef = useRef<number | null>(null);
 
   const participantId = state.participantId || attempt?.participantId;
 
@@ -69,6 +71,7 @@ const QuizSession = () => {
         if (cancelled) return;
         if (!quizData) throw new Error('Quiz introuvable');
         if (!attemptData) throw new Error('Tentative introuvable');
+        if (attemptData.completedAt) throw new Error('Cette tentative est déjà terminée.');
         if (quizData.status === 'completed') throw new Error('Ce quiz est terminé');
         if (quizData.status === 'draft' && quizData.mode === 'realtime') {
           throw new Error("Ce quiz n’a pas encore démarré");
@@ -77,7 +80,12 @@ const QuizSession = () => {
         setQuiz(quizData);
         setAttempt(attemptData);
         setAnswers(attemptData.answers || {});
-        setTimeLeft(quizData.timeLimit ? quizData.timeLimit * 60 : null);
+        const startedAtMs = Date.parse(attemptData.startedAt);
+        if (quizData.timeLimit && !Number.isFinite(startedAtMs)) throw new Error('Le début de cette tentative est invalide.');
+        deadlineRef.current = quizData.timeLimit ? startedAtMs + quizData.timeLimit * 60_000 : null;
+        setTimeLeft(deadlineRef.current === null ? null : remainingSeconds(deadlineRef.current, Date.now()));
+        const firstUnanswered = quizData.questions.findIndex(question => !attemptData.answers?.[question.id]);
+        setCurrentQuestionIndex(firstUnanswered < 0 ? Math.max(0, quizData.questions.length - 1) : firstUnanswered);
       } catch (sessionError) {
         if (!cancelled) {
           const message = sessionError instanceof Error ? sessionError.message : 'Impossible de charger le quiz';
@@ -131,29 +139,28 @@ const QuizSession = () => {
   }, [answers, attemptId, navigate, participantId, quiz, quizId, timeLeft]);
 
   useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0 || isLoading || isSubmitting) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((current) => {
-        if (current === null || current <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          void handleSubmit();
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
+    if (deadlineRef.current === null || isLoading || isSubmitting) return;
+    const tick = () => {
+      const remaining = remainingSeconds(deadlineRef.current!, Date.now());
+      setTimeLeft(remaining);
+      if (remaining === 0) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        void handleSubmit();
+      }
+    };
+    timerRef.current = setInterval(tick, 1000);
+    tick();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [handleSubmit, isLoading, isSubmitting, timeLeft]);
+  }, [handleSubmit, isLoading, isSubmitting]);
 
   const currentQuestion = quiz?.questions[currentQuestionIndex];
   const answeredCount = useMemo(() => Object.values(answers).filter(Boolean).length, [answers]);
 
   const handleAnswerChange = (questionId: string, optionId: string) => {
-    if (!quizId || !attemptId) return;
+    if (!quizId || !attemptId || isSubmitting || (deadlineRef.current !== null && Date.now() >= deadlineRef.current)) return;
     setAnswers((current) => ({ ...current, [questionId]: optionId }));
     void recordQuizAttemptAnswer(quizId, attemptId, questionId, optionId).catch((answerError) => {
       console.error('Unable to save answer:', answerError);

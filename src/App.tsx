@@ -38,6 +38,7 @@ const JoinQuiz = React.lazy(() => import('./pages/JoinQuiz'));
 const QuizSession = React.lazy(() => import('./pages/QuizSession'));
 const Pricing = React.lazy(() => import('./pages/Pricing'));
 const LiveSessionDashboard = React.lazy(() => import('./pages/LiveSessionDashboard'));
+const LiveSessionV2 = React.lazy(() => import('./pages/LiveSessionV2'));
 
 const queryClient = new QueryClient()
 
@@ -73,6 +74,8 @@ function App() {
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/pricing" element={<Pricing />} />
                     <Route path="/live-session/:sessionId" element={<LiveSessionDashboard />} />
+                    <Route path="/session/:sessionId" element={<LiveSessionV2 />} />
+                    <Route path="/live-session/:sessionId/display" element={<LiveSessionV2 display />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>

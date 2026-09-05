@@ -4,6 +4,7 @@ import { Copy, Check, Users, Shield, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Participant } from '@/types/quiz';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
 interface WaitingRoomProps {
   shareCode: string;
@@ -21,9 +22,10 @@ export const WaitingRoom = ({
   gameTitle,
 }: WaitingRoomProps) => {
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
 
   const copyLink = () => {
-    const url = `${window.location.origin}/join-quiz/${shareCode}`;
+    const url = `${window.location.origin}/join/${encodeURIComponent(shareCode)}`;
     navigator.clipboard
       .writeText(url)
       .then(() => {
@@ -144,7 +146,7 @@ export const WaitingRoom = ({
                       <span className="font-semibold text-white text-sm text-center truncate max-w-full group-hover:text-[#ffb77d] transition-colors">
                         {player.name}
                       </span>
-                      {player.userId === player.id && (
+                      {player.userId === user?.id && (
                         <span className="absolute top-2 right-2 text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-400/20 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                           Toi

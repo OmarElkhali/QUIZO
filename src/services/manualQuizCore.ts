@@ -282,7 +282,10 @@ export const resolveShareCode = async (
   const normalizedCode = normalizeCode(code);
   const shareCode = await getShareCode(normalizedCode);
 
-  if (shareCode && (!expectedType || shareCode.type === expectedType) && shareCode.status === 'active') {
+  if (shareCode) {
+    if (shareCode.status !== 'active') throw new Error('Ce code de partage est désactivé.');
+    if (shareCode.expiresAt && (!Number.isFinite(Date.parse(shareCode.expiresAt)) || Date.parse(shareCode.expiresAt) <= Date.now())) throw new Error('Ce code de partage a expiré.');
+    if (expectedType && shareCode.type !== expectedType) throw new Error('Ce code correspond à un autre type de quiz.');
     return shareCode;
   }
 

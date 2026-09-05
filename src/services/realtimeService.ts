@@ -4,7 +4,7 @@
  */
 
 import { getDatabase, ref, set, onValue, off, update, remove, push, serverTimestamp } from 'firebase/database';
-import { app } from '@/lib/firebase';
+import app from '@/lib/firebase';
 
 const realtimeDb = getDatabase(app);
 

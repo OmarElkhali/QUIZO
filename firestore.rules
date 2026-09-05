@@ -61,7 +61,9 @@ service cloud.firestore {
         isCollaborator(resource.data) ||
         isByCode(resource.data)
       );
-      allow list: if signed();
+      allow list: if signed() && (
+        isOwner(resource.data) || isCollaborator(resource.data) || isByCode(resource.data)
+      );
       allow update, delete: if signed() && isOwner(resource.data);
 
       match /participants/{participantId} {
@@ -189,6 +191,23 @@ service cloud.firestore {
     match /backup-questions/{docId} {
       allow read: if signed();
       allow create, update, delete: if false;
+    }
+
+    // V2: authoritative sessions, versions, answers, commands and codes are server-only.
+    // Shared view: ownerId:string, phase:string, question:map|null, leaderboard:list.
+    // Player view: uid:string, receipt:map|null, published result and totals.
+    function isLiveMember(sessionId) {
+      return signed() && exists(/databases/$(database)/documents/liveSessionsV2/$(sessionId)/participants/$(request.auth.uid));
+    }
+
+    match /liveSessionViews/{sessionId} {
+      allow get: if signed() && (resource.data.ownerId == request.auth.uid || isLiveMember(sessionId));
+      allow list, create, update, delete: if false;
+    }
+
+    match /livePlayerViews/{sessionId}/players/{uid} {
+      allow get: if signed() && request.auth.uid == uid && isLiveMember(sessionId);
+      allow list, create, update, delete: if false;
     }
 
     match /{document=**} {

@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useQuiz } from '@/hooks/useQuiz';
 import { PremiumMetric, PremiumPanel } from '@/components/ui/premium';
+import { QuizPractice } from '@/components/live/QuizPractice';
+import { validateQuizQuestions, type QuizQuestionInput } from '@/domain/quizRules';
 
 const QuizPreview = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +21,7 @@ const QuizPreview = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasFallbackQuestions, setHasFallbackQuestions] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -79,6 +82,14 @@ const QuizPreview = () => {
     );
   }
 
+  const practiceQuestions: QuizQuestionInput[] = quiz.questions.map((q: QuizQuestionInput) => ({ ...q, points: q.points ?? 1 }));
+  const startPreview = () => {
+    const errors = validateQuizQuestions(practiceQuestions);
+    if (errors.length) { toast.error(errors[0]); return; }
+    setTesting(true);
+  };
+  if (testing) return <AppShell><QuizPractice questions={practiceQuestions} onClose={() => setTesting(false)} /></AppShell>;
+
   return (
     <AppShell>
       <PageHeader
@@ -86,8 +97,8 @@ const QuizPreview = () => {
         title={quiz.title}
         description={quiz.description || 'Préparez-vous à tester vos connaissances avec ce quiz.'}
         actions={
-          <Button onClick={() => navigate(`/quiz/${id}`)} className="quizo-copper-button">
-            Commencer le quiz
+          <Button onClick={startPreview} className="quizo-copper-button">
+            Tester sans enregistrer
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         }
@@ -130,8 +141,8 @@ const QuizPreview = () => {
             <Button variant="outline" onClick={() => navigate('/')} className="w-full quizo-outline-button sm:w-auto">
               Retour à l’accueil
             </Button>
-            <Button onClick={() => navigate(`/quiz/${id}`)} className="w-full quizo-copper-button sm:w-auto">
-              Commencer le quiz
+            <Button onClick={startPreview} className="w-full quizo-copper-button sm:w-auto">
+              Tester sans enregistrer
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -142,9 +153,9 @@ const QuizPreview = () => {
           <h3 className="text-xl font-bold text-white">Checklist participant</h3>
           <ul className="mt-5 space-y-3 text-sm leading-6 text-[#d8d2ce]">
             <li>• Vérifiez votre connexion avant de démarrer.</li>
-            <li>• Ne rechargez pas la page pendant la session.</li>
-            <li>• Les réponses sont enregistrées pendant la progression.</li>
-            <li>• Le score s’affiche automatiquement à la fin.</li>
+            <li>• Le test utilise les questions et les points de ce quiz.</li>
+            <li>• Aucune tentative ni statistique réelle n’est créée.</li>
+            <li>• Recharger la page quitte cet essai local.</li>
           </ul>
         </PremiumPanel>
       </section>
