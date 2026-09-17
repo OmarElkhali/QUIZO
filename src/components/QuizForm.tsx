@@ -21,7 +21,7 @@ import { AIModelType } from '@/types/quiz';
 import { BackendCapabilities, getBackendCapabilities } from '@/services/backendCapabilities';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string; badge?: string }> = [
-  { value: 'groq', label: 'Groq', description: '⚡ Ultra-rapide (3-5s), gratuit et illimité.', badge: 'Recommandé' },
+  { value: 'groq', label: 'Groq', description: '⚡ Très rapide avec un quota développeur gratuit.', badge: 'Rapide' },
   { value: 'gemini', label: 'Gemini', description: '🔥 Modèle puissant de Google pour la génération de quiz.' },
   { value: 'openrouter', label: 'OpenRouter', description: 'Routeur rapide multi-modèles (Llama, etc.).' },
 ];
@@ -343,7 +343,7 @@ export const QuizForm = () => {
                   {modelType === 'groq' && (
                     <div className="mt-2 flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      <span>Gratuit • Ultra-rapide • Illimité</span>
+                      <span>Quota gratuit • Très rapide • Secours automatique</span>
                     </div>
                   )}
                   {capabilities?.providers[modelType] && (

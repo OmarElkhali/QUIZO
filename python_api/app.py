@@ -9,6 +9,7 @@ from pypdf import PdfReader
 import docx
 import io
 import uuid
+import time
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 try:
@@ -179,12 +180,13 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Configuration des modèles
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "qwen/qwen3.6-flash")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 GROQ_BASE_URL = os.getenv("GROQ_BASE_URL") or "https://api.groq.com/openai/v1"
 DEFAULT_GROQ_MODEL = GROQ_MODEL
+AI_MAX_COMPLETION_TOKENS = max(512, min(int(os.getenv("AI_MAX_COMPLETION_TOKENS", "8192")), 16384))
 
 SUPPORTED_MODELS = {"gemini", "openrouter", "groq"}
-PROVIDER_FALLBACK_ORDER = ["gemini", "openrouter", "groq"]
+PROVIDER_FALLBACK_ORDER = ["gemini", "groq", "openrouter"]
 
 
 def sanitize_error_message(message):
@@ -858,18 +860,28 @@ def generate_quiz():
 
 
 def generate_with_gemini(prompt):
-    try:
-        logger.info("Utilisation de l'API Gemini avec le SDK officiel")
-        if not gemini_client:
-            raise ValueError("Cle API Gemini non configuree")
-        response = gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
-        content = response.text
-        logger.info(f"Contenu extrait de Gemini: {len(content)} caracteres")
-        return content
-    except Exception as e:
-        safe_error = sanitize_error_message(str(e))
-        logger.error(f"Erreur lors de l'appel a l'API Gemini: {safe_error}")
-        raise ValueError(f"Service Gemini indisponible: {safe_error}")
+    if not gemini_client:
+        raise ValueError("Cle API Gemini non configuree")
+    last_error = None
+    for attempt in range(2):
+        try:
+            logger.info(f"Utilisation de l'API Gemini avec le SDK officiel (tentative {attempt + 1}/2)")
+            response = gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
+            content = response.text
+            logger.info(f"Contenu extrait de Gemini: {len(content)} caracteres")
+            return content
+        except Exception as error:
+            last_error = error
+            safe_error = sanitize_error_message(str(error))
+            transient = "503" in safe_error or "UNAVAILABLE" in safe_error or "high demand" in safe_error.lower()
+            if attempt == 0 and transient:
+                logger.warning("Gemini temporairement sature; nouvelle tentative dans une seconde")
+                time.sleep(1)
+                continue
+            break
+    safe_error = sanitize_error_message(str(last_error))
+    logger.error(f"Erreur lors de l'appel a l'API Gemini: {safe_error}")
+    raise ValueError(f"Service Gemini indisponible: {safe_error}")
 
 
 def generate_with_chat_completions_api(provider_name, base_url, api_key, model, prompt, extra_headers=None):
@@ -899,6 +911,7 @@ def generate_with_chat_completions_api(provider_name, base_url, api_key, model, 
                     {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.2,
+                "max_tokens": AI_MAX_COMPLETION_TOKENS,
             },
             timeout=90,
         )

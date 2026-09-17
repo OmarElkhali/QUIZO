@@ -14,6 +14,7 @@
 - La fin du quiz personnel présente toutes les questions, le choix de l'utilisateur, la bonne réponse et l'explication existante.
 - Chaque correction propose une explication IA optionnelle via `/api/explain-answer` : authentification Firebase, appel uniquement au clic, cascade des fournisseurs, limites d'usage et secours local gratuit.
 - Le formulaire de création réellement utilisé affiche maintenant l'état des fournisseurs et ne demande plus de clé API dans le navigateur.
+- La cascade gratuite utilise Gemini, puis Groq `openai/gpt-oss-20b`, puis OpenRouter. Les sorties sont bornées à 8 192 jetons pour éviter les refus de quota et Gemini est retenté une fois sur saturation temporaire.
 
 ## Périmètre de cette livraison
 
@@ -43,7 +44,7 @@ L'activation exige les règles Firestore validées et publiées, un secret serve
 
 - Build Vite et vérifications TypeScript : réussis.
 - 10 tests unitaires du barème personnel/compétitif, de l'échéance et de la validation : réussis.
-- 6 tests de contrat Python (authentification, limites, CORS, fournisseurs et explication IA) : réussis.
+- 7 tests de contrat Python (authentification, limites, CORS, fournisseurs, budget de jetons et explication IA) : réussis.
 - 3 scénarios sur émulateur Firestore isolé `demo-quizo-live-tests` : réussis, comprenant 100 réponses simultanées, concurrence animateur, rejeu des requêtes, timeout et refus des accès/écritures interdits.
 - Parcours public accueil et rejoindre : rendu contrôlé sur navigateur, rejoindre en 390 × 844 et ordinateur, aucune erreur JavaScript détectée.
 - Python : compilation et contrôle local health/ancienne route live.

@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ["FIREBASE_PROJECT_ID"] = "ests-quiz"
 os.environ["FLASK_ENV"] = "production"
@@ -62,6 +62,18 @@ class ApiSecurityContractTest(unittest.TestCase):
         denied = self.client.get("/api/health", headers={"Origin": "https://attacker.example"})
         self.assertEqual(allowed.headers.get("Access-Control-Allow-Origin"), "https://quizo-tau.vercel.app")
         self.assertIsNone(denied.headers.get("Access-Control-Allow-Origin"))
+
+    def test_chat_provider_has_a_bounded_completion_budget(self):
+        provider_response = MagicMock()
+        provider_response.raise_for_status.return_value = None
+        provider_response.json.return_value = {"choices": [{"message": {"content": "{}"}}]}
+        with patch.object(backend.requests, "post", return_value=provider_response) as post:
+            backend.generate_with_chat_completions_api(
+                "TestProvider", "https://provider.example/v1", "test-key", "test-model", "prompt"
+            )
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(payload["max_tokens"], backend.AI_MAX_COMPLETION_TOKENS)
+        self.assertLessEqual(payload["max_tokens"], 16_384)
 
 
 if __name__ == "__main__":
