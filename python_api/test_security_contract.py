@@ -75,6 +75,24 @@ class ApiSecurityContractTest(unittest.TestCase):
         self.assertEqual(payload["max_tokens"], backend.AI_MAX_COMPLETION_TOKENS)
         self.assertLessEqual(payload["max_tokens"], 16_384)
 
+    def test_correct_answers_are_balanced_across_positions(self):
+        questions = [
+            {
+                "id": f"q{index}",
+                "options": [
+                    {"id": f"q{index}_a", "isCorrect": True},
+                    {"id": f"q{index}_b", "isCorrect": False},
+                    {"id": f"q{index}_c", "isCorrect": False},
+                    {"id": f"q{index}_d", "isCorrect": False},
+                ],
+            }
+            for index in range(4)
+        ]
+        balanced = backend.balance_correct_answer_positions(questions, offset=1)
+        positions = [next(i for i, option in enumerate(question["options"]) if option["isCorrect"]) for question in balanced]
+        self.assertEqual(positions, [1, 2, 3, 0])
+        self.assertEqual(questions[0]["options"][0]["id"], "q0_a")
+
 
 if __name__ == "__main__":
     unittest.main()

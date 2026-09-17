@@ -11,11 +11,12 @@ import { toast } from 'sonner';
 import { QuizAnswerCard } from '@/components/ui/premium';
 import { StateCard } from '@/components/ui/StateCard';
 import { AppShell } from '@/components/layout/AppShell';
+import { randomizeQuestionOptionOrder } from '@/domain/quizRules';
 
 interface QuizQuestion {
   id: string;
   text: string;
-  options: { id: string; text: string }[];
+  options: { id: string; text: string; isCorrect: boolean }[];
 }
 
 interface QuizData {
@@ -77,14 +78,15 @@ const Quiz = () => {
           return;
         }
 
+        const presentedQuestions = randomizeQuestionOptionOrder(data.questions.map(q => ({
+          id: q.id,
+          text: q.text,
+          options: q.options.map(opt => ({ id: opt.id, text: opt.text, isCorrect: opt.isCorrect })),
+        })));
         setQuiz({
           id: data.id,
           title: data.title,
-          questions: data.questions.map(q => ({
-            id: q.id,
-            text: q.text,
-            options: q.options.map(opt => ({ id: opt.id, text: opt.text })),
-          })),
+          questions: presentedQuestions,
           timeLimit: data.timeLimit,
         });
 

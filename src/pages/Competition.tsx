@@ -26,6 +26,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { LiveLeaderboard } from '@/components/LiveLeaderboard';
 import { cn } from '@/lib/utils';
+import { randomizeQuestionOptionOrder } from '@/domain/quizRules';
 
 const formatTime = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
@@ -104,7 +105,7 @@ const CompetitionPlay = () => {
 
         if (cancelled) return;
         setCompetition(competitionData);
-        setQuiz(quizData);
+        setQuiz({ ...quizData, questions: randomizeQuestionOptionOrder(quizData.questions) });
         setAttemptId(newAttemptId);
         
         if (competitionData.mode !== 'teacher_led' && quizData.timeLimit) {

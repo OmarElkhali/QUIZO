@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Award, CheckCircle2, RotateCcw, Sparkles, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { calculatePersonalScore, type QuizQuestionInput } from '@/domain/quizRules';
+import { calculatePersonalScore, randomizeQuestionOptionOrder, type QuizQuestionInput } from '@/domain/quizRules';
 import { QuestionStage } from './QuestionStage';
 import { AIAnswerExplanation } from '@/components/quiz/AIAnswerExplanation';
 
 export function QuizPractice({ questions, onClose }: { questions: QuizQuestionInput[]; onClose: () => void }) {
+  const [presentedQuestions, setPresentedQuestions] = useState(() => randomizeQuestionOptionOrder(questions));
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | undefined>();
   const [revealed, setRevealed] = useState(false);
   const [finished, setFinished] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string | undefined>>({});
-  const question = questions[index];
-  const personalScore = useMemo(() => calculatePersonalScore(questions, answers), [answers, questions]);
+  const question = presentedQuestions[index];
+  const personalScore = useMemo(() => calculatePersonalScore(presentedQuestions, answers), [answers, presentedQuestions]);
   const points = personalScore.points;
   const selectedIsCorrect = question?.options.some((option) => option.id === selected && option.isCorrect) || false;
 
@@ -24,7 +25,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
   };
 
   const next = () => {
-    if (index === questions.length - 1) {
+    if (index === presentedQuestions.length - 1) {
       setFinished(true);
       return;
     }
@@ -39,6 +40,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
     setRevealed(false);
     setAnswers({});
     setFinished(false);
+    setPresentedQuestions(randomizeQuestionOptionOrder(questions));
   };
 
   if (!question) return <p>Ajoutez des questions avant de tester.</p>;
@@ -55,7 +57,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
       </div>
 
       <div className="sticky top-16 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-xl sm:top-20 sm:grid-cols-3">
-        <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {questions.length}</p></div>
+        <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {presentedQuestions.length}</p></div>
         <div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Réussite</p><p className="text-xl font-black">{successRate} %</p></div>
         <div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Barème</p><p className="text-xl font-black">1 pt / question</p></div>
       </div>
@@ -68,7 +70,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
               <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full p-3 shadow-[0_0_48px_rgba(251,146,60,.18)]" style={{ background: `conic-gradient(#fb923c ${successRate}%, rgba(255,255,255,.09) 0)` }}>
                 <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#101010]">
                   <Award className="mb-1 h-7 w-7 text-amber-300" />
-                  <span className="text-4xl font-black">{points}/{questions.length}</span>
+                  <span className="text-4xl font-black">{points}/{presentedQuestions.length}</span>
                   <span className="text-xs text-[var(--quizo-muted)]">{successRate} %</span>
                 </div>
               </div>
@@ -82,7 +84,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
           </div>
 
           <div className="space-y-5 text-left">
-            {questions.map((reviewQuestion, reviewIndex) => {
+            {presentedQuestions.map((reviewQuestion, reviewIndex) => {
               const selectedId = answers[reviewQuestion.id];
               const selectedOption = reviewQuestion.options.find((option) => option.id === selectedId);
               const correctOption = reviewQuestion.options.find((option) => option.isCorrect);
@@ -114,7 +116,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
           <QuestionStage
             question={{ ...question, points: 1 }}
             index={index}
-            total={questions.length}
+            total={presentedQuestions.length}
             remaining={null}
             selected={selected}
             correctOptionId={revealed ? question.options.find((option) => option.isCorrect)?.id : undefined}
@@ -129,7 +131,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
                 {selectedIsCorrect ? 'Bonne réponse · +1 point' : 'Réponse incorrecte · +0 point'}
               </p>
               <p>{question.explanation || 'La correction complète sera disponible à la fin.'}</p>
-              <Button onClick={next}>{index === questions.length - 1 ? 'Voir la correction complète' : 'Question suivante'}</Button>
+              <Button onClick={next}>{index === presentedQuestions.length - 1 ? 'Voir la correction complète' : 'Question suivante'}</Button>
             </div>
           )}
         </>

@@ -15,7 +15,7 @@ import {
 } from '@/services/manualQuizService';
 import { Attempt, ManualQuiz } from '@/types/quiz';
 import { cn } from '@/lib/utils';
-import { remainingSeconds } from '@/domain/quizRules';
+import { randomizeQuestionOptionOrder, remainingSeconds } from '@/domain/quizRules';
 import { QuestionStage } from '@/components/live/QuestionStage';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
@@ -94,7 +94,7 @@ const QuizSession = () => {
           throw new Error("Ce quiz n’a pas encore démarré");
         }
 
-        setQuiz(quizData);
+        setQuiz({ ...quizData, questions: randomizeQuestionOptionOrder(quizData.questions) });
         setAttempt(attemptData);
         setAnswers(attemptData.answers || {});
         const startedAtMs = Date.parse(attemptData.startedAt);

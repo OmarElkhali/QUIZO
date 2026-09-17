@@ -10,6 +10,46 @@ export interface QuizQuestionInput {
   explanation?: string;
 }
 
+/**
+ * Creates a presentation-only option order for one attempt.
+ * IDs and correctness stay unchanged, so saved answers and scoring remain valid.
+ * Correct positions are spread across the available letters instead of clustering on A.
+ */
+export function randomizeQuestionOptionOrder<
+  TOption extends { id: string; isCorrect?: boolean },
+  TQuestion extends { options: TOption[] },
+>(questions: readonly TQuestion[], random: () => number = Math.random): TQuestion[] {
+  const cycles = new Map<number, { positions: number[]; cursor: number }>();
+  const shuffle = <T,>(values: readonly T[]): T[] => {
+    const result = [...values];
+    for (let index = result.length - 1; index > 0; index -= 1) {
+      const target = Math.min(index, Math.floor(Math.max(0, random()) * (index + 1)));
+      [result[index], result[target]] = [result[target], result[index]];
+    }
+    return result;
+  };
+
+  return questions.map((question) => {
+    const options = shuffle(question.options);
+    if (options.length < 2) return { ...question, options };
+
+    let cycle = cycles.get(options.length);
+    if (!cycle) {
+      cycle = { positions: shuffle(Array.from({ length: options.length }, (_, index) => index)), cursor: 0 };
+      cycles.set(options.length, cycle);
+    }
+
+    const correctIndex = options.findIndex((option) => option.isCorrect === true);
+    if (correctIndex >= 0) {
+      const targetIndex = cycle.positions[cycle.cursor % cycle.positions.length];
+      cycle.cursor += 1;
+      [options[correctIndex], options[targetIndex]] = [options[targetIndex], options[correctIndex]];
+    }
+
+    return { ...question, options };
+  });
+}
+
 export function validateQuizQuestions(questions: QuizQuestionInput[], mode: 'teacher_led' | 'async' = 'async'): string[] {
   const errors: string[] = [];
   if (!questions.length) errors.push('Ajoutez au moins une question.');

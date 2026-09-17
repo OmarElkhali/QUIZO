@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Check, Circle, Timer, Weight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -8,7 +8,7 @@ export interface StageQuestion {
   text: string;
   points: number;
   timeLimit?: number;
-  options: { id: string; text: string }[];
+  options: { id: string; text: string; isCorrect?: boolean }[];
 }
 
 interface Props {
@@ -36,7 +36,23 @@ const identities = [
 export function QuestionStage({ question, index, total, remaining, timerTotal, selected, correctOptionId, disabled, compact = false, onAnswer }: Props) {
   const reducedMotion = useReducedMotion();
   const answerHandler = useRef(onAnswer);
+  const optionOrders = useRef(new Map<string, string[]>());
   useEffect(() => { answerHandler.current = onAnswer; }, [onAnswer]);
+  const orderedOptions = useMemo(() => {
+    if (question.options.some((option) => typeof option.isCorrect === 'boolean')) return question.options;
+    const currentIds = new Set(question.options.map((option) => option.id));
+    let order = optionOrders.current.get(question.id);
+    if (!order || order.length !== question.options.length || order.some((id) => !currentIds.has(id))) {
+      order = question.options.map((option) => option.id);
+      for (let optionIndex = order.length - 1; optionIndex > 0; optionIndex -= 1) {
+        const targetIndex = Math.floor(Math.random() * (optionIndex + 1));
+        [order[optionIndex], order[targetIndex]] = [order[targetIndex], order[optionIndex]];
+      }
+      optionOrders.current.set(question.id, order);
+    }
+    const byId = new Map(question.options.map((option) => [option.id, option]));
+    return order.map((id) => byId.get(id)).filter((option): option is StageQuestion['options'][number] => Boolean(option));
+  }, [question.id, question.options]);
   const timerProgress = remaining !== null && remaining !== undefined && timerTotal
     ? Math.max(0, Math.min(100, (remaining / timerTotal) * 100))
     : null;
@@ -48,14 +64,14 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
       const target = event.target as HTMLElement;
       if (disabled || !answerHandler.current || event.repeat || event.ctrlKey || event.metaKey || event.altKey || target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
       const optionIndex = event.key.toUpperCase().charCodeAt(0) - 65;
-      if (event.key.length === 1 && optionIndex >= 0 && optionIndex < question.options.length) {
+      if (event.key.length === 1 && optionIndex >= 0 && optionIndex < orderedOptions.length) {
         event.preventDefault();
-        answerHandler.current(question.options[optionIndex].id);
+        answerHandler.current(orderedOptions[optionIndex].id);
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [question.options, disabled]);
+  }, [orderedOptions, disabled]);
 
   return (
     <motion.section key={question.id} initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }} className="space-y-6" aria-labelledby={`question-${question.id}`}>
@@ -71,23 +87,23 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
         <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ width: `${questionProgress}%` }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
       </div>
       {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><div className={cn('h-full rounded-full transition-[width,background-color] duration-300', urgent ? 'bg-red-400' : 'bg-orange-400')} style={{ width: `${timerProgress}%` }} /></div>}
-      <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-xl sm:text-3xl lg:text-4xl 2xl:text-5xl' : 'text-2xl sm:text-4xl xl:text-5xl 2xl:text-6xl')}>{question.text}</h2>
+      <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-xl sm:text-2xl xl:text-3xl 2xl:text-4xl' : 'text-xl sm:text-3xl xl:text-4xl')}>{question.text}</h2>
       <div role="group" aria-label="Réponses possibles" className="grid gap-3 md:grid-cols-2 xl:gap-4">
-        {question.options.map((option, optionIndex) => {
+        {orderedOptions.map((option, optionIndex) => {
           const identity = identities[optionIndex % identities.length];
           const correct = option.id === correctOptionId;
           const chosen = option.id === selected;
           const incorrectChoice = Boolean(chosen && correctOptionId && !correct);
           return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
             whileHover={reducedMotion || disabled ? undefined : { y: -2 }} whileTap={reducedMotion || disabled ? undefined : { scale: 0.985 }}
-            className={cn('group flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:gap-4 sm:p-5 xl:min-h-28 xl:p-6', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/15 font-black" aria-hidden="true"><span className="mr-1 text-xs opacity-70">{String.fromCharCode(65 + optionIndex)}</span>{identity.symbol}</span>
-            <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-relaxed sm:text-base lg:text-lg 2xl:text-xl">{option.text}</span>
+            className={cn('group flex min-h-20 items-center gap-3 rounded-xl border-2 p-3.5 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:min-h-24 sm:rounded-2xl sm:p-4 xl:p-5', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/15 font-black sm:h-10 sm:w-10 sm:rounded-xl" aria-hidden="true"><span className="mr-1 text-[11px] opacity-70">{String.fromCharCode(65 + optionIndex)}</span>{identity.symbol}</span>
+            <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-relaxed sm:text-base xl:text-lg">{option.text}</span>
             {correct ? <Check className="h-6 w-6 shrink-0 text-emerald-300" aria-label="Bonne réponse" /> : chosen ? <Circle className="h-5 w-5 shrink-0 fill-current text-orange-300" aria-label="Votre choix" /> : null}
           </motion.button>;
         })}
       </div>
-      {!disabled && onAnswer && <p className="text-center text-xs text-[var(--quizo-muted)]">Astuce : utilisez les touches A à {String.fromCharCode(64 + question.options.length)} pour répondre.</p>}
+      {!disabled && onAnswer && <p className="text-center text-xs text-[var(--quizo-muted)]">Astuce : utilisez les touches A à {String.fromCharCode(64 + orderedOptions.length)} pour répondre.</p>}
     </motion.section>
   );
 }

@@ -317,6 +317,21 @@ def validate_question(question):
     return True
 
 
+def balance_correct_answer_positions(questions, offset=0):
+    """Répartit les bonnes réponses entre A/B/C/D sans modifier leurs identifiants."""
+    balanced = []
+    for question_index, question in enumerate(questions):
+        copied_question = {**question, "options": [dict(option) for option in question.get("options", [])]}
+        options = copied_question["options"]
+        if len(options) > 1:
+            correct_index = next((index for index, option in enumerate(options) if option.get("isCorrect") is True), None)
+            if correct_index is not None:
+                target_index = (question_index + offset) % len(options)
+                options[correct_index], options[target_index] = options[target_index], options[correct_index]
+        balanced.append(copied_question)
+    return balanced
+
+
 def normalize_manual_assistant_question(question, index, difficulty):
     """Normalise une proposition QCM pour le builder manuel."""
     if not isinstance(question, dict):
@@ -395,9 +410,9 @@ FORMAT JSON STRICT:
     {{
       "text": "Question QCM claire",
       "options": [
+        {{"text": "Distracteur plausible", "isCorrect": false}},
+        {{"text": "Distracteur plausible", "isCorrect": false}},
         {{"text": "Bonne reponse", "isCorrect": true}},
-        {{"text": "Distracteur plausible", "isCorrect": false}},
-        {{"text": "Distracteur plausible", "isCorrect": false}},
         {{"text": "Distracteur plausible", "isCorrect": false}}
       ],
       "explanation": "Explication concise basee sur le cours",
@@ -470,6 +485,7 @@ def manual_assistant():
             for normalized in [normalize_manual_assistant_question(question, index, difficulty)]
             if normalized is not None
         ]
+        suggestions = balance_correct_answer_positions(suggestions, offset=int(uuid.uuid4().hex[:2], 16) % 4)
 
         if not suggestions:
             raise ValueError("Le fournisseur IA n'a pas retourne de proposition QCM valide")
@@ -705,9 +721,9 @@ def generate_quiz():
             {{
               "text": "Question...",
               "options": [
+                {{"text": "...", "isCorrect": false}},
+                {{"text": "...", "isCorrect": false}},
                 {{"text": "...", "isCorrect": true}},
-                {{"text": "...", "isCorrect": false}},
-                {{"text": "...", "isCorrect": false}},
                 {{"text": "...", "isCorrect": false}}
               ],
               "explanation": "Explication basée sur le texte",
@@ -718,6 +734,7 @@ def generate_quiz():
 
         CONTRAINTES :
         - Une seule réponse correcte par question
+        - Répartir équitablement la position de la bonne réponse entre A, B, C et D ; ne jamais placer toutes les bonnes réponses en première position
         - Les options doivent être plausibles
         - Les explications doivent citer le texte
         - Ne pas inclure de markdown
@@ -830,6 +847,11 @@ def generate_quiz():
             local_fallback_count = num_questions - len(valid_questions)
             fallback = generate_fallback_questions(local_fallback_count, difficulty, text)
             valid_questions.extend(fallback)
+
+        valid_questions = balance_correct_answer_positions(
+            valid_questions,
+            offset=int(request_id.replace('-', '')[:8], 16) % 4,
+        )
 
         return jsonify({
             'questions': valid_questions[:num_questions],
@@ -1051,7 +1073,7 @@ def generate_fallback_questions(num, difficulty, source_text=""):
             "difficulty": difficulty,
         })
 
-    return questions
+    return balance_correct_answer_positions(questions, offset=1)
 
 
 def get_provider_configured_state():

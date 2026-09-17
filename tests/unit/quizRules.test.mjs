@@ -6,7 +6,7 @@ import ts from 'typescript';
 // Compile the dependency-free domain module in memory; no Firebase or production writes.
 const source = await readFile(new URL('../../src/domain/quizRules.ts', import.meta.url), 'utf8');
 const { outputText } = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext } });
-const { calculateQuestionScore, calculatePedagogicalScore, calculatePersonalScore, validateQuizQuestions, remainingSeconds } =
+const { calculateQuestionScore, calculatePedagogicalScore, calculatePersonalScore, randomizeQuestionOptionOrder, validateQuizQuestions, remainingSeconds } =
   await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`);
 
 const input = { weight: 2, correct: true, responseTimeMs: 4000, timeLimitMs: 20000, previousStreak: 2 };
@@ -28,6 +28,25 @@ test('personal quiz gives exactly one point per correct answer and ignores speed
   const weightedQuestion = { ...question, points: 100, timeLimit: 5 };
   assert.deepEqual(calculatePersonalScore([weightedQuestion], { q1: 'a' }), { points: 1, total: 1, percentage: 100 });
   assert.deepEqual(calculatePersonalScore([weightedQuestion], { q1: 'b' }), { points: 0, total: 1, percentage: 0 });
+});
+test('answer positions are distributed without changing option IDs or correctness', () => {
+  const questions = Array.from({ length: 4 }, (_, index) => ({
+    ...question,
+    id: `q${index + 1}`,
+    options: [
+      { id: `q${index + 1}_a`, text: 'Correcte', isCorrect: true },
+      { id: `q${index + 1}_b`, text: 'B', isCorrect: false },
+      { id: `q${index + 1}_c`, text: 'C', isCorrect: false },
+      { id: `q${index + 1}_d`, text: 'D', isCorrect: false },
+    ],
+  }));
+  const randomized = randomizeQuestionOptionOrder(questions, () => 0);
+  const correctPositions = randomized.map((item) => item.options.findIndex((option) => option.isCorrect));
+  assert.equal(new Set(correctPositions).size, 4);
+  assert.deepEqual(
+    new Set(randomized.flatMap((item) => item.options.map((option) => option.id))),
+    new Set(questions.flatMap((item) => item.options.map((option) => option.id))),
+  );
 });
 test('streak bonus is capped and speed becomes zero after original duration', () => {
   const score = calculateQuestionScore({ ...input, previousStreak: 100, responseTimeMs: 25000 });
