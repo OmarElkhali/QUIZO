@@ -38,7 +38,7 @@ class ApiSecurityContractTest(unittest.TestCase):
             ],
         }
         provider_payload = '{"explanation":"La première réponse respecte la règle.","keyPoint":"Retenir la règle."}'
-        with patch.object(backend.firebase_auth, "verify_id_token", return_value={"uid": "test-user"}), \
+        with patch.object(backend, "verify_firebase_id_token", return_value={"uid": "test-user"}), \
              patch.object(backend, "generate_with_provider", return_value=provider_payload):
             response = self.client.post(
                 "/api/explain-answer",
@@ -49,7 +49,7 @@ class ApiSecurityContractTest(unittest.TestCase):
         self.assertEqual(response.get_json()["explanation"], "La première réponse respecte la règle.")
 
     def test_authenticated_payload_limits_run_before_provider_call(self):
-        with patch.object(backend.firebase_auth, "verify_id_token", return_value={"uid": "test-user"}):
+        with patch.object(backend, "verify_firebase_id_token", return_value={"uid": "test-user"}):
             response = self.client.post(
                 "/api/generate",
                 headers={"Authorization": "Bearer test-token"},

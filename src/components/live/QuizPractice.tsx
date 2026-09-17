@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BookOpenCheck, CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
+import { Award, CheckCircle2, RotateCcw, Sparkles, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { calculatePersonalScore, type QuizQuestionInput } from '@/domain/quizRules';
 import { QuestionStage } from './QuestionStage';
@@ -54,7 +54,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
         <Button variant="outline" onClick={onClose}>Quitter le test</Button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="sticky top-20 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/70 p-2 shadow-2xl backdrop-blur-xl sm:grid-cols-3">
         <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {questions.length}</p></div>
         <div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Réussite</p><p className="text-xl font-black">{successRate} %</p></div>
         <div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Barème</p><p className="text-xl font-black">1 pt / question</p></div>
@@ -62,12 +62,23 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
 
       {finished ? (
         <div className="space-y-8">
-          <div className="space-y-4 text-center">
-            <BookOpenCheck className="mx-auto h-12 w-12 text-orange-300" />
-            <h2 className="text-3xl font-bold">Correction complète</h2>
-            <p>{points} point{points === 1 ? '' : 's'} sur {questions.length} · {successRate} % de réussite.</p>
-            <p className="text-sm text-[var(--quizo-muted)]">Retrouvez toutes les réponses ci-dessous. L’explication IA reste optionnelle et se lance question par question.</p>
-            <Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Recommencer</Button>
+          <div className="relative overflow-hidden rounded-3xl border border-orange-300/20 bg-gradient-to-br from-orange-500/15 via-amber-400/[0.06] to-violet-500/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,.28)] sm:p-8">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-400/10 blur-3xl" />
+            <div className="relative grid items-center gap-7 sm:grid-cols-[180px_1fr]">
+              <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full p-3 shadow-[0_0_48px_rgba(251,146,60,.18)]" style={{ background: `conic-gradient(#fb923c ${successRate}%, rgba(255,255,255,.09) 0)` }}>
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#101010]">
+                  <Award className="mb-1 h-7 w-7 text-amber-300" />
+                  <span className="text-4xl font-black">{points}/{questions.length}</span>
+                  <span className="text-xs text-[var(--quizo-muted)]">{successRate} %</span>
+                </div>
+              </div>
+              <div className="space-y-4 text-center sm:text-left">
+                <p className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-200"><Sparkles className="h-3.5 w-3.5" />Quiz terminé</p>
+                <h2 className="text-3xl font-black sm:text-4xl">Correction complète</h2>
+                <p className="max-w-2xl text-sm leading-6 text-[var(--quizo-muted)]">Toutes les questions, vos choix et les bonnes réponses sont réunis ci-dessous. L’explication IA reste optionnelle et se lance uniquement sur la question qui vous intéresse.</p>
+                <Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Recommencer</Button>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-5 text-left">
@@ -77,14 +88,17 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
               const correctOption = reviewQuestion.options.find((option) => option.isCorrect);
               const correct = selectedOption?.isCorrect === true;
               return (
-                <article key={reviewQuestion.id} className={`rounded-2xl border p-5 sm:p-6 ${correct ? 'border-emerald-400/25 bg-emerald-500/[0.08]' : 'border-red-400/25 bg-red-500/[0.08]'}`}>
+                <article key={reviewQuestion.id} className={`scroll-mt-36 rounded-2xl border p-5 shadow-[0_16px_48px_rgba(0,0,0,.18)] sm:p-6 ${correct ? 'border-emerald-400/25 bg-emerald-500/[0.08]' : 'border-red-400/25 bg-red-500/[0.08]'}`}>
                   <div className="flex items-start gap-3">
                     {correct ? <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-emerald-300" /> : <XCircle className="mt-1 h-6 w-6 shrink-0 text-red-300" />}
                     <div className="min-w-0 flex-1">
-                      <p className="text-lg font-bold text-[var(--quizo-heading)]">{reviewIndex + 1}. {reviewQuestion.text}</p>
-                      <div className="mt-4 space-y-2 text-sm leading-6">
-                        <p><strong>Votre réponse :</strong> {selectedOption?.text || 'Aucune réponse'}</p>
-                        {!correct && <p className="text-emerald-200"><strong>Bonne réponse :</strong> {correctOption?.text || 'Correction indisponible'}</p>}
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="min-w-0 flex-1 text-lg font-bold leading-7 text-[var(--quizo-heading)]"><span className="mr-2 text-[var(--quizo-muted)]">Q{reviewIndex + 1}</span>{reviewQuestion.text}</p>
+                        <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-bold ${correct ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200' : 'border-red-300/30 bg-red-400/10 text-red-200'}`}>{correct ? '✓ 1 / 1 point' : '✕ 0 / 1 point'}</span>
+                      </div>
+                      <div className="mt-5 grid gap-3 text-sm leading-6">
+                        <div className={`rounded-xl border p-4 ${correct ? 'border-emerald-300/20 bg-emerald-500/10' : 'border-red-300/20 bg-red-500/10'}`}><p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-[var(--quizo-muted)]">Votre réponse</p><p>{selectedOption?.text || 'Aucune réponse'}</p></div>
+                        {!correct && <div className="rounded-xl border border-emerald-300/20 bg-emerald-500/10 p-4 text-emerald-100"><p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300">Bonne réponse</p><p>{correctOption?.text || 'Correction indisponible'}</p></div>}
                       </div>
                       {reviewQuestion.explanation && <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6"><strong>Explication du quiz :</strong> {reviewQuestion.explanation}</div>}
                       <AIAnswerExplanation question={{ ...reviewQuestion, points: 1 }} selectedOptionId={selectedId} />

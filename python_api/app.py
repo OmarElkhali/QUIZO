@@ -21,6 +21,9 @@ from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 from google import genai
+from google.auth import exceptions as google_auth_exceptions
+from google.auth.transport import requests as google_auth_requests
+from google.oauth2 import id_token as google_id_token
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 
@@ -48,23 +51,22 @@ def reject_disabled_legacy_live():
 
 # --- Firebase Admin SDK Initialization ---
 _firebase_app = None
+_firebase_verify_mode = "disabled"
 service_account_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 firebase_project_id = os.getenv("FIREBASE_PROJECT_ID")
 if service_account_path and os.path.isfile(service_account_path):
     try:
         cred = credentials.Certificate(service_account_path)
         _firebase_app = firebase_admin.initialize_app(cred)
+        _firebase_verify_mode = "admin-sdk"
         logging.getLogger(__name__).info("Firebase Admin SDK initialise avec succes")
     except Exception as e:
         logging.getLogger(__name__).warning(f"Firebase Admin SDK init echoue: {e}")
 elif firebase_project_id:
-    try:
-        # Firebase ID tokens are verified with Google's public certificates.
-        # A project id is sufficient; no long-lived private key is required.
-        _firebase_app = firebase_admin.initialize_app(options={"projectId": firebase_project_id})
-        logging.getLogger(__name__).info("Firebase token verification initialized without a private key")
-    except Exception as e:
-        logging.getLogger(__name__).warning(f"Firebase token verification init failed: {e}")
+    # google-auth validates the signature with Google's public Firebase
+    # certificates and checks the project audience. No private key is needed.
+    _firebase_verify_mode = "public-certificates"
+    logging.getLogger(__name__).info("Firebase token verification initialized with public certificates")
 else:
     logging.getLogger(__name__).warning(
         "GOOGLE_APPLICATION_CREDENTIALS non defini ou fichier introuvable. "
@@ -116,6 +118,18 @@ logger = logging.getLogger(__name__)
 
 
 # --- Firebase Auth Verification Decorator ---
+def verify_firebase_id_token(token):
+    if _firebase_verify_mode == "admin-sdk":
+        return firebase_auth.verify_id_token(token)
+    if _firebase_verify_mode == "public-certificates":
+        return google_id_token.verify_firebase_token(
+            token,
+            google_auth_requests.Request(),
+            audience=firebase_project_id,
+        )
+    raise RuntimeError("Firebase Auth verification is not configured")
+
+
 def require_auth(f):
     """Decorator that verifies Firebase ID token from Authorization header.
     In dev mode (no Firebase Admin SDK), requests pass through with a warning.
@@ -126,10 +140,11 @@ def require_auth(f):
         if request.method == 'OPTIONS':
             return f(*args, **kwargs)
 
-        if not _firebase_app:
-            # Dev mode: no Firebase Admin SDK available, skip verification
-            g.user_uid = None
-            return f(*args, **kwargs)
+        if _firebase_verify_mode == "disabled":
+            if os.getenv('FLASK_ENV') == 'development':
+                g.user_uid = None
+                return f(*args, **kwargs)
+            return jsonify({'error': "La vérification d'authentification n'est pas configurée"}), 503
 
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
@@ -142,10 +157,10 @@ def require_auth(f):
 
         token = auth_header.replace('Bearer ', '')
         try:
-            decoded_token = firebase_auth.verify_id_token(token)
+            decoded_token = verify_firebase_id_token(token)
             g.user_uid = decoded_token.get('uid')
             return f(*args, **kwargs)
-        except firebase_auth.InvalidIdTokenError:
+        except (firebase_auth.InvalidIdTokenError, ValueError, google_auth_exceptions.GoogleAuthError):
             return jsonify({'error': 'Token invalide'}), 401
         except firebase_admin.exceptions.FirebaseError as e:
             logger.error(f"Erreur Firebase Auth: {sanitize_error_message(str(e))}")
@@ -1089,6 +1104,8 @@ def health_check():
         "groq": services.get("groq", False),
         "release": os.getenv("RENDER_GIT_COMMIT", "local")[:12],
         "legacy_live_enabled": LEGACY_LIVE_ENABLED,
+        "auth_verification": _firebase_verify_mode != "disabled",
+        "auth_verification_mode": _firebase_verify_mode,
     })
 
 
@@ -1104,9 +1121,10 @@ def status_check():
         "providers_count": len(providers_list),
         "firebase_admin_configured": _firebase_app is not None,
         "firebase_project_id": os.getenv("FIREBASE_PROJECT_ID", "not-set"),
+        "firebase_verification_mode": _firebase_verify_mode,
         "environment": os.getenv("FLASK_ENV", "development"),
         "rate_limiting": True,
-        "auth_verification": _firebase_app is not None,
+        "auth_verification": _firebase_verify_mode != "disabled",
     })
 
 

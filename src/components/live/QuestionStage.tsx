@@ -41,6 +41,7 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
     ? Math.max(0, Math.min(100, (remaining / timerTotal) * 100))
     : null;
   const urgent = remaining !== null && remaining !== undefined && remaining <= Math.min(10, Math.ceil((timerTotal || 20) * 0.2));
+  const questionProgress = total > 0 ? Math.max(0, Math.min(100, ((index + 1) / total) * 100)) : 0;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -64,6 +65,10 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--quizo-border)] px-3 py-1.5"><Weight className="h-3.5 w-3.5" />{question.points} {question.points > 1 ? 'points' : 'point'}</span>
         </div>
         {remaining !== null && remaining !== undefined && <span className={cn('inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-lg font-bold transition-colors', urgent ? 'border-red-400/50 bg-red-500/15 text-red-200' : 'border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] text-[var(--quizo-heading)]')} aria-live={urgent ? 'polite' : 'off'} aria-label={`${remaining} secondes restantes`}><Timer className={cn('h-4 w-4', urgent && !reducedMotion && 'animate-pulse')} />{remaining} s</span>}
+      </div>
+      <div className="space-y-2" role="progressbar" aria-label="Progression du quiz" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + 1}>
+        <div className="flex justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--quizo-muted)]"><span>Progression</span><span>{Math.round(questionProgress)} %</span></div>
+        <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ width: `${questionProgress}%` }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
       </div>
       {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><div className={cn('h-full rounded-full transition-[width,background-color] duration-300', urgent ? 'bg-red-400' : 'bg-orange-400')} style={{ width: `${timerProgress}%` }} /></div>}
       <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl')}>{question.text}</h2>
