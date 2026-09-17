@@ -8,7 +8,7 @@
   "regions": ["cdg1"],
   "rewrites": [
     {
-      "source": "/api/:route(health|status|providers|extract-text|generate|manual-assistant)",
+      "source": "/api/:route(health|status|providers|extract-text|generate|manual-assistant|explain-answer)",
       "destination": "https://quizo-nued.onrender.com/api/:route"
     },
     {
