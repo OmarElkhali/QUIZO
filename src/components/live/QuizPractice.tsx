@@ -45,7 +45,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
   const successRate = Math.round(personalScore.percentage);
 
   return (
-    <section className="mx-auto max-w-5xl space-y-6 rounded-3xl border border-[var(--quizo-border)] p-5 sm:p-8">
+    <section className="w-full space-y-5 rounded-2xl border border-[var(--quizo-border)] p-3 sm:space-y-6 sm:rounded-3xl sm:p-6 lg:p-8 2xl:p-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm text-[var(--quizo-muted)]">Quiz personnel · aucune statistique enregistrée</p>
@@ -54,7 +54,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
         <Button variant="outline" onClick={onClose}>Quitter le test</Button>
       </div>
 
-      <div className="sticky top-20 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/70 p-2 shadow-2xl backdrop-blur-xl sm:grid-cols-3">
+      <div className="sticky top-16 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-xl sm:top-20 sm:grid-cols-3">
         <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {questions.length}</p></div>
         <div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Réussite</p><p className="text-xl font-black">{successRate} %</p></div>
         <div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Barème</p><p className="text-xl font-black">1 pt / question</p></div>
@@ -64,7 +64,7 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
         <div className="space-y-8">
           <div className="relative overflow-hidden rounded-3xl border border-orange-300/20 bg-gradient-to-br from-orange-500/15 via-amber-400/[0.06] to-violet-500/10 p-6 shadow-[0_24px_80px_rgba(0,0,0,.28)] sm:p-8">
             <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-orange-400/10 blur-3xl" />
-            <div className="relative grid items-center gap-7 sm:grid-cols-[180px_1fr]">
+            <div className="relative grid items-center gap-7 md:grid-cols-[180px_1fr] 2xl:grid-cols-[220px_1fr]">
               <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full p-3 shadow-[0_0_48px_rgba(251,146,60,.18)]" style={{ background: `conic-gradient(#fb923c ${successRate}%, rgba(255,255,255,.09) 0)` }}>
                 <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#101010]">
                   <Award className="mb-1 h-7 w-7 text-amber-300" />

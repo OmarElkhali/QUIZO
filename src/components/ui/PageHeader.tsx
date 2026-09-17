@@ -15,9 +15,9 @@ export const PageHeader = ({ eyebrow, title, description, actions }: PageHeaderP
           {eyebrow}
         </p>
       )}
-      <h1 className="text-4xl font-black tracking-tight text-[var(--quizo-heading)] sm:text-5xl">{title}</h1>
+      <h1 className="break-words text-3xl font-black tracking-tight text-[var(--quizo-heading)] sm:text-4xl xl:text-5xl">{title}</h1>
       {description && <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--quizo-muted)]">{description}</p>}
     </div>
-    {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    {actions && <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">{actions}</div>}
   </div>
 );

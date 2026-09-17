@@ -189,7 +189,7 @@ export const QuizForm = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mx-auto max-w-3xl rounded-2xl border border-white/[0.07] bg-[#111111]/70 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] md:p-8"
+      className="w-full rounded-2xl border border-white/[0.07] bg-[#111111]/70 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-6 md:p-8"
     >
       <div className="flex items-center space-x-4 mb-6">
         <div className="rounded-xl border border-orange-300/25 bg-orange-500/15 p-3">

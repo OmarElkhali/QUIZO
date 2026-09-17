@@ -118,7 +118,7 @@ export default function LiveSessionV2({ display = false }: { display?: boolean }
   const remaining = view ? Math.max(0, Math.ceil((view.deadlineAt - now) / 1000)) : 0;
   const countdown = view?.openedAt ? Math.max(0, Math.ceil((view.openedAt - now) / 1000)) : 0;
   const selected = pending?.questionId === view?.question?.id ? pending.selectedOptionId : player?.receipt?.questionId === view?.question?.id ? player.receipt.selectedOptionId : undefined;
-  const content = <section className={`mx-auto space-y-6 ${display ? 'max-w-7xl px-6 py-10 text-xl' : 'max-w-4xl'}`}>
+  const content = <section className={`w-full space-y-6 ${display ? 'quizo-page-frame py-6 text-base sm:py-10 sm:text-xl' : ''}`}>
     <header className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm text-[var(--quizo-muted)]">{display ? 'Écran de présentation' : host ? 'Console animateur' : 'Partie en direct'}</p><h1 className="text-3xl font-bold text-[var(--quizo-heading)]">{view?.title || 'Connexion à la partie…'}</h1></div><span role="status" className="text-sm">{online ? 'Réseau disponible' : 'Hors ligne — reconnexion nécessaire'}</span></header>
     {error && <div role="alert" className="space-y-3 rounded-xl border border-red-400/40 p-5"><p>{error}</p><Button onClick={() => navigate('/join')}>Rejoindre avec un code</Button></div>}
     {view && <>

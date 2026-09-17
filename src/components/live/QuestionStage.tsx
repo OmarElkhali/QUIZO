@@ -71,8 +71,8 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
         <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ width: `${questionProgress}%` }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
       </div>
       {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><div className={cn('h-full rounded-full transition-[width,background-color] duration-300', urgent ? 'bg-red-400' : 'bg-orange-400')} style={{ width: `${timerProgress}%` }} /></div>}
-      <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl')}>{question.text}</h2>
-      <div role="group" aria-label="Réponses possibles" className="grid gap-3 sm:grid-cols-2">
+      <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-xl sm:text-3xl lg:text-4xl 2xl:text-5xl' : 'text-2xl sm:text-4xl xl:text-5xl 2xl:text-6xl')}>{question.text}</h2>
+      <div role="group" aria-label="Réponses possibles" className="grid gap-3 md:grid-cols-2 xl:gap-4">
         {question.options.map((option, optionIndex) => {
           const identity = identities[optionIndex % identities.length];
           const correct = option.id === correctOptionId;
@@ -80,9 +80,9 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
           const incorrectChoice = Boolean(chosen && correctOptionId && !correct);
           return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
             whileHover={reducedMotion || disabled ? undefined : { y: -2 }} whileTap={reducedMotion || disabled ? undefined : { scale: 0.985 }}
-            className={cn('group flex min-h-24 items-center gap-4 rounded-2xl border-2 p-4 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:p-5', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
+            className={cn('group flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:gap-4 sm:p-5 xl:min-h-28 xl:p-6', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/15 font-black" aria-hidden="true"><span className="mr-1 text-xs opacity-70">{String.fromCharCode(65 + optionIndex)}</span>{identity.symbol}</span>
-            <span className="min-w-0 flex-1 break-words text-base font-semibold leading-relaxed sm:text-lg">{option.text}</span>
+            <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-relaxed sm:text-base lg:text-lg 2xl:text-xl">{option.text}</span>
             {correct ? <Check className="h-6 w-6 shrink-0 text-emerald-300" aria-label="Bonne réponse" /> : chosen ? <Circle className="h-5 w-5 shrink-0 fill-current text-orange-300" aria-label="Votre choix" /> : null}
           </motion.button>;
         })}

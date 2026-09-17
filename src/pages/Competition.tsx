@@ -404,7 +404,7 @@ const CompetitionPlay = () => {
     return (
       <div className="dark quizo-app-bg min-h-screen flex flex-col">
         <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-        <header className="relative z-10 flex h-20 items-center justify-between px-5 md:px-10 border-b border-white/[0.05] bg-black/20">
+        <header className="quizo-page-frame relative z-10 flex min-h-16 items-center justify-between gap-3 border-b border-white/[0.05] bg-black/20 py-3 sm:min-h-20">
           <div className="flex items-center gap-4">
             <span className="text-sm font-semibold tracking-wide text-orange-300">{competition.title}</span>
           </div>
@@ -418,7 +418,7 @@ const CompetitionPlay = () => {
           )}
         </header>
 
-        <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+        <main className="quizo-page-frame relative z-10 flex w-full flex-1 flex-col items-center justify-center py-6">
           <AnimatePresence mode="wait">
             
             {/* LOBBY LITE FOR PARTICIPANTS */}
@@ -636,7 +636,7 @@ const CompetitionPlay = () => {
   return (
     <div className="dark quizo-app-bg min-h-screen">
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-      <header className="relative z-10 flex h-20 items-center justify-between px-5 md:px-10 border-b border-white/[0.05] bg-black/20">
+      <header className="quizo-page-frame relative z-10 flex min-h-16 items-center justify-between gap-3 border-b border-white/[0.05] bg-black/20 py-3 sm:min-h-20">
         <div className="flex items-center gap-5">
           <span className="text-sm font-semibold tracking-wide text-orange-300">{competition.title}</span>
         </div>
@@ -648,7 +648,7 @@ const CompetitionPlay = () => {
         )}
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-3xl flex-col px-4 pb-32 pt-8 md:px-10">
+      <main className="quizo-page-frame relative z-10 flex w-full flex-col pb-32 pt-5 sm:pt-8">
         <div className="mb-10">
           <div className="mb-4 flex items-center justify-between">
             <span className="quizo-label">Question {currentQuestionIndex + 1} / {totalQuestions}</span>

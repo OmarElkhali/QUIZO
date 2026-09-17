@@ -243,7 +243,7 @@ const QuizSession = () => {
   return (
     <div className="dark quizo-app-bg min-h-screen">
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-      <header className="relative z-10 flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-10">
+      <header className="quizo-page-frame relative z-10 flex min-h-16 flex-wrap items-center justify-between gap-3 py-3 sm:min-h-20 sm:py-4">
         <div className="flex items-center gap-5">
           <Button variant="ghost" size="icon" aria-label="Quitter le quiz" className="text-[#dbc2b0] hover:bg-white/[0.055] hover:text-white" onClick={() => navigate('/join')}>
             <X className="h-5 w-5" />
@@ -253,7 +253,7 @@ const QuizSession = () => {
         <div role="status" className={cn('flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.055] px-4 py-2 text-xs', saveStatus === 'error' ? 'text-amber-300' : 'text-[#dbc2b0]')}>{saveStatus === 'error' ? <CloudOff className="h-4 w-4" /> : <Save className={cn('h-4 w-4', saveStatus === 'saving' && 'animate-pulse')} />}{saveLabel}</div>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-4 pb-40 pt-6 md:px-10">
+      <main className="quizo-page-frame relative z-10 flex w-full flex-col pb-40 pt-5 sm:pt-6">
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between">
             <span className="quizo-label">{answeredCount} réponse{answeredCount > 1 ? 's' : ''} sur {quiz.questions.length}</span>
@@ -304,7 +304,7 @@ const QuizSession = () => {
       </main>
 
       <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/[0.06] bg-[#070707]/90 p-4 backdrop-blur-xl md:p-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div className="quizo-page-frame flex items-center justify-between gap-3 sm:gap-4">
           <Button
             variant="outline"
             className="rounded-full px-6 quizo-outline-button"

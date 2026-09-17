@@ -56,7 +56,7 @@ const Pricing = () => {
         </Button>
       }
     >
-      <section className="mx-auto max-w-6xl">
+      <section className="w-full">
         <PageHeader
           eyebrow="Tarifs"
           title="Choisissez votre plan"

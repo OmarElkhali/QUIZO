@@ -215,7 +215,7 @@ const Quiz = () => {
   return (
     <div className="dark quizo-app-bg min-h-screen">
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-      <header className="relative z-10 flex h-20 items-center justify-between px-5 md:px-10">
+      <header className="quizo-page-frame relative z-10 flex min-h-16 items-center justify-between gap-3 py-3 sm:min-h-20">
         <div className="flex items-center gap-5">
           <Button variant="ghost" size="icon" className="text-[#dbc2b0] hover:bg-white/[0.055] hover:text-white" onClick={() => navigate(`/quiz-preview/${id}`)}>
             <X className="h-5 w-5" />
@@ -228,7 +228,7 @@ const Quiz = () => {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-col px-4 pb-32 pt-8 md:px-10">
+      <main className="quizo-page-frame relative z-10 flex w-full flex-col pb-32 pt-5 sm:pt-8">
         <div className="mb-10">
           <div className="mb-4 flex items-center justify-between">
             <span className="quizo-label">{t('quiz.question')} {currentQuestionIndex + 1} {t('quiz.of')} {quiz.questions.length}</span>
@@ -259,7 +259,7 @@ const Quiz = () => {
       </main>
 
       <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#070707] via-[#070707]/90 to-transparent p-5 md:p-8">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div className="quizo-page-frame flex items-center justify-between gap-3 sm:gap-4">
           <Button
             variant="outline"
             onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}

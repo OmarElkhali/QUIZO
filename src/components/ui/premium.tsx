@@ -24,7 +24,7 @@ interface ActionCardProps {
 export const ActionCard = ({ title, description, icon: Icon, accent = false, children, className }: ActionCardProps) => (
   <div
     className={cn(
-      'quizo-panel quizo-panel-hover flex h-full flex-col p-6',
+      'quizo-panel quizo-panel-hover flex h-full flex-col p-4 sm:p-6',
       accent && 'border-orange-400/35 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.16),transparent_34%),rgba(217,119,6,0.06)]',
       className
     )}
@@ -37,7 +37,7 @@ export const ActionCard = ({ title, description, icon: Icon, accent = false, chi
     >
       <Icon className="h-6 w-6" />
     </div>
-    <h3 className="text-2xl font-bold tracking-tight text-[var(--quizo-heading)]">{title}</h3>
+    <h3 className="break-words text-xl font-bold tracking-tight text-[var(--quizo-heading)] sm:text-2xl">{title}</h3>
     <p className="mt-3 flex-1 text-sm leading-6 text-[var(--quizo-muted)]">{description}</p>
     {children && <div className="mt-6 border-t border-[var(--quizo-border)] pt-5">{children}</div>}
   </div>
@@ -61,7 +61,7 @@ const toneClasses: Record<NonNullable<PremiumMetricProps['tone']>, string> = {
 };
 
 export const PremiumMetric = ({ label, value, detail, icon: Icon, tone = 'default', className }: PremiumMetricProps) => (
-  <div className={cn('quizo-panel-subtle quizo-panel-hover p-6', className)}>
+  <div className={cn('quizo-panel-subtle quizo-panel-hover p-4 sm:p-6', className)}>
     <div className="mb-8 flex items-center justify-between gap-3">
       {Icon ? (
         <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--quizo-border)]', toneClasses[tone])}>

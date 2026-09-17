@@ -26,7 +26,7 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1180);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -62,11 +62,11 @@ export const Navbar = () => {
   return (
     <header 
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-4 px-6",
+        "fixed left-0 right-0 top-0 z-50 py-3 transition-all duration-300 sm:py-4",
         isScrolled ? "glass-panel shadow-sm" : "bg-transparent"
       )}
     >
-      <div className="container mx-auto flex items-center justify-between">
+      <div className="quizo-page-frame flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight hover-scale">
             <BookOpen className="h-6 w-6 text-primary" />
@@ -77,7 +77,7 @@ export const Navbar = () => {
         </div>
         
         {!isMobile ? (
-          <nav className="flex items-center space-x-8">
+          <nav className="flex items-center gap-4 xl:gap-7">
             <Link to="/" className="font-medium underline-animation">
               {t('nav.home')}
             </Link>
@@ -162,7 +162,8 @@ export const Navbar = () => {
       
       {/* Mobile menu */}
       {isMobile && isOpen && (
-        <div className="container mx-auto mt-4 py-4 glass-panel rounded-xl animate-fade-in">
+        <div className="quizo-page-frame mt-3 animate-fade-in">
+          <div className="glass-panel rounded-xl py-4">
           <nav className="flex flex-col space-y-4">
             <div className="flex items-center justify-between px-4 py-2">
               <span className="text-sm font-medium">Mode nuit</span>
@@ -250,6 +251,7 @@ export const Navbar = () => {
               </Button>
             )}
           </nav>
+          </div>
         </div>
       )}
       

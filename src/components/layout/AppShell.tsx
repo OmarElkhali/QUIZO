@@ -61,7 +61,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
   };
 
   const navLinks = (mobile = false) => (
-    <nav className={cn(mobile ? 'space-y-1 p-4' : 'hidden items-center gap-1 lg:flex')}>
+    <nav className={cn(mobile ? 'space-y-1 p-4' : 'hidden min-w-0 items-center gap-0.5 2xl:flex')}>
       {navigation.map((item) => (
         <NavLink
           key={item.href}
@@ -70,7 +70,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           onClick={() => setMobileOpen(false)}
           className={({ isActive }) =>
             cn(
-              'group flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold tracking-wide text-[var(--quizo-muted)] transition',
+              'group flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-semibold tracking-wide text-[var(--quizo-muted)] transition min-[1750px]:px-3 min-[1750px]:text-sm',
               'hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60',
               isActive && 'border border-orange-400/20 bg-orange-500/10 text-[#d97706]',
               mobile && 'w-full px-3 py-3'
@@ -91,10 +91,10 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
 
       <div className="relative min-h-screen">
         <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
-          <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-20">
             <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
               <BookOpen className="h-6 w-6 text-orange-500" />
-              <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
+              <span className="quizo-brand-text text-xl font-black tracking-tighter sm:text-2xl">QUIZO</span>
             </button>
 
             {navLinks()}
@@ -142,7 +142,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] lg:hidden"
+                className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] 2xl:hidden"
                 onClick={() => setMobileOpen(true)}
               >
                 <Menu className="h-5 w-5" />
@@ -152,7 +152,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
         </header>
 
         {mobileOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 z-50 2xl:hidden">
             <button
               type="button"
               aria-label={t('common.close')}
@@ -234,7 +234,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           </div>
         )}
 
-        <main className="mx-auto min-h-[calc(100vh-5rem)] max-w-[1500px] px-4 py-8 sm:px-6 lg:px-10">{children}</main>
+        <main className="quizo-page-frame min-h-[calc(100vh-4rem)] py-5 sm:min-h-[calc(100vh-5rem)] sm:py-8">{children}</main>
       </div>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
