@@ -17,6 +17,7 @@ import { getQuizSubmission } from '@/services/quizService';
 import { getQuizAttempt } from '@/services/manualQuizService';
 import { cn } from '@/lib/utils';
 import { PremiumMetric, PremiumPanel } from '@/components/ui/premium';
+import { AIAnswerExplanation } from '@/components/quiz/AIAnswerExplanation';
 
 const normalizeAnswerId = (answer: any) => answer?.selectedOptionId || answer;
 
@@ -163,7 +164,7 @@ const Results = () => {
   const scoreText = score >= 90 ? t('results.excellent') : score >= 75 ? t('results.veryGood') : score >= 60 ? t('results.goodJob') : t('results.keepPracticingText');
 
   const shareResults = () => {
-    const message = `J’ai obtenu ${Math.round(score)} % au quiz « ${quiz.title} » sur QUIZO.`;
+    const message = `J’ai obtenu ${correctAnswers}/${totalQuestions} points (${Math.round(score)} %) au quiz « ${quiz.title} » sur QUIZO.`;
     if (navigator.share) {
       navigator.share({
         title: `Résultat QUIZO — ${quiz.title}`,
@@ -203,9 +204,9 @@ const Results = () => {
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-orange-300/35 bg-orange-500/15 text-[#ffb77d]">
             <Trophy className="h-9 w-9" />
           </div>
-          <p className="quizo-label justify-center">{t('results.score')}</p>
-          <div className="mt-4 quizo-brand-text text-7xl font-black tracking-tight">{Math.round(score)}%</div>
-          <p className="mt-3 text-xl font-bold text-white">{scoreText}</p>
+          <p className="quizo-label justify-center">Score · 1 point par bonne réponse</p>
+          <div className="mt-4 quizo-brand-text text-7xl font-black tracking-tight">{correctAnswers}/{totalQuestions}</div>
+          <p className="mt-3 text-xl font-bold text-white">{Math.round(score)} % · {scoreText}</p>
           <Progress value={score} className="mt-6 h-2 bg-white/10" />
 
           <div className="mt-8 grid grid-cols-2 gap-4">
@@ -282,6 +283,16 @@ const Results = () => {
                               <span className="font-semibold text-white">{t('results.explanation')}:</span> {question.explanation}
                             </div>
                           )}
+                          <AIAnswerExplanation
+                            question={{
+                              id: question.id,
+                              text: question.text,
+                              options: question.options,
+                              explanation: question.explanation,
+                              points: 1,
+                            }}
+                            selectedOptionId={normalizeAnswerId(userAnswers[question.id])}
+                          />
                         </div>
                       </div>
                     </article>

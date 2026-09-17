@@ -1,61 +1,125 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Flame, Gauge, RotateCcw, XCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { BookOpenCheck, CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { calculateQuestionScore, calculatePedagogicalScore, remainingSeconds, type QuizQuestionInput } from '@/domain/quizRules';
+import { calculatePersonalScore, type QuizQuestionInput } from '@/domain/quizRules';
 import { QuestionStage } from './QuestionStage';
+import { AIAnswerExplanation } from '@/components/quiz/AIAnswerExplanation';
 
 export function QuizPractice({ questions, onClose }: { questions: QuizQuestionInput[]; onClose: () => void }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | undefined>();
   const [revealed, setRevealed] = useState(false);
-  const [points, setPoints] = useState(0);
-  const [earnedWeight, setEarnedWeight] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string | undefined>>({});
   const question = questions[index];
-  const openedAt = useRef(Date.now());
-  const answered = useRef(false);
-  const [remaining, setRemaining] = useState(question?.timeLimit || 20);
-  const [lastPoints, setLastPoints] = useState(0);
-  const [lastCorrect, setLastCorrect] = useState(false);
-  const [correctCount, setCorrectCount] = useState(0);
-  const possibleWeight = useMemo(() => questions.reduce((sum, q) => sum + q.points, 0), [questions]);
-  const answer = useCallback((optionId?: string) => {
-    if (answered.current || !question) return;
-    answered.current = true;
-    const correct = question.options.some(o => o.id === optionId && o.isCorrect);
-    const score = calculateQuestionScore({ weight: question.points, correct,
-      responseTimeMs: Math.max(0, Date.now() - openedAt.current), timeLimitMs: (question.timeLimit || 20) * 1000, previousStreak: streak });
-    setSelected(optionId); setRevealed(true); setLastPoints(score.awardedGamePoints); setLastCorrect(correct);
-    setPoints(total => total + score.awardedGamePoints); setEarnedWeight(total => total + score.earnedWeight); setStreak(score.resultingStreak);
-    if (correct) setCorrectCount(total => total + 1);
-  }, [question, streak]);
-  useEffect(() => {
-    if (!question || revealed || finished) return;
-    const timer = setInterval(() => {
-      const value = remainingSeconds(openedAt.current + (question.timeLimit || 20) * 1000, Date.now());
-      setRemaining(value);
-      if (value === 0) answer();
-    }, 200);
-    return () => clearInterval(timer);
-  }, [answer, question, revealed, finished]);
+  const personalScore = useMemo(() => calculatePersonalScore(questions, answers), [answers, questions]);
+  const points = personalScore.points;
+  const selectedIsCorrect = question?.options.some((option) => option.id === selected && option.isCorrect) || false;
+
+  const answer = (optionId: string) => {
+    if (revealed || !question) return;
+    setSelected(optionId);
+    setAnswers((current) => ({ ...current, [question.id]: optionId }));
+    setRevealed(true);
+  };
+
+  const next = () => {
+    if (index === questions.length - 1) {
+      setFinished(true);
+      return;
+    }
+    setIndex((current) => current + 1);
+    setSelected(undefined);
+    setRevealed(false);
+  };
 
   const restart = () => {
-    openedAt.current = Date.now(); answered.current = false;
-    setIndex(0); setSelected(undefined); setRevealed(false); setPoints(0); setEarnedWeight(0); setStreak(0); setCorrectCount(0); setFinished(false); setLastPoints(0); setRemaining(questions[0]?.timeLimit || 20);
+    setIndex(0);
+    setSelected(undefined);
+    setRevealed(false);
+    setAnswers({});
+    setFinished(false);
   };
+
   if (!question) return <p>Ajoutez des questions avant de tester.</p>;
-  return <section className="mx-auto max-w-4xl space-y-6 rounded-3xl border border-[var(--quizo-border)] p-5 sm:p-8">
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-[var(--quizo-muted)]">Essai local · aucune statistique enregistrée</p><Button variant="outline" onClick={onClose}>Quitter le test</Button></div>
-    <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Points de jeu</p><p className="text-xl font-black">{points}</p></div><div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Maîtrise</p><p className="text-xl font-black">{calculatePedagogicalScore(earnedWeight, possibleWeight).toFixed(1)} %</p></div><div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Série actuelle</p><p className="flex items-center gap-2 text-xl font-black"><Flame className="h-5 w-5" />{streak}</p></div></div>
-    {finished ? <div className="space-y-5 text-center"><Gauge className="mx-auto h-12 w-12 text-orange-300" /><h2 className="text-3xl font-bold">Test terminé</h2><p>{correctCount} bonne{correctCount > 1 ? 's' : ''} réponse{correctCount > 1 ? 's' : ''} sur {questions.length}. Ces résultats restent uniquement dans cet écran.</p><Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Recommencer</Button></div> : <>
-      <QuestionStage question={question} index={index} total={questions.length} remaining={remaining} timerTotal={question.timeLimit || 20} selected={selected} correctOptionId={revealed ? question.options.find(o => o.isCorrect)?.id : undefined} disabled={revealed} onAnswer={answer} compact />
-      {revealed && <div role="status" className={`space-y-3 rounded-2xl border p-4 ${lastCorrect ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-red-400/30 bg-red-500/10'}`}><p className="flex items-center gap-2 text-xl font-bold">{lastCorrect ? <CheckCircle2 className="h-6 w-6 text-emerald-300" /> : <XCircle className="h-6 w-6 text-red-300" />}{lastCorrect ? 'Bonne réponse' : selected ? 'Réponse incorrecte' : 'Temps écoulé'} · +{lastPoints} points</p><p>{question.explanation || 'Comparez votre réponse avec la correction.'}</p>
-        <Button onClick={() => {
-          if (index === questions.length - 1) { setFinished(true); return; }
-          openedAt.current = Date.now(); answered.current = false; setIndex(index + 1); setSelected(undefined); setRevealed(false); setRemaining(questions[index + 1].timeLimit || 20);
-        }}>{index === questions.length - 1 ? 'Voir le résultat' : 'Question suivante'}</Button>
-      </div>}
-    </>}
-  </section>;
+  const successRate = Math.round(personalScore.percentage);
+
+  return (
+    <section className="mx-auto max-w-5xl space-y-6 rounded-3xl border border-[var(--quizo-border)] p-5 sm:p-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-[var(--quizo-muted)]">Quiz personnel · aucune statistique enregistrée</p>
+          <p className="mt-1 text-xs text-[var(--quizo-muted)]">Barème simple : 1 bonne réponse = 1 point. Aucun bonus de vitesse.</p>
+        </div>
+        <Button variant="outline" onClick={onClose}>Quitter le test</Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {questions.length}</p></div>
+        <div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Réussite</p><p className="text-xl font-black">{successRate} %</p></div>
+        <div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Barème</p><p className="text-xl font-black">1 pt / question</p></div>
+      </div>
+
+      {finished ? (
+        <div className="space-y-8">
+          <div className="space-y-4 text-center">
+            <BookOpenCheck className="mx-auto h-12 w-12 text-orange-300" />
+            <h2 className="text-3xl font-bold">Correction complète</h2>
+            <p>{points} point{points === 1 ? '' : 's'} sur {questions.length} · {successRate} % de réussite.</p>
+            <p className="text-sm text-[var(--quizo-muted)]">Retrouvez toutes les réponses ci-dessous. L’explication IA reste optionnelle et se lance question par question.</p>
+            <Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Recommencer</Button>
+          </div>
+
+          <div className="space-y-5 text-left">
+            {questions.map((reviewQuestion, reviewIndex) => {
+              const selectedId = answers[reviewQuestion.id];
+              const selectedOption = reviewQuestion.options.find((option) => option.id === selectedId);
+              const correctOption = reviewQuestion.options.find((option) => option.isCorrect);
+              const correct = selectedOption?.isCorrect === true;
+              return (
+                <article key={reviewQuestion.id} className={`rounded-2xl border p-5 sm:p-6 ${correct ? 'border-emerald-400/25 bg-emerald-500/[0.08]' : 'border-red-400/25 bg-red-500/[0.08]'}`}>
+                  <div className="flex items-start gap-3">
+                    {correct ? <CheckCircle2 className="mt-1 h-6 w-6 shrink-0 text-emerald-300" /> : <XCircle className="mt-1 h-6 w-6 shrink-0 text-red-300" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-lg font-bold text-[var(--quizo-heading)]">{reviewIndex + 1}. {reviewQuestion.text}</p>
+                      <div className="mt-4 space-y-2 text-sm leading-6">
+                        <p><strong>Votre réponse :</strong> {selectedOption?.text || 'Aucune réponse'}</p>
+                        {!correct && <p className="text-emerald-200"><strong>Bonne réponse :</strong> {correctOption?.text || 'Correction indisponible'}</p>}
+                      </div>
+                      {reviewQuestion.explanation && <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6"><strong>Explication du quiz :</strong> {reviewQuestion.explanation}</div>}
+                      <AIAnswerExplanation question={{ ...reviewQuestion, points: 1 }} selectedOptionId={selectedId} />
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <>
+          <QuestionStage
+            question={{ ...question, points: 1 }}
+            index={index}
+            total={questions.length}
+            remaining={null}
+            selected={selected}
+            correctOptionId={revealed ? question.options.find((option) => option.isCorrect)?.id : undefined}
+            disabled={revealed}
+            onAnswer={answer}
+            compact
+          />
+          {revealed && (
+            <div role="status" className={`space-y-3 rounded-2xl border p-4 ${selectedIsCorrect ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-red-400/30 bg-red-500/10'}`}>
+              <p className="flex items-center gap-2 text-xl font-bold">
+                {selectedIsCorrect ? <CheckCircle2 className="h-6 w-6 text-emerald-300" /> : <XCircle className="h-6 w-6 text-red-300" />}
+                {selectedIsCorrect ? 'Bonne réponse · +1 point' : 'Réponse incorrecte · +0 point'}
+              </p>
+              <p>{question.explanation || 'La correction complète sera disponible à la fin.'}</p>
+              <Button onClick={next}>{index === questions.length - 1 ? 'Voir la correction complète' : 'Question suivante'}</Button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
 }

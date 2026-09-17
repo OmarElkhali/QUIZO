@@ -153,7 +153,8 @@ const QuizPreview = () => {
           <h3 className="text-xl font-bold text-white">Checklist participant</h3>
           <ul className="mt-5 space-y-3 text-sm leading-6 text-[#d8d2ce]">
             <li>• Vérifiez votre connexion avant de démarrer.</li>
-            <li>• Le test utilise les questions et les points de ce quiz.</li>
+            <li>• Chaque bonne réponse rapporte exactement 1 point.</li>
+            <li>• Aucun bonus de vitesse n’est appliqué en mode personnel.</li>
             <li>• Aucune tentative ni statistique réelle n’est créée.</li>
             <li>• Recharger la page quitte cet essai local.</li>
           </ul>

@@ -10,6 +10,10 @@
 - Suppression du contrôle `/health` avant chaque génération et de l'attente Supabase sur le chemin critique. L'archivage Supabase devient optionnel via `VITE_ENABLE_SUPABASE_ARCHIVE=true` ; les projets QUIZO/ESTS-QUIZ étant en pause lors de l'audit, la valeur doit rester désactivée.
 - Migration de l'ancien SDK Gemini non maintenu vers le SDK officiel `google-genai` épinglé.
 - Le backend peut vérifier les jetons Firebase avec `FIREBASE_PROJECT_ID`, sans compte de service privé. Les CORS sont limités au frontend configuré et les payloads de génération sont bornés.
+- Le quiz personnel utilise un barème strict de 1 point par bonne réponse, sans bonus de vitesse ni série. Le temps et le score de jeu restent réservés aux parcours partagés/compétitifs.
+- La fin du quiz personnel présente toutes les questions, le choix de l'utilisateur, la bonne réponse et l'explication existante.
+- Chaque correction propose une explication IA optionnelle via `/api/explain-answer` : authentification Firebase, appel uniquement au clic, cascade des fournisseurs, limites d'usage et secours local gratuit.
+- Le formulaire de création réellement utilisé affiche maintenant l'état des fournisseurs et ne demande plus de clé API dans le navigateur.
 
 ## Périmètre de cette livraison
 
@@ -38,7 +42,8 @@ L'activation exige les règles Firestore validées et publiées, un secret serve
 ## Vérifications effectuées localement
 
 - Build Vite et vérifications TypeScript : réussis.
-- 9 tests unitaires du barème, de l'échéance et de la validation : réussis.
+- 10 tests unitaires du barème personnel/compétitif, de l'échéance et de la validation : réussis.
+- 6 tests de contrat Python (authentification, limites, CORS, fournisseurs et explication IA) : réussis.
 - 3 scénarios sur émulateur Firestore isolé `demo-quizo-live-tests` : réussis, comprenant 100 réponses simultanées, concurrence animateur, rejeu des requêtes, timeout et refus des accès/écritures interdits.
 - Parcours public accueil et rejoindre : rendu contrôlé sur navigateur, rejoindre en 390 × 844 et ordinateur, aucune erreur JavaScript détectée.
 - Python : compilation et contrôle local health/ancienne route live.

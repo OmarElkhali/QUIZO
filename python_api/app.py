@@ -498,6 +498,118 @@ def manual_assistant():
         }), 500
 
 
+@app.route('/api/explain-answer', methods=['POST', 'OPTIONS'])
+@limiter.limit("30 per day;10 per minute")
+@require_auth
+def explain_answer():
+    """Explique une correction uniquement lorsque l'utilisateur le demande."""
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        data = request.get_json() or {}
+        question_text = str(data.get('question') or '').strip()
+        raw_options = data.get('options')
+        selected_option_id = str(data.get('selectedOptionId') or '').strip()
+        existing_explanation = str(data.get('existingExplanation') or '').strip()
+        requested_provider = str(data.get('provider') or 'gemini').strip().lower()
+
+        if not question_text or len(question_text) > 3000:
+            return jsonify({'error': 'Question absente ou trop longue.'}), 400
+        if not isinstance(raw_options, list) or not 2 <= len(raw_options) <= 6:
+            return jsonify({'error': 'Entre 2 et 6 réponses sont requises.'}), 400
+        if len(existing_explanation) > 3000:
+            return jsonify({'error': 'Explication existante trop longue.'}), 400
+        if requested_provider not in SUPPORTED_MODELS:
+            requested_provider = 'gemini'
+
+        options = []
+        for index, option in enumerate(raw_options):
+            if not isinstance(option, dict):
+                continue
+            option_text = str(option.get('text') or '').strip()
+            if not option_text or len(option_text) > 1000:
+                continue
+            options.append({
+                'id': str(option.get('id') or f'option_{index + 1}')[:120],
+                'text': option_text,
+                'isCorrect': option.get('isCorrect') is True,
+            })
+
+        correct_options = [option for option in options if option['isCorrect']]
+        if len(options) < 2 or len(correct_options) != 1:
+            return jsonify({'error': 'La correction de cette question est invalide.'}), 400
+
+        correct_option = correct_options[0]
+        selected_option = next((option for option in options if option['id'] == selected_option_id), None)
+        prompt = f"""
+Tu es le tuteur pédagogique de QUIZO. Explique en français une correction de QCM à un étudiant.
+Réponds uniquement avec un JSON valide sans markdown sous cette forme:
+{{"explanation":"explication claire en 2 à 4 phrases","keyPoint":"idée essentielle à retenir"}}
+
+QUESTION: {question_text}
+RÉPONSES: {json.dumps([option['text'] for option in options], ensure_ascii=False)}
+BONNE RÉPONSE: {correct_option['text']}
+RÉPONSE DE L'ÉTUDIANT: {selected_option['text'] if selected_option else 'Aucune réponse'}
+EXPLICATION EXISTANTE: {existing_explanation or 'Aucune'}
+
+Contraintes:
+- explique pourquoi la bonne réponse est correcte;
+- si l'étudiant s'est trompé, explique brièvement pourquoi son choix ne convient pas;
+- n'invente pas de source, citation ou fait extérieur;
+- reste concis, pédagogique et bienveillant.
+"""
+
+        content = None
+        used_provider = requested_provider
+        provider_errors = []
+        for provider in get_provider_attempt_order(requested_provider):
+            try:
+                content = generate_with_provider(provider, prompt)
+                used_provider = provider
+                break
+            except ValueError as provider_error:
+                provider_errors.append(f"{provider}: {sanitize_error_message(str(provider_error))}")
+
+        if not content:
+            raise ValueError('Aucun fournisseur IA disponible: ' + ' | '.join(provider_errors))
+
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if not json_match:
+            raise ValueError("L'IA n'a pas retourné une explication structurée.")
+        payload = json.loads(json_match.group())
+        explanation = str(payload.get('explanation') or '').strip()
+        key_point = str(payload.get('keyPoint') or '').strip()
+        if not explanation:
+            raise ValueError("L'IA n'a pas fourni d'explication.")
+
+        return jsonify({
+            'explanation': explanation[:2500],
+            'keyPoint': key_point[:600],
+            'provider': used_provider,
+            'model': get_provider_model(used_provider),
+            'fallback': used_provider != requested_provider,
+        })
+    except (ValueError, json.JSONDecodeError) as error:
+        logger.warning(f"Explication IA indisponible: {sanitize_error_message(str(error))}")
+        if 'correct_option' in locals():
+            fallback_text = existing_explanation if 'existing_explanation' in locals() and existing_explanation else (
+                f"La bonne réponse est « {correct_option['text']} ». "
+                "Comparez-la aux autres propositions et retenez le concept formulé dans cette réponse."
+            )
+            return jsonify({
+                'explanation': fallback_text,
+                'keyPoint': correct_option['text'],
+                'provider': 'local-fallback',
+                'model': 'local-fallback',
+                'fallback': True,
+            }), 200
+        return jsonify({'error': "Impossible de générer l'explication."}), 503
+    except Exception as error:
+        logger.error(f"Erreur inattendue pendant l'explication: {sanitize_error_message(str(error))}", exc_info=True)
+        return jsonify({'error': "Erreur inattendue pendant la génération de l'explication."}), 500
+
+
 @app.route('/api/generate', methods=['POST', 'OPTIONS'])
 @limiter.limit("20 per minute")
 @require_auth

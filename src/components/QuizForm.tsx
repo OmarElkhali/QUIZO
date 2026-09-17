@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { FileUpload } from './FileUpload';
 import { toast } from 'sonner';
-import { BrainCircuit, Share2, ArrowRight, Loader2, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { BrainCircuit, Share2, ArrowRight, Loader2, Clock, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuiz } from '@/hooks/useQuiz';
@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AIModelType } from '@/types/quiz';
+import { BackendCapabilities, getBackendCapabilities } from '@/services/backendCapabilities';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string; badge?: string }> = [
   { value: 'groq', label: 'Groq', description: '⚡ Ultra-rapide (3-5s), gratuit et illimité.', badge: 'Recommandé' },
@@ -28,7 +29,7 @@ const AI_MODELS: Array<{ value: AIModelType; label: string; description: string;
 export const QuizForm = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { createQuiz, isLoading } = useQuiz();
+  const { createQuiz } = useQuiz();
   const { user } = useAuth();
   
   const [file, setFile] = useState<File | null>(null);
@@ -38,7 +39,8 @@ export const QuizForm = () => {
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
   const [timeLimit, setTimeLimit] = useState(30); // minutes
   const [modelType, setModelType] = useState<AIModelType>('groq'); // Groq par défaut (ultra-rapide)
-  const [openRouterApiKey, setOpenRouterApiKey] = useState('');
+  const [capabilities, setCapabilities] = useState<BackendCapabilities | null>(null);
+  const [capabilityError, setCapabilityError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [quizCreated, setQuizCreated] = useState(false);
@@ -49,10 +51,25 @@ export const QuizForm = () => {
   const [progressPercent, setProgressPercent] = useState(0);
   const [progressLogs, setProgressLogs] = useState<string[]>([]);
 
-  useEffect(() => {
-    const savedKey = localStorage.getItem('quizo_openrouter_api_key') || '';
-    setOpenRouterApiKey(savedKey);
+  const availableProviders = AI_MODELS.filter((model) => capabilities?.providers[model.value]?.configured);
+
+  const refreshCapabilities = useCallback(async (forceRefresh = false) => {
+    setCapabilityError(null);
+    try {
+      const next = await getBackendCapabilities(forceRefresh);
+      setCapabilities(next);
+      setModelType((current) => next.providers[current]?.configured
+        ? current
+        : AI_MODELS.find((model) => next.providers[model.value]?.configured)?.value || current);
+    } catch (capabilityRequestError) {
+      console.error('Impossible de charger les fournisseurs IA:', capabilityRequestError);
+      setCapabilityError('Impossible de vérifier les API. Réessayez dans quelques instants.');
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshCapabilities();
+  }, [refreshCapabilities]);
   
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -142,7 +159,7 @@ export const QuizForm = () => {
         enableTimeLimit ? timeLimit : undefined, 
         additionalInfo,
         modelType,
-        openRouterApiKey,
+        '',
         statusCallback
       );
       
@@ -268,7 +285,30 @@ export const QuizForm = () => {
           </div>
           
           <div className="space-y-4">
-            <Label>{t('createQuiz.aiModel')}</Label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <Label>{t('createQuiz.aiModel')}</Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  En cas d’échec, le serveur essaie automatiquement les autres API disponibles.
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => void refreshCapabilities(true)}
+                disabled={isSubmitting}
+                aria-label="Revérifier les API"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+            {capabilityError && (
+              <Alert className="border-amber-400/30 bg-amber-500/10 text-amber-100">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{capabilityError}</AlertDescription>
+              </Alert>
+            )}
             <Card className="border-white/[0.07] bg-black/25 p-4">
               <CardContent className="p-0 space-y-4">
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -278,12 +318,20 @@ export const QuizForm = () => {
                       type="button"
                       variant={modelType === model.value ? "default" : "outline"}
                       onClick={() => setModelType(model.value)}
+                      disabled={capabilities ? !capabilities.providers[model.value].configured : false}
                       className={modelType === model.value 
                         ? 'min-h-12 quizo-copper-button flex flex-col justify-center items-center py-1' 
                         : 'min-h-12 quizo-outline-button flex flex-col justify-center items-center py-1'
                       }
                     >
-                      <span className="text-sm font-bold">{model.label}</span>
+                      <span className="flex items-center gap-1.5 text-sm font-bold">
+                        {model.label}
+                        {capabilities?.providers[model.value]?.configured
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                          : capabilities
+                            ? <AlertCircle className="h-3.5 w-3.5 text-amber-300" />
+                            : <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      </span>
                       {model.badge && <span className="text-[10px] opacity-75">{model.badge}</span>}
                     </Button>
                   ))}
@@ -298,27 +346,14 @@ export const QuizForm = () => {
                       <span>Gratuit • Ultra-rapide • Illimité</span>
                     </div>
                   )}
-                </div>
-                {modelType === 'openrouter' && (
-                  <div className="space-y-2 mt-4 pt-2 border-t border-white/[0.07]">
-                    <Label htmlFor="openrouter-api-key" className="text-xs text-[#a79d96]">
-                      Clé API OpenRouter (Optionnel)
-                    </Label>
-                    <input
-                      id="openrouter-api-key"
-                      type="password"
-                      placeholder="sk-or-v1-..."
-                      value={openRouterApiKey}
-                      onChange={(e) => {
-                        setOpenRouterApiKey(e.target.value);
-                        localStorage.setItem('quizo_openrouter_api_key', e.target.value);
-                      }}
-                      className="flex h-10 w-full rounded-xl border border-white/[0.07] bg-black/40 px-3 py-2 text-sm text-white placeholder-[#a79d96]/50 focus:border-[#ffb77d]/50 focus:outline-none focus:ring-1 focus:ring-[#ffb77d]/20 transition-all duration-300"
-                    />
-                    <p className="text-[10px] text-[#a79d96]/70 leading-normal">
-                      Si vous ne fournissez pas de clé, les clés de secours du serveur seront utilisées automatiquement.
+                  {capabilities?.providers[modelType] && (
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Modèle serveur : {capabilities.providers[modelType].model}
                     </p>
-                  </div>
+                  )}
+                </div>
+                {capabilities && availableProviders.length === 0 && (
+                  <p role="alert" className="text-sm text-red-300">Aucun fournisseur IA n’est configuré sur le serveur.</p>
                 )}
               </CardContent>
             </Card>
@@ -418,7 +453,7 @@ export const QuizForm = () => {
             <Button 
               type="submit" 
               className="w-full quizo-copper-button"
-              disabled={isSubmitting || !file || !user}
+              disabled={isSubmitting || !file || !user || (capabilities !== null && availableProviders.length === 0)}
             >
               {isSubmitting ? (
                 <>

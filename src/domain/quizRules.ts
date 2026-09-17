@@ -70,6 +70,19 @@ export function calculatePedagogicalScore(earnedWeight: number, possibleWeight: 
   return possibleWeight === 0 ? 0 : earnedWeight / possibleWeight * 100;
 }
 
+/** Personal AI quizzes deliberately ignore weight, speed and streak: one correct answer is one point. */
+export function calculatePersonalScore(questions: QuizQuestionInput[], answers: Record<string, string | undefined>) {
+  const points = questions.reduce((total, question) => {
+    const correctOption = question.options.find((option) => option.isCorrect);
+    return total + (correctOption && answers[question.id] === correctOption.id ? 1 : 0);
+  }, 0);
+  return {
+    points,
+    total: questions.length,
+    percentage: questions.length === 0 ? 0 : points / questions.length * 100,
+  };
+}
+
 export function remainingSeconds(deadlineMs: number, nowMs: number): number {
   if (!Number.isFinite(deadlineMs) || !Number.isFinite(nowMs)) throw new Error('Échéance invalide');
   return Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
