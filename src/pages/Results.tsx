@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/context/AuthContext';
 import { saveQuizResult } from '@/services/quizService';
+import { getQuizSubmission } from '@/services/quizService';
+import { getQuizAttempt } from '@/services/manualQuizService';
 import { cn } from '@/lib/utils';
 import { PremiumMetric, PremiumPanel } from '@/components/ui/premium';
 
@@ -31,9 +33,9 @@ const Results = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [resultSaved, setResultSaved] = useState(false);
 
-  const score = location.state?.score ?? 0;
-  const userAnswers = useMemo(() => location.state?.answers ?? {}, [location.state?.answers]);
-  const timeSpent = location.state?.timeSpent ?? 0;
+  const [score, setScore] = useState<number>(Number(location.state?.score) || 0);
+  const [userAnswers, setUserAnswers] = useState<Record<string, string>>(location.state?.answers ?? {});
+  const [timeSpent, setTimeSpent] = useState<number>(Number(location.state?.timeSpent) || 0);
   const startTime = useMemo(() => location.state?.startTime ?? Date.now(), [location.state?.startTime]);
 
   useEffect(() => {
@@ -52,6 +54,15 @@ const Results = () => {
           return;
         }
         setQuiz(quizData);
+        if (!location.state?.answers && submissionId) {
+          const manualAttempt = await getQuizAttempt(quizId, submissionId).catch(() => null);
+          const stored = manualAttempt || await getQuizSubmission(submissionId).catch(() => null);
+          if (stored) {
+            setScore(Number(stored.score) || 0);
+            setUserAnswers(stored.answers || {});
+            setTimeSpent(Number(stored.timeSpent) || 0);
+          }
+        }
       } catch (error) {
         console.error('Erreur lors du chargement du quiz:', error);
         toast.error('Impossible de charger les résultats');
@@ -61,11 +72,11 @@ const Results = () => {
     };
 
     fetchQuiz();
-  }, [quizId, getQuiz, navigate]);
+  }, [quizId, submissionId, getQuiz, location.state?.answers, navigate]);
 
   useEffect(() => {
     const saveResults = async () => {
-      if (!quiz || !user || resultSaved) return;
+      if (!quiz || !user || resultSaved || location.state?.score === undefined) return;
 
       try {
         const totalQuestions = quiz.questions?.length || 0;
@@ -95,10 +106,10 @@ const Results = () => {
     };
 
     saveResults();
-  }, [quiz, user, score, userAnswers, timeSpent, startTime, resultSaved]);
+  }, [quiz, user, score, userAnswers, timeSpent, startTime, resultSaved, location.state?.score]);
 
   useEffect(() => {
-    if (score >= 70 && !isLoading && quiz) {
+    if (score >= 70 && !isLoading && quiz && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       confetti({
         particleCount: 110,
         spread: 90,
@@ -152,17 +163,17 @@ const Results = () => {
   const scoreText = score >= 90 ? t('results.excellent') : score >= 75 ? t('results.veryGood') : score >= 60 ? t('results.goodJob') : t('results.keepPracticingText');
 
   const shareResults = () => {
+    const message = `J’ai obtenu ${Math.round(score)} % au quiz « ${quiz.title} » sur QUIZO.`;
     if (navigator.share) {
       navigator.share({
-        title: `Résultats du Quiz: ${quiz.title}`,
-        text: `J’ai obtenu un score de ${score}% au quiz "${quiz.title}" !`,
-        url: window.location.href,
+        title: `Résultat QUIZO — ${quiz.title}`,
+        text: message,
       }).catch(() => toast.error(t('errors.generic')));
       return;
     }
 
     navigator.clipboard
-      .writeText(`J’ai obtenu un score de ${score}% au quiz "${quiz.title}" ! ${window.location.href}`)
+      .writeText(message)
       .then(() => toast.success(t('share.linkCopied')))
       .catch(() => toast.error(t('errors.generic')));
   };
@@ -179,7 +190,7 @@ const Results = () => {
               <Share2 className="mr-2 h-4 w-4" />
               {t('results.shareResults')}
             </Button>
-            <Button variant="outline" className="quizo-outline-button" onClick={() => toast.success('Export PDF bientôt disponible')}>
+            <Button variant="outline" className="quizo-outline-button" onClick={() => window.print()}>
               <Download className="mr-2 h-4 w-4" />
               Export PDF
             </Button>
@@ -193,7 +204,7 @@ const Results = () => {
             <Trophy className="h-9 w-9" />
           </div>
           <p className="quizo-label justify-center">{t('results.score')}</p>
-          <div className="mt-4 quizo-brand-text text-7xl font-black tracking-tight">{score}%</div>
+          <div className="mt-4 quizo-brand-text text-7xl font-black tracking-tight">{Math.round(score)}%</div>
           <p className="mt-3 text-xl font-bold text-white">{scoreText}</p>
           <Progress value={score} className="mt-6 h-2 bg-white/10" />
 

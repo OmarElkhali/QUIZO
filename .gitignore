@@ -64,4 +64,5 @@ supabase/.temp/
 Thumbs.db
 .vercel
 .test-build/
+.tmp-python-deps/
 *.zip

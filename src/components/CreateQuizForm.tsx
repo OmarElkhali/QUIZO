@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
@@ -7,18 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 import { FileUpload } from '@/components/FileUpload';
-import { BrainCircuit, Share2, ArrowRight, Loader2, Clock } from 'lucide-react';
+import { BrainCircuit, Share2, ArrowRight, Loader2, Clock, CircleCheck, CircleAlert, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuiz } from '@/hooks/useQuiz';
 import { useAuth } from '@/context/AuthContext';
-import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { AIModelType } from '@/types/quiz';
+import { getBackendCapabilities, type BackendCapabilities } from '@/services/backendCapabilities';
 
 const AI_MODELS: Array<{ value: AIModelType; label: string; description: string }> = [
-  { value: 'openrouter', label: 'OpenRouter recommandé', description: 'Routeur rapide multi-modèles configuré côté backend.' },
-  { value: 'gemini', label: 'Gemini', description: 'Alternative via le backend Flask.' },
-  { value: 'groq', label: 'Groq', description: 'Génération rapide si la clé serveur est configurée.' },
+  { value: 'openrouter', label: 'OpenRouter', description: 'Qwen via le routeur multi-modèles.' },
+  { value: 'gemini', label: 'Gemini', description: 'Bon équilibre qualité et compréhension.' },
+  { value: 'groq', label: 'Groq', description: 'Llama, optimisé pour la vitesse.' },
 ];
 
 export const CreateQuizForm = () => {
@@ -33,6 +33,25 @@ export const CreateQuizForm = () => {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [timeLimit, setTimeLimit] = useState(15); // Default time limit in minutes
   const [enableTimeLimit, setEnableTimeLimit] = useState(false);
+  const [capabilities, setCapabilities] = useState<BackendCapabilities | null>(null);
+  const [capabilityError, setCapabilityError] = useState('');
+  const [progress, setProgress] = useState({ stage: '', percent: 0, message: '' });
+  const availableProviders = AI_MODELS.filter(model => capabilities?.providers[model.value]?.configured);
+
+  const refreshCapabilities = useCallback(async (force = false) => {
+    setCapabilityError('');
+    try {
+      const next = await getBackendCapabilities(force);
+      setCapabilities(next);
+      setSelectedAI(current => next.providers[current]?.configured
+        ? current
+        : AI_MODELS.find(model => next.providers[model.value]?.configured)?.value || current);
+    } catch (error) {
+      setCapabilityError(error instanceof Error ? error.message : 'Vérification des API impossible.');
+    }
+  }, []);
+
+  useEffect(() => { void refreshCapabilities(); }, [refreshCapabilities]);
   
   const handleFileSelect = (file: File) => {
     setFile(file);
@@ -65,9 +84,7 @@ export const CreateQuizForm = () => {
       const actualTimeLimit = enableTimeLimit ? timeLimit : undefined;
       
       // Définir une fonction de callback pour suivre la progression
-      const progressCallback = (stage: string, percent: number, message?: string) => {
-        console.log(`[CreateQuizForm] Progress: ${stage} - ${percent}% - ${message || ''}`);
-      };
+      const progressCallback = (stage: string, percent: number, message?: string) => setProgress({ stage, percent, message: message || '' });
       
       const quizId = await createQuiz(
         file, 
@@ -181,26 +198,33 @@ export const CreateQuizForm = () => {
         </div>
         
         <div className="space-y-4">
-          <Label>Modèle d'IA pour la génération</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><Label>API de génération</Label><p className="mt-1 text-xs text-muted-foreground">Si l’API choisie échoue, le serveur essaie automatiquement les autres services disponibles.</p></div>
+            <Button type="button" size="sm" variant="ghost" onClick={() => void refreshCapabilities(true)} disabled={isLoading} aria-label="Revérifier les API"><RefreshCw className="h-4 w-4" /></Button>
+          </div>
+          {capabilityError && <p role="alert" className="flex items-center gap-2 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-sm text-amber-200"><CircleAlert className="h-4 w-4 shrink-0" />{capabilityError}</p>}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {AI_MODELS.map((model) => (
-              <Card
+              <button
+                type="button"
                 key={model.value}
-                className={`p-4 cursor-pointer transition-all hover:shadow-md border ${
-                  selectedAI === model.value ? 'border-[#D2691E]' : 'border-input'
-                }`}
+                className={`rounded-xl border p-4 text-left transition-all ${selectedAI === model.value ? 'border-orange-400 bg-orange-500/10 shadow-[0_0_24px_rgba(217,119,6,.12)]' : 'border-input hover:border-orange-300/35'} disabled:cursor-not-allowed disabled:opacity-45`}
                 onClick={() => setSelectedAI(model.value)}
+                disabled={capabilities ? !capabilities.providers[model.value].configured : false}
+                aria-pressed={selectedAI === model.value}
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-medium">{model.label}</h3>
                     <p className="text-xs text-muted-foreground">{model.description}</p>
+                    {capabilities?.providers[model.value] && <p className="mt-2 truncate text-[11px] text-muted-foreground">{capabilities.providers[model.value].model}</p>}
                   </div>
-                  <div className={`h-4 w-4 shrink-0 rounded-full ${selectedAI === model.value ? 'bg-[#D2691E]' : 'bg-muted'}`} />
+                  {capabilities?.providers[model.value]?.configured ? <CircleCheck className="h-4 w-4 shrink-0 text-emerald-400" /> : capabilities ? <CircleAlert className="h-4 w-4 shrink-0 text-amber-400" /> : <Loader2 className="h-4 w-4 shrink-0 animate-spin" />}
                 </div>
-              </Card>
+              </button>
             ))}
           </div>
+          {capabilities && availableProviders.length === 0 && <p role="alert" className="text-sm text-red-300">Aucun fournisseur IA n’est configuré sur le serveur.</p>}
         </div>
         
         <div className="space-y-2">
@@ -237,11 +261,13 @@ export const CreateQuizForm = () => {
           />
         </div>
         
+        {isLoading && progress.stage && <div role="status" aria-live="polite" className="space-y-2 rounded-xl border border-orange-400/20 bg-orange-500/10 p-4"><div className="flex items-center justify-between gap-4 text-sm"><span className="font-semibold">{progress.stage}</span><span>{Math.min(100, progress.percent)} %</span></div><div className="h-2 overflow-hidden rounded-full bg-black/20"><div className="h-full bg-orange-400 transition-[width] duration-300" style={{ width: `${Math.min(100, progress.percent)}%` }} /></div><p className="text-xs text-muted-foreground">{progress.message}</p></div>}
+
         <div className="pt-4 flex flex-col sm:flex-row gap-4">
           <Button 
             type="submit" 
             className="w-full btn-shine bg-[#D2691E] hover:bg-[#D2691E]/90"
-            disabled={isLoading || !file || !user}
+            disabled={isLoading || !file || !user || (capabilities !== null && availableProviders.length === 0)}
           >
             {isLoading ? (
               <>

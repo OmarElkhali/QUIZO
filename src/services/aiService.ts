@@ -148,7 +148,7 @@ export const processFileAndGenerateQuestions = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  apiKey?: string,
+  _apiKey?: string,
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
@@ -187,7 +187,6 @@ export const processFileAndGenerateQuestions = async (
       difficulty,
       additionalInfo,
       modelType,
-      apiKey,
       progress => progressCallback?.(0.3 + progress * 0.7)
     );
 
@@ -203,20 +202,10 @@ export const generateQuestionsWithAI = async (
   difficulty: 'easy' | 'medium' | 'hard' = 'medium',
   additionalInfo?: string,
   modelType: AIModelType = 'gemini',
-  apiKey?: string,
   progressCallback?: (progress: number) => void
 ): Promise<Question[]> => {
   progressCallback?.(0.1);
-
-  // Vérification de l'état du serveur Flask (non bloquant)
-  try {
-    const health = await axios.get(`${FLASK_API_URL}/health`, { timeout: 5000 });
-    console.log('Backend health:', health.data);
-  } catch (error) {
-    console.warn('Health check backend non bloquant:', error);
-  }
-
-  progressCallback?.(0.3);
+  progressCallback?.(0.2);
 
   const authHeaders = await getAuthHeaders();
 
@@ -229,7 +218,6 @@ export const generateQuestionsWithAI = async (
     difficulty,
     additionalInfo,
     modelType,
-    apiKey,
   }, {
     headers: authHeaders,
     timeout: timeoutMs,

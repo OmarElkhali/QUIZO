@@ -1,5 +1,16 @@
 # Livraison progressive — quiz manuel et live
 
+## Lot du 17 septembre 2026 — API et expérience QCM
+
+- Le QCM asynchrone utilise désormais les mêmes cartes interactives que le live : repères A–F, formes/couleurs, clavier, focus visible, animation réduite selon la préférence système et minuteur urgent.
+- Les réponses sont enregistrées dans une file séquentielle afin qu'un changement rapide ne réécrive pas une réponse plus récente. L'écran indique synchronisation, succès ou perte réseau.
+- Ajout des questions « à revoir », de la progression réellement répondue et d'une confirmation avant envoi incomplet.
+- La page de résultats recharge maintenant une tentative ou une soumission existante après actualisation, partage un texte fiable et utilise l'impression native pour l'export PDF.
+- L'écran de création affiche l'état réel de Gemini, OpenRouter et Groq. Le backend essaie les fournisseurs gratuits disponibles dans un ordre déterministe et expose le fournisseur réellement utilisé sans exposer de clé.
+- Suppression du contrôle `/health` avant chaque génération et de l'attente Supabase sur le chemin critique. L'archivage Supabase devient optionnel via `VITE_ENABLE_SUPABASE_ARCHIVE=true` ; les projets QUIZO/ESTS-QUIZ étant en pause lors de l'audit, la valeur doit rester désactivée.
+- Migration de l'ancien SDK Gemini non maintenu vers le SDK officiel `google-genai` épinglé.
+- Le backend peut vérifier les jetons Firebase avec `FIREBASE_PROJECT_ID`, sans compte de service privé. Les CORS sont limités au frontend configuré et les payloads de génération sont bornés.
+
 ## Périmètre de cette livraison
 
 Cette livraison ne termine pas le plan de refonte. Elle corrige des parcours existants et introduit un moteur live V2 désactivé par défaut.

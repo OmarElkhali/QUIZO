@@ -1,53 +1,88 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { Check, Circle, Timer, Weight } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-export interface StageQuestion { id: string; text: string; points: number; timeLimit?: number; options: { id: string; text: string }[] }
+export interface StageQuestion {
+  id: string;
+  text: string;
+  points: number;
+  timeLimit?: number;
+  options: { id: string; text: string }[];
+}
+
 interface Props {
-  question: StageQuestion; index: number; total: number; remaining: number;
-  selected?: string; correctOptionId?: string; disabled?: boolean;
+  question: StageQuestion;
+  index: number;
+  total: number;
+  remaining?: number | null;
+  timerTotal?: number;
+  selected?: string;
+  correctOptionId?: string;
+  disabled?: boolean;
+  compact?: boolean;
   onAnswer?: (optionId: string) => void;
 }
+
 const identities = [
-  { symbol: '▲', className: 'border-red-400/50 bg-red-500/10' },
-  { symbol: '◆', className: 'border-blue-400/50 bg-blue-500/10' },
-  { symbol: '●', className: 'border-yellow-400/50 bg-yellow-500/10' },
-  { symbol: '■', className: 'border-green-400/50 bg-green-500/10' },
-  { symbol: '★', className: 'border-purple-400/50 bg-purple-500/10' },
-  { symbol: '⬟', className: 'border-cyan-400/50 bg-cyan-500/10' },
+  { symbol: '▲', color: 'border-rose-400/40 bg-rose-500/10 hover:bg-rose-500/15' },
+  { symbol: '◆', color: 'border-sky-400/40 bg-sky-500/10 hover:bg-sky-500/15' },
+  { symbol: '●', color: 'border-amber-400/40 bg-amber-500/10 hover:bg-amber-500/15' },
+  { symbol: '■', color: 'border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/15' },
+  { symbol: '★', color: 'border-violet-400/40 bg-violet-500/10 hover:bg-violet-500/15' },
+  { symbol: '⬟', color: 'border-cyan-400/40 bg-cyan-500/10 hover:bg-cyan-500/15' },
 ];
-export function QuestionStage({ question, index, total, remaining, selected, correctOptionId, disabled, onAnswer }: Props) {
-  const reduced = useReducedMotion();
+
+export function QuestionStage({ question, index, total, remaining, timerTotal, selected, correctOptionId, disabled, compact = false, onAnswer }: Props) {
+  const reducedMotion = useReducedMotion();
+  const answerHandler = useRef(onAnswer);
+  useEffect(() => { answerHandler.current = onAnswer; }, [onAnswer]);
+  const timerProgress = remaining !== null && remaining !== undefined && timerTotal
+    ? Math.max(0, Math.min(100, (remaining / timerTotal) * 100))
+    : null;
+  const urgent = remaining !== null && remaining !== undefined && remaining <= Math.min(10, Math.ceil((timerTotal || 20) * 0.2));
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (disabled || !onAnswer || event.repeat || event.ctrlKey || event.metaKey || event.altKey || target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
-      const index = event.key.toUpperCase().charCodeAt(0) - 65;
-      if (event.key.length === 1 && index >= 0 && index < question.options.length) {
-        event.preventDefault(); onAnswer(question.options[index].id);
+      if (disabled || !answerHandler.current || event.repeat || event.ctrlKey || event.metaKey || event.altKey || target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+      const optionIndex = event.key.toUpperCase().charCodeAt(0) - 65;
+      if (event.key.length === 1 && optionIndex >= 0 && optionIndex < question.options.length) {
+        event.preventDefault();
+        answerHandler.current(question.options[optionIndex].id);
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [question.options, disabled, onAnswer]);
-  return <motion.section key={question.id} initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.24 }} className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--quizo-muted)]">
-      <span>Question {index + 1} / {total} · Poids {question.points}</span>
-      <span className="rounded-full border border-[var(--quizo-border)] px-4 py-2 font-mono text-lg" aria-label={`${remaining} secondes restantes`}>{remaining} s</span>
-    </div>
-    <h2 className="break-words text-2xl font-bold leading-relaxed text-[var(--quizo-heading)] sm:text-3xl">{question.text}</h2>
-    <div role="group" aria-label="Réponses" className="grid gap-3 sm:grid-cols-2">
-      {question.options.map((option, i) => {
-        const identity = identities[i % identities.length];
-        const correct = option.id === correctOptionId;
-        const chosen = option.id === selected;
-        return <button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
-          className={`flex min-h-20 items-center gap-3 rounded-2xl border-2 p-4 text-start text-[var(--quizo-heading)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default ${identity.className} ${chosen ? 'ring-2 ring-orange-400' : ''} ${correct ? 'ring-2 ring-emerald-400' : ''}`}>
-          <span className="flex shrink-0 flex-col items-center font-bold"><span aria-hidden="true">{identity.symbol}</span>{String.fromCharCode(65 + i)}</span>
-          <span className="min-w-0 flex-1 break-words">{option.text}</span>
-          {correct && <span aria-label="Bonne réponse">✓</span>}
-          {chosen && !correctOptionId && <span aria-label="Votre choix">●</span>}
-        </button>;
-      })}
-    </div>
-  </motion.section>;
+  }, [question.options, disabled]);
+
+  return (
+    <motion.section key={question.id} initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }} className="space-y-6" aria-labelledby={`question-${question.id}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--quizo-muted)]">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] px-3 py-1.5 font-semibold">Question {index + 1} / {total}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--quizo-border)] px-3 py-1.5"><Weight className="h-3.5 w-3.5" />{question.points} {question.points > 1 ? 'points' : 'point'}</span>
+        </div>
+        {remaining !== null && remaining !== undefined && <span className={cn('inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-lg font-bold transition-colors', urgent ? 'border-red-400/50 bg-red-500/15 text-red-200' : 'border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] text-[var(--quizo-heading)]')} aria-live={urgent ? 'polite' : 'off'} aria-label={`${remaining} secondes restantes`}><Timer className={cn('h-4 w-4', urgent && !reducedMotion && 'animate-pulse')} />{remaining} s</span>}
+      </div>
+      {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><div className={cn('h-full rounded-full transition-[width,background-color] duration-300', urgent ? 'bg-red-400' : 'bg-orange-400')} style={{ width: `${timerProgress}%` }} /></div>}
+      <h2 id={`question-${question.id}`} className={cn('break-words font-black leading-tight tracking-tight text-[var(--quizo-heading)]', compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-5xl')}>{question.text}</h2>
+      <div role="group" aria-label="Réponses possibles" className="grid gap-3 sm:grid-cols-2">
+        {question.options.map((option, optionIndex) => {
+          const identity = identities[optionIndex % identities.length];
+          const correct = option.id === correctOptionId;
+          const chosen = option.id === selected;
+          const incorrectChoice = Boolean(chosen && correctOptionId && !correct);
+          return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
+            whileHover={reducedMotion || disabled ? undefined : { y: -2 }} whileTap={reducedMotion || disabled ? undefined : { scale: 0.985 }}
+            className={cn('group flex min-h-24 items-center gap-4 rounded-2xl border-2 p-4 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:p-5', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/15 font-black" aria-hidden="true"><span className="mr-1 text-xs opacity-70">{String.fromCharCode(65 + optionIndex)}</span>{identity.symbol}</span>
+            <span className="min-w-0 flex-1 break-words text-base font-semibold leading-relaxed sm:text-lg">{option.text}</span>
+            {correct ? <Check className="h-6 w-6 shrink-0 text-emerald-300" aria-label="Bonne réponse" /> : chosen ? <Circle className="h-5 w-5 shrink-0 fill-current text-orange-300" aria-label="Votre choix" /> : null}
+          </motion.button>;
+        })}
+      </div>
+      {!disabled && onAnswer && <p className="text-center text-xs text-[var(--quizo-muted)]">Astuce : utilisez les touches A à {String.fromCharCode(64 + question.options.length)} pour répondre.</p>}
+    </motion.section>
+  );
 }

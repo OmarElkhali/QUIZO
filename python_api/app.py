@@ -8,6 +8,7 @@ from functools import wraps
 from pypdf import PdfReader
 import docx
 import io
+import uuid
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 try:
@@ -19,7 +20,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
-import google.generativeai as genai
+from google import genai
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 
@@ -48,6 +49,7 @@ def reject_disabled_legacy_live():
 # --- Firebase Admin SDK Initialization ---
 _firebase_app = None
 service_account_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+firebase_project_id = os.getenv("FIREBASE_PROJECT_ID")
 if service_account_path and os.path.isfile(service_account_path):
     try:
         cred = credentials.Certificate(service_account_path)
@@ -55,6 +57,14 @@ if service_account_path and os.path.isfile(service_account_path):
         logging.getLogger(__name__).info("Firebase Admin SDK initialise avec succes")
     except Exception as e:
         logging.getLogger(__name__).warning(f"Firebase Admin SDK init echoue: {e}")
+elif firebase_project_id:
+    try:
+        # Firebase ID tokens are verified with Google's public certificates.
+        # A project id is sufficient; no long-lived private key is required.
+        _firebase_app = firebase_admin.initialize_app(options={"projectId": firebase_project_id})
+        logging.getLogger(__name__).info("Firebase token verification initialized without a private key")
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Firebase token verification init failed: {e}")
 else:
     logging.getLogger(__name__).warning(
         "GOOGLE_APPLICATION_CREDENTIALS non defini ou fichier introuvable. "
@@ -72,7 +82,7 @@ limiter = Limiter(
 # --- CORS ---
 configured_origins = os.getenv(
     "CORS_ORIGINS",
-    "*",
+    "https://quizo-tau.vercel.app",
 ).split(",")
 local_dev_origins = [
     "http://localhost:5173",
@@ -84,7 +94,7 @@ local_dev_origins = [
     "https://quizo.vercel.app",
 ]
 raw_origins = [origin.strip() for origin in [*configured_origins, *local_dev_origins] if origin.strip()]
-ALLOWED_ORIGINS = "*" if "*" in raw_origins or os.getenv("FLASK_ENV") != "development" else list(dict.fromkeys(raw_origins))
+ALLOWED_ORIGINS = "*" if "*" in raw_origins else list(dict.fromkeys(raw_origins))
 
 CORS(app, resources={
     r"/*": {
@@ -175,8 +185,9 @@ def sanitize_error_message(message):
 
 
 # Configuration de l'API Gemini
+gemini_client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
     logger.info("API Gemini configurée avec succès")
 else:
     logger.warning("GEMINI_API_KEY n'est pas configurée - la génération avec Gemini sera désactivée")
@@ -408,31 +419,28 @@ def manual_assistant():
                 "details": "Le contenu doit contenir au moins 80 caracteres.",
             }), 400
 
-        if not OPENROUTER_API_KEY:
-            fallback = generate_fallback_questions(num_questions, difficulty, course_text)
-            return jsonify({
-                "summary": "OpenRouter n'est pas configure. Propositions locales de secours generees.",
-                "issues": ["Configurez OPENROUTER_API_KEY pour activer l'assistant complet."],
-                "suggestions": [
-                    normalize_manual_assistant_question(question, index, difficulty)
-                    for index, question in enumerate(fallback)
-                ],
-                "provider": "local-fallback",
-                "model": "local-fallback",
-                "fallback": True,
-            }), 200
-
         prompt = build_manual_assistant_prompt({
             **data,
             "courseText": course_text,
             "difficulty": difficulty,
             "numQuestions": num_questions,
         })
-        content = generate_with_openrouter(prompt)
+        content = None
+        used_provider = "openrouter"
+        provider_errors = []
+        for provider in get_provider_attempt_order("openrouter"):
+            try:
+                content = generate_with_provider(provider, prompt)
+                used_provider = provider
+                break
+            except ValueError as provider_error:
+                provider_errors.append(f"{provider}: {sanitize_error_message(str(provider_error))}")
+        if not content:
+            raise ValueError("Aucun fournisseur IA disponible: " + " | ".join(provider_errors))
 
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
         if not json_match:
-            raise ValueError("Aucun JSON trouve dans la reponse OpenRouter")
+            raise ValueError("Aucun JSON trouve dans la reponse du fournisseur IA")
 
         payload = json.loads(json_match.group())
         raw_suggestions = payload.get("suggestions", [])
@@ -447,19 +455,19 @@ def manual_assistant():
         ]
 
         if not suggestions:
-            raise ValueError("OpenRouter n'a pas retourne de proposition QCM valide")
+            raise ValueError("Le fournisseur IA n'a pas retourne de proposition QCM valide")
 
         issues = payload.get("issues", [])
         if not isinstance(issues, list):
             issues = []
 
         return jsonify({
-            "summary": str(payload.get("summary") or "Propositions generees avec OpenRouter."),
+            "summary": str(payload.get("summary") or "Propositions generees par l'assistant."),
             "issues": [str(issue) for issue in issues[:6]],
             "suggestions": suggestions,
-            "provider": "openrouter",
-            "model": OPENROUTER_MODEL,
-            "fallback": False,
+            "provider": used_provider,
+            "model": get_provider_model(used_provider),
+            "fallback": used_provider != "openrouter",
         })
     except ValueError as e:
         safe_error = sanitize_error_message(str(e))
@@ -518,9 +526,17 @@ def generate_quiz():
             logger.info(f"Texte reçu directement: {len(text)} caractères")
 
         # Validation des paramètres
-        if not text or not text.strip():
+        if not text or not str(text).strip():
             logger.warning("Aucun contenu textuel fourni pour la génération")
             return jsonify({'error': 'Aucun contenu fourni'}), 400
+
+        text = str(text).strip()
+        if len(text) > 50_000:
+            return jsonify({'error': 'Le texte extrait dépasse la limite de 50 000 caractères.'}), 413
+
+        additional_info = str(data.get('additionalInfo') or '').strip()
+        if len(additional_info) > 1_500:
+            return jsonify({'error': 'Les consignes supplémentaires dépassent 1 500 caractères.'}), 400
 
         try:
             num_questions = int(data.get('numQuestions', 5))
@@ -535,20 +551,16 @@ def generate_quiz():
         if difficulty not in ['easy', 'medium', 'hard']:
             difficulty = 'medium'
 
-        model_type = (data.get('modelType') or 'gemini').strip().lower()
+        model_type = str(data.get('modelType') or 'gemini').strip().lower()
         if model_type not in SUPPORTED_MODELS:
             return jsonify({
                 'error': f"Modele IA non supporte: {model_type}",
                 'supportedModels': sorted(SUPPORTED_MODELS),
             }), 400
 
-        api_key = data.get('apiKey', '')
+        request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
         
         logger.info(f"Paramètres de génération: {num_questions} questions, difficulté {difficulty}, modèle {model_type}")
-
-        # Vérifier que la clé API nécessaire est disponible
-        if model_type == 'gemini' and not GEMINI_API_KEY:
-            return jsonify({'error': 'Clé API Gemini non configurée dans python_api/.env'}), 503
 
         # Construction du prompt
         logger.debug(f"Construction du prompt avec {len(text[:5000])} caractères de texte")
@@ -580,7 +592,7 @@ def generate_quiz():
         - Les options doivent être plausibles
         - Les explications doivent citer le texte
         - Ne pas inclure de markdown
-        {f"- Contraintes supplementaires: {data.get('additionalInfo')}" if data.get('additionalInfo') else ""}
+        {f"- Contraintes supplementaires: {additional_info}" if additional_info else ""}
         """
         logger.debug("Prompt construit avec succès")
 
@@ -590,7 +602,7 @@ def generate_quiz():
         for provider in get_provider_attempt_order(model_type):
             try:
                 logger.info(f"Tentative de generation avec {provider}")
-                content = generate_with_provider(provider, prompt, api_key)
+                content = generate_with_provider(provider, prompt)
                 used_provider = provider
                 break
             except ValueError as e:
@@ -681,18 +693,25 @@ def generate_quiz():
 
         # Compléter si insuffisant
         warning = None
+        local_fallback_count = 0
         if len(valid_questions) < num_questions:
             warning = f"Seulement {len(valid_questions)} questions valides ont été générées sur {num_questions} demandées."
             logger.warning(warning)
             # Génération locale fallback
-            fallback = generate_fallback_questions(num_questions - len(valid_questions), difficulty, text)
+            local_fallback_count = num_questions - len(valid_questions)
+            fallback = generate_fallback_questions(local_fallback_count, difficulty, text)
             valid_questions.extend(fallback)
 
         return jsonify({
             'questions': valid_questions[:num_questions],
             'warning': warning,
+            'requestId': request_id,
+            'requestedProvider': model_type,
             'provider': used_provider,
-            'fallback_used': len(valid_questions) > num_questions
+            'providerFallbackUsed': used_provider != model_type,
+            'localFallbackCount': local_fallback_count,
+            'fallback_used': used_provider != model_type or local_fallback_count > 0,
+            'generatedCount': min(len(valid_questions), num_questions),
         })
 
     except ValueError as e:
@@ -714,8 +733,9 @@ def generate_quiz():
 def generate_with_gemini(prompt):
     try:
         logger.info("Utilisation de l'API Gemini avec le SDK officiel")
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(prompt)
+        if not gemini_client:
+            raise ValueError("Cle API Gemini non configuree")
+        response = gemini_client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
         content = response.text
         logger.info(f"Contenu extrait de Gemini: {len(content)} caracteres")
         return content
@@ -897,8 +917,8 @@ def generate_fallback_questions(num, difficulty, source_text=""):
 def get_provider_configured_state():
     return {
         "gemini": bool(GEMINI_API_KEY),
-        "openrouter": True,
-        "groq": True,
+        "openrouter": bool(OPENROUTER_API_KEY or os.getenv("BACKUP_OPENROUTER_KEYS", "").strip()),
+        "groq": bool(GROQ_API_KEY or os.getenv("BACKUP_GROQ_KEYS", "").strip()),
     }
 
 
@@ -948,7 +968,7 @@ def health_check():
 
     return jsonify({
         "status": "ok",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "services": services,
         "models": {
             provider: get_provider_model(provider)
@@ -967,7 +987,7 @@ def status_check():
     providers_list = [p for p, configured in services.items() if configured]
     return jsonify({
         "status": "ok",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "providers_configured": sorted(providers_list),
         "providers_count": len(providers_list),
         "firebase_admin_configured": _firebase_app is not None,
@@ -987,9 +1007,11 @@ def providers_check():
             provider: {
                 "configured": services.get(provider, False),
                 "model": get_provider_model(provider),
+                "label": {"gemini": "Gemini", "openrouter": "OpenRouter", "groq": "Groq"}.get(provider, provider),
             }
             for provider in sorted(SUPPORTED_MODELS)
-        }
+        },
+        "fallbackOrder": get_provider_attempt_order("gemini"),
     })
 
 

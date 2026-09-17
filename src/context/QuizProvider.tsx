@@ -4,8 +4,7 @@ import { AIModelType, Quiz } from '@/types/quiz';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import * as quizService from '@/services/quizService';
-import { getFirebaseBackupQuestions, processFileAndGenerateQuestions } from '@/services/aiService';
-import { useNavigate } from 'react-router-dom';
+import { processFileAndGenerateQuestions } from '@/services/aiService';
 
 type ProgressCallback = (stage: string, percent: number, message?: string) => void;
 
@@ -15,7 +14,6 @@ const getErrorMessage = (error: unknown): string => (
 
 export const QuizProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [sharedQuizzes, setSharedQuizzes] = useState<Quiz[]>([]);
   const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null);
@@ -101,13 +99,13 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
       let questions = [];
       
       try {
-        // Télécharger le fichier pour référence future
-        try {
+        // L'archivage Supabase est optionnel et désactivé tant que le projet est en pause.
+        // La génération traite le fichier local directement et n'attend plus un service inactif.
+        if (import.meta.env.VITE_ENABLE_SUPABASE_ARCHIVE === 'true') {
           await quizService.uploadFile(file, user.id);
-          progressCallback?.('Fichier telecharge', 25, `Fichier archive sur Supabase: ${file.name}`);
-        } catch (uploadError) {
-          console.warn('Archivage Supabase ignore, generation directe depuis le fichier local:', uploadError);
-          progressCallback?.('Extraction directe', 25, 'Supabase Storage indisponible, traitement direct du fichier local...');
+          progressCallback?.('Fichier archivé', 25, `Fichier archivé: ${file.name}`);
+        } else {
+          progressCallback?.('Extraction directe', 25, 'Traitement sécurisé du fichier sans archivage externe...');
         }
         
         // Utiliser notre nouvelle fonction qui extrait le texte et génère les questions
@@ -165,40 +163,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         progressCallback?.('Quiz sauvegardé', 100, 'Quiz créé avec succès');
         toast.success('Quiz créé avec succès');
         
-        // Redirection directe vers la page du quiz sans passer par la prévisualisation
-        setTimeout(() => {
-          navigate(`/quiz-preview/${quizId}`);
-        }, 500);
-        
         return quizId;
       } catch (genError) {
-        console.error("Erreur lors de la génération du quiz standard:", genError);
-        
-        // Créer un quiz de secours avec des questions Firebase
-        progressCallback?.('Création du quiz de secours', 80, 'Création d\'un quiz de secours...');
-        
-        const backupQuestions = await getFirebaseBackupQuestions();
-        const title = file ? file.name.split('.')[0] : 'Quiz de secours';
-        const description = 'Quiz de secours généré automatiquement';
-        
-        quizId = await quizService.createQuiz(
-          user.id,
-          title,
-          description,
-          backupQuestions,
-          difficulty,
-          timeLimit
-        );
-        
-        progressCallback?.('Quiz de secours créé', 100, 'Quiz de secours créé avec succès');
-        toast.success('Quiz de secours créé avec succès');
-        
-        // Redirection directe vers la page du quiz
-        setTimeout(() => {
-          navigate(`/quiz-preview/${quizId}`);
-        }, 500);
-        
-        return quizId;
+        console.error("Erreur lors de la sauvegarde du quiz:", genError);
+        throw genError;
       }
     } catch (error) {
       console.error('QuizProvider: Error creating quiz:', error);
@@ -207,7 +175,7 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, user]);
+  }, [user]);
   
   const getQuiz = useCallback(async (id: string) => {
     console.log(`QuizProvider: Récupération du quiz avec ID: ${id}`);
@@ -241,27 +209,10 @@ export const QuizProvider = ({ children }: { children: ReactNode }) => {
         
         setCurrentQuiz(quiz);
         return quiz;
-      } else {
-        // Si le quiz est null/undefined, créer un quiz de secours
-        console.log('QuizProvider: Quiz non trouvé, création d\'un quiz de secours');
-        
-        const backupQuestions = await getFirebaseBackupQuestions();
-        const backupQuiz = {
-          id,
-          title: "Quiz",
-          description: "Quiz généré automatiquement",
-          questions: backupQuestions,
-          createdAt: new Date().toISOString().split('T')[0],
-          completionRate: 0,
-          duration: "30 min",
-          participants: 0,
-          difficulty: "medium" as const,
-          timeLimit: 30
-        };
-        
-        setCurrentQuiz(backupQuiz);
-        return backupQuiz;
       }
+
+      setCurrentQuiz(null);
+      return null;
     } catch (error) {
       console.error('QuizProvider: Error getting quiz:', error);
       toast.error(`Impossible de récupérer le quiz: ${getErrorMessage(error)}`);

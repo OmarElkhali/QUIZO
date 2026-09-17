@@ -16,7 +16,6 @@ import {
 } from 'firebase/firestore';
 import { AIModelType, Quiz, Question } from '@/types/quiz';
 import { BACKEND_API_URL } from '@/lib/backendUrl';
-import { uploadFileToSupabase } from './storageService';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 
 const BACKEND_URL = BACKEND_API_URL;
@@ -34,6 +33,7 @@ const getErrorCode = (error: unknown): string | undefined => (
 export const uploadFile = async (file: File, userId: string): Promise<string> => {
   try {
     console.log('Téléchargement du fichier:', file.name);
+    const { uploadFileToSupabase } = await import('./storageService');
     const fileUrl = await uploadFileToSupabase(file, userId);
     console.log('Fichier téléchargé avec succès:', fileUrl);
     return fileUrl;
@@ -444,6 +444,17 @@ export const submitQuizAnswers = async (
     quizId,
     submissionId: submissionRef.id,
     score: percentageScore,
+  };
+};
+
+export const getQuizSubmission = async (submissionId: string): Promise<{ score: number; answers: Record<string, string>; timeSpent?: number } | null> => {
+  const snapshot = await getDoc(doc(db, 'submissions', submissionId));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data();
+  return {
+    score: Number(data.score) || 0,
+    answers: data.answers && typeof data.answers === 'object' ? data.answers as Record<string, string> : {},
+    timeSpent: typeof data.timeSpent === 'number' ? data.timeSpent : undefined,
   };
 };
 
