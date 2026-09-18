@@ -54,6 +54,7 @@ import {
 import { ManualQuestion, ManualQuiz } from '@/types/quiz';
 import { validateQuizQuestions } from '@/domain/quizRules';
 import { liveCapabilities, liveRequest } from '@/services/liveClient';
+import { type LiveCompetitionConfig } from '@/domain/liveCompetition';
 
 type OptionDraft = ManualQuestion['options'][number];
 
@@ -102,12 +103,12 @@ const ManualQuizBuilder = () => {
 
   const [timeLimit, setTimeLimit] = useState<number | undefined>(undefined);
   const [isPublic, setIsPublic] = useState(false);
-  const [quizMode, setQuizMode] = useState<'realtime' | 'async'>('async');
+  const [quizMode, setQuizMode] = useState<'async' | 'realtime' | 'realtime_timed' | 'realtime_battle'>('async');
   const [quizStatus, setQuizStatus] = useState<'draft' | 'active' | 'completed'>('draft');
 
   const [competitionTitle, setCompetitionTitle] = useState('');
   const [competitionDescription, setCompetitionDescription] = useState('');
-  const [competitionMode, setCompetitionMode] = useState<'classic' | 'teacher_led'>('classic');
+  const [competitionMode, setCompetitionMode] = useState<'async' | 'realtime' | 'realtime_timed' | 'realtime_battle'>('realtime');
   const [startDate, setStartDate] = useState(() => toLocalDateTimeValue(new Date()));
   const [endDate, setEndDate] = useState(() => toLocalDateTimeValue(new Date(Date.now() + 60 * 60 * 1000)));
   const [isCreatingCompetition, setIsCreatingCompetition] = useState(false);
@@ -347,7 +348,8 @@ const ManualQuizBuilder = () => {
 
   const handleCreateCompetition = async () => {
     if (!id || !quiz) return;
-    const validationErrors = validateQuizQuestions(quiz.questions, competitionMode === 'teacher_led' ? 'teacher_led' : 'async');
+    const liveMode = competitionMode !== 'async';
+    const validationErrors = validateQuizQuestions(quiz.questions, liveMode ? 'teacher_led' : 'async');
     if (validationErrors.length) {
       toast.error(validationErrors[0]);
       return;
@@ -367,24 +369,24 @@ const ManualQuizBuilder = () => {
 
     setIsCreatingCompetition(true);
     try {
-      if (competitionMode === 'teacher_led') {
+      if (liveMode) {
         const capabilities = await liveCapabilities();
-        if (capabilities.ready) {
-          liveCreationId.current ||= crypto.randomUUID();
-          const session = await liveRequest<{ sessionId: string }>({ operation: 'create', quizId: id, commandId: liveCreationId.current });
-          navigate(`/session/${session.sessionId}`);
-          return;
-        }
+        if (!capabilities.ready) throw new Error('Le moteur live sécurisé n’est pas encore activé. Configurez FIREBASE_SERVICE_ACCOUNT_JSON et ENABLE_LIVE_V2 sur Vercel.');
+        const config: LiveCompetitionConfig = competitionMode === 'realtime_battle'
+          ? { mode: 'battle', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: ['double', 'shield', 'freeze'], duels: true }
+          : competitionMode === 'realtime_timed'
+            ? { mode: 'battle_pure', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: [], duels: false }
+            : { mode: 'classic', timePerQuestion: 60, speedBonus: false, streakBonus: false, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'standard', powers: [], duels: false };
+        liveCreationId.current ||= crypto.randomUUID();
+        const session = await liveRequest<{ sessionId: string }>({ operation: 'create', quizId: id, commandId: liveCreationId.current, config });
+        setShowCompetitionDialog(false);
+        navigate(`/session/${session.sessionId}`);
+        return;
       }
-      const modeParam = competitionMode === 'teacher_led' ? 'teacher_led' : 'classic';
-      const competitionId = await createCompetition(id, user.id, competitionTitle, competitionDescription, start, end, modeParam);
-      toast.success(`Compétition créée en mode ${competitionMode === 'classic' ? 'classique' : 'teacher-led'}`);
+      const competitionId = await createCompetition(id, user.id, competitionTitle, competitionDescription, start, end, 'classic');
+      toast.success('Compétition asynchrone créée');
       setShowCompetitionDialog(false);
-      if (modeParam === 'teacher_led') {
-        navigate(`/live-session/${competitionId}`);
-      } else {
-        navigate(`/creator-dashboard/${competitionId}`);
-      }
+      navigate(`/creator-dashboard/${competitionId}`);
     } catch (error) {
       console.error('Erreur lors de la création de la compétition:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de la compétition');
@@ -932,13 +934,15 @@ const ManualQuizBuilder = () => {
               </div>
               <div className="space-y-2">
                 <Label>Mode</Label>
-                <Select value={quizMode} onValueChange={(value: 'realtime' | 'async') => setQuizMode(value)}>
+                <Select value={quizMode} onValueChange={(value: 'async' | 'realtime' | 'realtime_timed' | 'realtime_battle') => setQuizMode(value)}>
                   <SelectTrigger className="quizo-input">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="async">Asynchrone</SelectItem>
-                    <SelectItem value="realtime">Temps réel</SelectItem>
+                    <SelectItem value="realtime">Temps réel normal</SelectItem>
+                    <SelectItem value="realtime_timed">Temps réel avec chrono</SelectItem>
+                    <SelectItem value="realtime_battle">Temps réel chrono + pouvoirs</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -993,8 +997,10 @@ const ManualQuizBuilder = () => {
             </div>
             <div className="space-y-3">
               {[
-                { id: 'classic', title: 'Classic student-paced', text: 'Chaque participant avance à son rythme.' },
-                { id: 'teacher_led', title: 'Teacher-led', text: 'Structure prête pour pilotage enseignant.' },
+                { id: 'async', title: 'Asynchrone', text: 'Chaque participant avance à son rythme, sans animation live.' },
+                { id: 'realtime', title: 'Temps réel normal', text: 'Lobby, questions synchronisées et classement, sans bonus de vitesse.' },
+                { id: 'realtime_timed', title: 'Temps réel avec chrono', text: 'Chrono, bonus vitesse, streak et classement après chaque manche.' },
+                { id: 'realtime_battle', title: 'Temps réel chrono + pouvoirs', text: 'Mode Battle : chrono, duels, Double score, Bouclier et Gel express.' },
               ].map((mode) => (
                 <button
                   key={mode.id}
@@ -1012,8 +1018,8 @@ const ManualQuizBuilder = () => {
               ))}
               <div className="rounded-xl border border-orange-400/20 bg-orange-500/10 p-4">
                 <FileText className="mb-2 h-5 w-5 text-[#d97706]" />
-                <p className="text-sm font-semibold text-[var(--quizo-heading)]">Code généré automatiquement</p>
-                <p className="mt-1 text-xs text-[var(--quizo-muted)]">Après création, le dashboard live s’ouvrira directement.</p>
+                <p className="text-sm font-semibold text-[var(--quizo-heading)]">Lobby et code générés automatiquement</p>
+                <p className="mt-1 text-xs text-[var(--quizo-muted)]">Les trois modes temps réel ouvrent la nouvelle console live sécurisée.</p>
               </div>
             </div>
           </div>

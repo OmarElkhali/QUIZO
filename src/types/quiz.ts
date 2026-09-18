@@ -95,7 +95,7 @@ export interface ManualQuiz {
   timeLimit?: number;
   shareCode?: string;
   visibility?: 'private' | 'by_code';
-  mode?: 'realtime' | 'async';
+  mode?: 'async' | 'realtime' | 'realtime_timed' | 'realtime_battle';
   status?: 'draft' | 'active' | 'completed';
   invitedEmails?: string[];
   collaboratorUids?: string[];

@@ -138,7 +138,9 @@ export const mapManualQuiz = (id: string, data: Record<string, unknown>): Manual
   timeLimit: typeof data.timeLimit === 'number' ? data.timeLimit : undefined,
   shareCode: typeof data.shareCode === 'string' ? data.shareCode : undefined,
   visibility: data.visibility === 'by_code' ? 'by_code' : 'private',
-  mode: data.mode === 'realtime' ? 'realtime' : 'async',
+  mode: ['realtime', 'realtime_timed', 'realtime_battle'].includes(String(data.mode))
+    ? data.mode as ManualQuiz['mode']
+    : 'async',
   status: data.status === 'draft' || data.status === 'completed' ? data.status : 'active',
   invitedEmails: Array.isArray(data.invitedEmails) ? (data.invitedEmails as string[]) : [],
   collaboratorUids: Array.isArray(data.collaboratorUids) ? (data.collaboratorUids as string[]) : [],
