@@ -81,6 +81,15 @@ const assistantActions: Array<{ value: ManualAssistantAction; label: string; des
   { value: 'generate_similar', label: 'Questions similaires', description: 'Décline le même concept autrement.' },
 ];
 
+type CompetitionMode = 'async' | 'realtime' | 'realtime_timed' | 'realtime_battle';
+
+const competitionModes: Array<{ id: CompetitionMode; title: string; text: string }> = [
+  { id: 'async', title: 'Asynchrone', text: 'Chaque participant avance à son rythme, sans animation live.' },
+  { id: 'realtime', title: 'Temps réel normal', text: 'Lobby et questions synchronisées, sans chrono ni bonus de vitesse.' },
+  { id: 'realtime_timed', title: 'Temps réel avec chrono', text: 'Chrono, bonus vitesse, série et classement après chaque manche.' },
+  { id: 'realtime_battle', title: 'Temps réel chrono + pouvoirs', text: 'Mode Battle : chrono, duels, Double score, Bouclier et Gel express.' },
+];
+
 const ManualQuizBuilder = () => {
   const { id } = useParams<{ id: string }>();
   const { user, isLoading: authLoading } = useAuth();
@@ -103,12 +112,11 @@ const ManualQuizBuilder = () => {
 
   const [timeLimit, setTimeLimit] = useState<number | undefined>(undefined);
   const [isPublic, setIsPublic] = useState(false);
-  const [quizMode, setQuizMode] = useState<'async' | 'realtime' | 'realtime_timed' | 'realtime_battle'>('async');
   const [quizStatus, setQuizStatus] = useState<'draft' | 'active' | 'completed'>('draft');
 
   const [competitionTitle, setCompetitionTitle] = useState('');
   const [competitionDescription, setCompetitionDescription] = useState('');
-  const [competitionMode, setCompetitionMode] = useState<'async' | 'realtime' | 'realtime_timed' | 'realtime_battle'>('realtime');
+  const [competitionMode, setCompetitionMode] = useState<CompetitionMode>('realtime');
   const [startDate, setStartDate] = useState(() => toLocalDateTimeValue(new Date()));
   const [endDate, setEndDate] = useState(() => toLocalDateTimeValue(new Date(Date.now() + 60 * 60 * 1000)));
   const [isCreatingCompetition, setIsCreatingCompetition] = useState(false);
@@ -152,7 +160,7 @@ const ManualQuizBuilder = () => {
         setQuiz(quizData);
         setTimeLimit(quizData.timeLimit);
         setIsPublic(quizData.isPublic || false);
-        setQuizMode(quizData.mode || 'async');
+        setCompetitionMode((quizData.mode as CompetitionMode) || 'async');
         setQuizStatus(quizData.status || 'draft');
         setCompetitionTitle(quizData.title);
         setCompetitionDescription(quizData.description || '');
@@ -334,7 +342,7 @@ const ManualQuizBuilder = () => {
       await updateManualQuiz(id, {
         timeLimit,
         isPublic,
-        mode: quizMode,
+        mode: competitionMode,
         status: quizStatus,
       });
       await refreshQuiz();
@@ -362,13 +370,15 @@ const ManualQuizBuilder = () => {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+    if (competitionMode === 'async' && (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end)) {
       toast.error('Les dates de compétition sont invalides');
       return;
     }
 
     setIsCreatingCompetition(true);
     try {
+      await updateManualQuiz(id, { mode: competitionMode });
+      setQuiz((current) => current ? { ...current, mode: competitionMode } : current);
       if (liveMode) {
         const capabilities = await liveCapabilities();
         if (!capabilities.ready) throw new Error('Le moteur live sécurisé n’est pas encore activé. Configurez FIREBASE_SERVICE_ACCOUNT_JSON et ENABLE_LIVE_V2 sur Vercel.');
@@ -550,7 +560,7 @@ const ManualQuizBuilder = () => {
               </div>
               <div className="rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] p-4">
                 <p className="quizo-label">Mode</p>
-                <p className="mt-2 text-2xl font-black text-[var(--quizo-heading)]">{quizMode === 'realtime' ? 'Live' : 'Libre'}</p>
+                <p className="mt-2 text-2xl font-black text-[var(--quizo-heading)]">{competitionModes.find((mode) => mode.id === competitionMode)?.title || 'Asynchrone'}</p>
               </div>
             </div>
           </PremiumPanel>
@@ -917,35 +927,20 @@ const ManualQuizBuilder = () => {
               </div>
               <Switch id="public-quiz" checked={isPublic} onCheckedChange={setIsPublic} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Limite de temps</Label>
-                <Select value={timeLimit?.toString() || 'none'} onValueChange={(value) => setTimeLimit(value === 'none' ? undefined : Number(value))}>
-                  <SelectTrigger className="quizo-input">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucune limite</SelectItem>
-                    {[5, 10, 15, 20, 30, 45, 60].map((value) => (
-                      <SelectItem key={value} value={value.toString()}>{value} minutes</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Mode</Label>
-                <Select value={quizMode} onValueChange={(value: 'async' | 'realtime' | 'realtime_timed' | 'realtime_battle') => setQuizMode(value)}>
-                  <SelectTrigger className="quizo-input">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="async">Asynchrone</SelectItem>
-                    <SelectItem value="realtime">Temps réel normal</SelectItem>
-                    <SelectItem value="realtime_timed">Temps réel avec chrono</SelectItem>
-                    <SelectItem value="realtime_battle">Temps réel chrono + pouvoirs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Limite de temps du quiz asynchrone</Label>
+              <Select value={timeLimit?.toString() || 'none'} onValueChange={(value) => setTimeLimit(value === 'none' ? undefined : Number(value))}>
+                <SelectTrigger className="quizo-input">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune limite</SelectItem>
+                  {[5, 10, 15, 20, 30, 45, 60].map((value) => (
+                    <SelectItem key={value} value={value.toString()}>{value} minutes</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-[var(--quizo-muted)]">Le mode de compétition et son chrono se choisissent uniquement dans « Créer une compétition ».</p>
             </div>
             <div className="space-y-2">
               <Label>Statut</Label>
@@ -984,7 +979,7 @@ const ManualQuizBuilder = () => {
                 <Label htmlFor="competition-description">Description</Label>
                 <Textarea id="competition-description" value={competitionDescription} onChange={(event) => setCompetitionDescription(event.target.value)} className="quizo-input" />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              {competitionMode === 'async' ? <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Début</Label>
                   <Input id="start-date" type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="quizo-input" />
@@ -993,19 +988,16 @@ const ManualQuizBuilder = () => {
                   <Label htmlFor="end-date">Fin</Label>
                   <Input id="end-date" type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="quizo-input" />
                 </div>
-              </div>
+              </div> : <div className="rounded-xl border border-orange-400/20 bg-orange-500/10 p-4 text-sm text-[var(--quizo-text)]">
+                La session live démarre dans un lobby dès sa création. Vous lancez les questions quand les joueurs sont prêts.
+              </div>}
             </div>
             <div className="space-y-3">
-              {[
-                { id: 'async', title: 'Asynchrone', text: 'Chaque participant avance à son rythme, sans animation live.' },
-                { id: 'realtime', title: 'Temps réel normal', text: 'Lobby, questions synchronisées et classement, sans bonus de vitesse.' },
-                { id: 'realtime_timed', title: 'Temps réel avec chrono', text: 'Chrono, bonus vitesse, streak et classement après chaque manche.' },
-                { id: 'realtime_battle', title: 'Temps réel chrono + pouvoirs', text: 'Mode Battle : chrono, duels, Double score, Bouclier et Gel express.' },
-              ].map((mode) => (
+              {competitionModes.map((mode) => (
                 <button
                   key={mode.id}
                   type="button"
-                  onClick={() => setCompetitionMode(mode.id as typeof competitionMode)}
+                  onClick={() => setCompetitionMode(mode.id)}
                   className={`w-full rounded-xl border p-4 text-left transition ${
                     competitionMode === mode.id
                       ? 'border-orange-400/45 bg-orange-500/12 text-[var(--quizo-heading)]'

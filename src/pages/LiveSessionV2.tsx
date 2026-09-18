@@ -135,7 +135,12 @@ export default function LiveSessionV2({ display = false }: { display?: boolean }
   }
   const remaining = view ? Math.max(0, Math.ceil((view.deadlineAt - now) / 1000)) : 0;
   const countdown = view?.openedAt ? Math.max(0, Math.ceil((view.openedAt - now) / 1000)) : 0;
-  const selected = pending?.questionId === view?.question?.id ? pending.selectedOptionId : player?.receipt?.questionId === view?.question?.id ? player.receipt.selectedOptionId : undefined;
+  const playerReceipt = player?.receipt;
+  const selected = pending?.questionId === view?.question?.id
+    ? pending.selectedOptionId
+    : playerReceipt?.questionId && playerReceipt.questionId === view?.question?.id
+      ? playerReceipt.selectedOptionId
+      : undefined;
   const reducedMotion = useReducedMotion();
   const playerFrozen = Boolean(player?.frozenUntil && player.frozenUntil > now);
   const gameScore = player?.gameScore ?? player?.gamePoints ?? 0;
