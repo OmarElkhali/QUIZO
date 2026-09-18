@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Minus, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -78,12 +77,12 @@ const Pricing = () => {
           />
           <PricingCard
             name="Pro"
-            price="5€/mois"
+            price="50 MAD/an"
             badge="Le plus populaire"
             features={proFeatures}
             cta="Passer au Pro"
             highlighted
-            onClick={() => toast.info("Le paiement Pro arrive bientôt. Aucun paiement n'est activé pour le moment.")}
+            href="https://quizooo.lemonsqueezy.com/checkout/buy/0607177f-b45a-49dd-9b7e-774ee3e4a6e6?embed=1"
           />
         </div>
 
@@ -116,7 +115,7 @@ const Pricing = () => {
         </PremiumPanel>
 
         <p className="py-8 text-center text-sm font-medium text-[var(--quizo-muted)]">
-          Aucune carte requise pour commencer
+          Paiement sécurisé par Lemon Squeezy · 50 MAD facturés annuellement pour le plan Pro
         </p>
       </section>
     </AppShell>

@@ -9,10 +9,11 @@ interface PricingCardProps {
   features: string[];
   cta: string;
   highlighted?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
+  href?: string;
 }
 
-export const PricingCard = ({ name, price, badge, features, cta, highlighted = false, onClick }: PricingCardProps) => (
+export const PricingCard = ({ name, price, badge, features, cta, highlighted = false, onClick, href }: PricingCardProps) => (
   <article
     className={cn(
       'quizo-panel relative flex h-full flex-col overflow-hidden p-6 transition duration-300 hover:-translate-y-1',
@@ -46,13 +47,8 @@ export const PricingCard = ({ name, price, badge, features, cta, highlighted = f
       ))}
     </ul>
 
-    <Button
-      type="button"
-      onClick={onClick}
-      className={cn('mt-8 w-full', highlighted ? 'quizo-copper-button' : 'quizo-outline-button')}
-      variant={highlighted ? 'default' : 'outline'}
-    >
-      {cta}
-    </Button>
+    {href ? <Button asChild className={cn('mt-8 w-full', highlighted ? 'quizo-copper-button' : 'quizo-outline-button')} variant={highlighted ? 'default' : 'outline'}>
+      <a href={href} className="lemonsqueezy-button" aria-label={`${cta} — paiement sécurisé par Lemon Squeezy`}>{cta}</a>
+    </Button> : <Button type="button" onClick={onClick} className={cn('mt-8 w-full', highlighted ? 'quizo-copper-button' : 'quizo-outline-button')} variant={highlighted ? 'default' : 'outline'}>{cta}</Button>}
   </article>
 );
