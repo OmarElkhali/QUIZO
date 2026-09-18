@@ -34,9 +34,12 @@ export function rankPlayers(players: LivePlayer[], possibleWeight: number) {
     });
 }
 
-interface LiveEvent { type: LiveEventType; at: number; message: string; uid?: string; targetUid?: string; meta?: Record<string, unknown> }
+interface LiveEvent { id: string; type: LiveEventType; at: number; message: string; uid?: string; targetUid?: string; meta?: Record<string, unknown> }
 function event(type: LiveEventType, at: number, message: string, uid?: string, targetUid?: string, meta?: Record<string, unknown>): LiveEvent {
-  return { type, at, message, ...(uid ? { uid } : {}), ...(targetUid ? { targetUid } : {}), ...(meta ? { meta } : {}) };
+  return { id: '', type, at, message, ...(uid ? { uid } : {}), ...(targetUid ? { targetUid } : {}), ...(meta ? { meta } : {}) };
+}
+function identifyEvents(sequence: number, additions: LiveEvent[]) {
+  return additions.map((item, index) => ({ ...item, id: `event-${sequence + index + 1}` }));
 }
 function publicEvents(previous: unknown, additions: LiveEvent[]) {
   const existing = Array.isArray(previous) ? previous : [];
@@ -163,7 +166,9 @@ export class LiveEngine {
       }
       const keyRef = playerRef.collection('submissions').doc(submissionId);
       requireValue(!(await tx.get(keyRef)).exists, 409, 'IDEMPOTENCY_CONFLICT', 'Identifiant de soumission déjà utilisé.');
-      requireValue(session.phase === 'question' && receivedAt >= session.openedAt && receivedAt < session.deadlineAt, 409, 'QUESTION_CLOSED', 'Les réponses sont fermées pour cette question.');
+      const openedAt = typeof session.openedAt === 'number' ? session.openedAt : null;
+      const deadlineAt = typeof session.deadlineAt === 'number' ? session.deadlineAt : null;
+      requireValue(session.phase === 'question' && openedAt !== null && receivedAt >= openedAt && (deadlineAt === null || receivedAt < deadlineAt), 409, 'QUESTION_CLOSED', 'Les réponses sont fermées pour cette question.');
       const version = (await tx.get(this.db.doc(`quizVersionsV2/${session.versionId}`))).data()!;
       const question = (version.questions as QuizQuestionInput[])[session.index];
       const viewRef = this.db.doc(`liveSessionViews/${sessionId}`);
@@ -173,7 +178,7 @@ export class LiveEngine {
       requireValue(option, 400, 'INVALID_OPTION', 'Option inconnue.');
       const player = playerSnap.data() as LivePlayer;
       requireValue(!player.frozenUntil || player.frozenUntil <= receivedAt, 409, 'PLAYER_FROZEN', 'Un duel vous immobilise encore un instant.');
-      const responseTimeMs = receivedAt - session.openedAt;
+      const responseTimeMs = receivedAt - openedAt;
       const previousStreak = player.lastAnsweredIndex === session.index - 1 ? player.streak : 0;
       const rawScore = calculateQuestionScore({ weight: question.points, correct: option.isCorrect, responseTimeMs, timeLimitMs: question.timeLimit! * 1000, previousStreak });
       const config = session.config as LiveCompetitionConfig;
@@ -212,7 +217,9 @@ export class LiveEngine {
       const session = sessionSnap.data()!;
       const config = session.config as LiveCompetitionConfig;
       requireValue(config.mode === 'battle' && config.powers.includes(power), 403, 'POWER_DISABLED', 'Ce pouvoir n’est pas disponible dans ce mode.');
-      requireValue(session.phase === 'question' && now >= session.openedAt && now < session.deadlineAt, 409, 'QUESTION_CLOSED', 'Les pouvoirs sont fermés pour cette manche.');
+      const openedAt = typeof session.openedAt === 'number' ? session.openedAt : null;
+      const deadlineAt = typeof session.deadlineAt === 'number' ? session.deadlineAt : null;
+      requireValue(session.phase === 'question' && openedAt !== null && now >= openedAt && (deadlineAt === null || now < deadlineAt), 409, 'QUESTION_CLOSED', 'Les pouvoirs sont fermés pour cette manche.');
       const playerRef = ref.collection('participants').doc(uid);
       const playerSnap = await tx.get(playerRef);
       requireValue(playerSnap.exists, 403, 'JOIN_REQUIRED', 'Rejoignez d’abord cette session.');
@@ -231,7 +238,7 @@ export class LiveEngine {
       }
       tx.update(playerRef, { powerInventory: inventory.filter(item => item !== power), activePower: power === 'freeze' ? null : power });
       tx.update(this.db.doc(`livePlayerViews/${sessionId}/players/${uid}`), { powerInventory: inventory.filter(item => item !== power), activePower: power === 'freeze' ? null : power });
-      const item = event('POWER_USED', now, `${player.name} active ${power === 'double' ? 'Double score' : power === 'shield' ? 'Bouclier de série' : 'Gel express'}.`, uid, targetUid, { power });
+      const item = identifyEvents(session.eventSequence, [event('POWER_USED', now, `${player.name} active ${power === 'double' ? 'Double score' : power === 'shield' ? 'Bouclier de série' : 'Gel express'}.`, uid, targetUid, { power })])[0];
       tx.create(ref.collection('events').doc(`${session.eventSequence + 1}`), item);
       tx.update(ref, { eventSequence: session.eventSequence + 1 });
       tx.update(viewRef, { events: publicEvents(view.events, [item]) });
@@ -269,8 +276,10 @@ export class LiveEngine {
         requireValue(index < questions.length, 409, 'NO_MORE_QUESTIONS', 'Toutes les questions ont été jouées. Terminez la session.');
         const question = questions[index];
         const openedAt = now + 3000;
-        Object.assign(update, { phase: 'question', index, openedAt, deadlineAt: openedAt + question.timeLimit! * 1000, ceremonyStep: null });
-        Object.assign(viewUpdate, update, { question: { id: question.id, text: question.text, points: question.points, timeLimit: question.timeLimit,
+        const config = session.config as LiveCompetitionConfig;
+        const deadlineAt = config.timerMode === 'countdown' ? openedAt + question.timeLimit! * 1000 : null;
+        Object.assign(update, { phase: 'question', index, openedAt, deadlineAt, ceremonyStep: null });
+        Object.assign(viewUpdate, update, { question: { id: question.id, text: question.text, points: question.points, timeLimit: config.timerMode === 'countdown' ? question.timeLimit : undefined,
           options: question.options.map(({ id, text }) => ({ id, text })) }, correction: null, distribution: null, responseCount: 0 });
       } else if (action === 'reveal') {
         requireValue(session.phase === 'question', 409, 'INVALID_PHASE', 'Aucune question à révéler.');
@@ -290,10 +299,10 @@ export class LiveEngine {
           else {
             omissions++;
             finalPlayer.streak = 0;
-            finalPlayer.responseTimeMs += question.timeLimit! * 1000;
+            finalPlayer.responseTimeMs += typeof session.deadlineAt === 'number' ? question.timeLimit! * 1000 : Math.max(0, now - (session.openedAt || now));
             tx.create(responseSnaps[i].ref, { questionId: question.id, sessionId, participantId: p.id, status: 'timeout', correct: false,
               awardedGamePoints: 0, baseWeight: question.points, questionOpenedAt: session.openedAt, answeredAt: null,
-              responseTimeMs: question.timeLimit! * 1000, createdAt: now });
+              responseTimeMs: typeof session.deadlineAt === 'number' ? question.timeLimit! * 1000 : Math.max(0, now - (session.openedAt || now)), createdAt: now });
             tx.update(p.ref, { streak: 0, responseTimeMs: finalPlayer.responseTimeMs });
           }
           finalPlayers.push(finalPlayer);
@@ -311,7 +320,7 @@ export class LiveEngine {
           entry.biggestClimb = player.bestRankGain;
           if (gain || entry.rank !== before?.rank) tx.update(ref.collection('participants').doc(entry.uid), { bestRankGain: player.bestRankGain, rank: entry.rank });
         });
-        const events: LiveEvent[] = [event('ROUND_END', now, `Manche ${session.index + 1} terminée.`)];
+        let events: LiveEvent[] = [event('ROUND_END', now, `Manche ${session.index + 1} terminée.`)];
         const leader = leaderboard[0];
         const oldLeader = previousBoard[0] as { uid?: string } | undefined;
         if (leader && leader.uid !== oldLeader?.uid) events.push(event('NEW_LEADER', now, `${leader.name} prend la tête !`, leader.uid));
@@ -324,6 +333,7 @@ export class LiveEngine {
           .filter((item): item is { player: LivePlayer; response: { answeredAt: number; responseTimeMs: number } } => typeof item.response?.answeredAt === 'number' && typeof item.response.responseTimeMs === 'number');
         answered.sort((a, b) => a.response.answeredAt - b.response.answeredAt);
         if (answered[0] && answered[0].response.responseTimeMs <= Math.max(1500, question.timeLimit! * 100)) events.push(event('LIGHTNING_ANSWER', now, `${answered[0].player.name} répond en éclair !`, answered[0].player.uid, undefined, { responseTimeMs: answered[0].response.responseTimeMs }));
+        events = identifyEvents(session.eventSequence, events);
         Object.assign(update, { phase: 'reveal' });
         const correctCount = responseSnaps.filter(item => item.data()?.correct === true).length;
         const analytics = { index: session.index, questionId: question.id, answered: players.size - omissions, correct: correctCount, incorrect: players.size - omissions - correctCount, omissions,
@@ -347,7 +357,7 @@ export class LiveEngine {
           const finished = action !== 'cancel';
           const finalBoard = (await tx.get(this.db.doc(`liveSessionViews/${sessionId}`))).data()!.leaderboard || [];
           const awards = finished ? buildAwards(finalBoard) : [];
-          const events = finished ? [event('GAME_END', now, 'La compétition est terminée.')] : [];
+          const events = finished ? identifyEvents(session.eventSequence, [event('GAME_END', now, 'La compétition est terminée.')]) : [];
           Object.assign(update, { phase: action === 'cancel' ? 'cancelled' : 'completed', completedAt: now, ceremonyStep: finished ? 'podium' : null, awards });
           Object.assign(viewUpdate, update, { events: publicEvents((await tx.get(this.db.doc(`liveSessionViews/${sessionId}`))).data()!.events, events) });
           events.forEach((item, index) => tx.create(ref.collection('events').doc(`${session.eventSequence + index + 1}`), item));

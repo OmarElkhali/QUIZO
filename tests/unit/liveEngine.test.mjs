@@ -18,9 +18,10 @@ const postCommand = (sessionId, action, revision, commandId) => engine.command('
 
 test('multiplayer lifecycle, retries, timeout, privacy, host concurrency, immutable snapshot', async () => {
   await db.doc('quizzes/demo').set({ creatorId: 'host', title: 'Fixture', questions });
-  const created = await engine.create('host', { quizId: 'demo', commandId: 'create1' });
-  assert.deepEqual(await engine.create('host', { quizId: 'demo', commandId: 'create1' }), created);
-  await assert.rejects(engine.create('outsider', { quizId: 'demo', commandId: 'create2' }), /créateur/);
+  const liveConfig = { mode: 'battle_pure', timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: false, animationIntensity: 'standard', powers: [], duels: false };
+  const created = await engine.create('host', { quizId: 'demo', commandId: 'create1', config: liveConfig });
+  assert.deepEqual(await engine.create('host', { quizId: 'demo', commandId: 'create1', config: liveConfig }), created);
+  await assert.rejects(engine.create('outsider', { quizId: 'demo', commandId: 'create2', config: liveConfig }), /créateur/);
   const { sessionId, code } = created;
   await engine.join('alice', { code, name: 'Alice' });
   await engine.join('bob', { code, name: 'Bob' });
@@ -68,7 +69,7 @@ test('multiplayer lifecycle, retries, timeout, privacy, host concurrency, immuta
 test('100 simultaneous answers do not share a mutable score document', async () => {
   now = 200000;
   await db.doc('quizzes/load').set({ creatorId: 'host', title: 'Load fixture', questions: questions.slice(0, 1) });
-  const { sessionId, code } = await engine.create('host', { quizId: 'load', commandId: 'load-create' });
+  const { sessionId, code } = await engine.create('host', { quizId: 'load', commandId: 'load-create', config: { mode: 'battle_pure', timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: false, animationIntensity: 'standard', powers: [], duels: false } });
   // Joining is intentionally serialized: the cap and unique-name reservation are atomic.
   for (let i = 0; i < 100; i++) await engine.join(`p${i}`, { code, name: `Player ${i}` });
   await assert.rejects(engine.join('overflow', { code, name: 'Overflow' }), /complète/);
@@ -81,6 +82,23 @@ test('100 simultaneous answers do not share a mutable score document', async () 
   assert.ok(view.leaderboard.every(p => p.gamePoints === 280 && p.pedagogicalScore === 100));
   assert.equal(view.distribution.a, 100);
   assert.equal(view.omissions, 0);
+});
+
+test('classic host-paced rounds have no deadline and never award a speed bonus', async () => {
+  now = 300000;
+  await db.doc('quizzes/host-paced').set({ creatorId: 'host', title: 'Host paced', questions: questions.slice(0, 1) });
+  const config = { mode: 'classic', timerMode: 'host', timePerQuestion: null, speedBonus: true, streakBonus: false, leaderboardFrequency: 'each_round', autoNext: false, sounds: false, animationIntensity: 'calm', powers: [], duels: false };
+  const { sessionId, code } = await engine.create('host', { quizId: 'host-paced', commandId: 'host-paced-create', config });
+  await engine.join('host-paced-player', { code, name: 'Host paced player' });
+  await postCommand(sessionId, 'start', 0, 'host-paced-start');
+  const opened = (await db.doc(`liveSessionsV2/${sessionId}`).get()).data();
+  assert.equal(opened.deadlineAt, null);
+  now = 380000;
+  await engine.answer('host-paced-player', { sessionId, questionId: 'q0', selectedOptionId: 'a', submissionId: 'host-paced-answer' });
+  await postCommand(sessionId, 'reveal', 1, 'host-paced-reveal');
+  const response = (await db.doc(`liveSessionsV2/${sessionId}/participants/host-paced-player/responses/q0`).get()).data();
+  assert.equal(response.speedBonus, 0);
+  assert.equal(response.awardedGamePoints, 200);
 });
 
 test.after(async () => { await db.terminate(); });

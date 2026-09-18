@@ -4,12 +4,15 @@ export const LIVE_EVENT_TYPES = [
 
 export type LiveEventType = typeof LIVE_EVENT_TYPES[number];
 export type LiveMode = 'classic' | 'battle' | 'battle_pure';
+export type LiveTimerMode = 'host' | 'countdown';
 export type LeaderboardFrequency = 'each_round' | 'final_only';
 export type AnimationIntensity = 'calm' | 'standard' | 'intense';
 export type LivePower = 'double' | 'shield' | 'freeze';
 
 export interface LiveCompetitionConfig {
   mode: LiveMode;
+  /** Host-paced rounds deliberately have no deadline and no speed scoring. */
+  timerMode: LiveTimerMode;
   timePerQuestion: number | null;
   speedBonus: boolean;
   streakBonus: boolean;
@@ -23,8 +26,9 @@ export interface LiveCompetitionConfig {
 
 export const DEFAULT_LIVE_COMPETITION_CONFIG: LiveCompetitionConfig = {
   mode: 'classic',
+  timerMode: 'host',
   timePerQuestion: null,
-  speedBonus: true,
+  speedBonus: false,
   streakBonus: true,
   leaderboardFrequency: 'each_round',
   autoNext: false,
@@ -47,11 +51,14 @@ export function parseLiveCompetitionConfig(value: unknown): LiveCompetitionConfi
   const uniquePowers = [...new Set(requestedPowers)];
   const timePerQuestion = raw.timePerQuestion == null ? null : Number(raw.timePerQuestion);
   if (timePerQuestion !== null && (!Number.isInteger(timePerQuestion) || timePerQuestion < 5 || timePerQuestion > 180)) throw new Error('Le temps par question doit être compris entre 5 et 180 secondes.');
+  const timerMode: LiveTimerMode = raw.timerMode === 'countdown' ? 'countdown' : 'host';
   const battle = mode === 'battle';
+  const timed = timerMode === 'countdown';
   return {
     mode,
-    timePerQuestion,
-    speedBonus: raw.speedBonus === undefined ? true : raw.speedBonus === true,
+    timerMode: timed ? 'countdown' : 'host',
+    timePerQuestion: timed ? (timePerQuestion ?? 20) : null,
+    speedBonus: timed && (raw.speedBonus === undefined ? true : raw.speedBonus === true),
     streakBonus: raw.streakBonus === undefined ? true : raw.streakBonus === true,
     leaderboardFrequency: FREQUENCIES.includes(raw.leaderboardFrequency as LeaderboardFrequency) ? raw.leaderboardFrequency as LeaderboardFrequency : 'each_round',
     autoNext: raw.autoNext === true,

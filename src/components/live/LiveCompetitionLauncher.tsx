@@ -1,58 +1,69 @@
-import { useState } from 'react';
-import { Gamepad2, Loader2, Shield, Swords, Zap } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toDataURL } from 'qrcode';
+import { Check, ChevronLeft, ChevronRight, Copy, Gamepad2, Loader2, QrCode, Shield, Swords, Trophy, Volume2, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { DEFAULT_LIVE_COMPETITION_CONFIG, liveModeLabel, type LiveCompetitionConfig, type LiveMode, type LivePower } from '@/domain/liveCompetition';
+import { DEFAULT_LIVE_COMPETITION_CONFIG, type LiveCompetitionConfig, type LiveMode, type LivePower } from '@/domain/liveCompetition';
 import { liveRequest } from '@/services/liveClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-const modes: Array<{ value: LiveMode; icon: typeof Gamepad2; detail: string }> = [
-  { value: 'classic', icon: Gamepad2, detail: 'QCM, chrono, vitesse, séries et classement.' },
-  { value: 'battle_pure', icon: Swords, detail: 'Même intensité compétitive, sans pouvoirs.' },
-  { value: 'battle', icon: Zap, detail: 'Compétition avec Double score, Bouclier et duels.' },
+type Step = 1 | 2 | 3 | 4;
+const modes: Array<{ value: LiveMode; icon: typeof Gamepad2; title: string; detail: string }> = [
+  { value: 'classic', icon: Gamepad2, title: 'Temps réel normal', detail: 'Animateur au rythme, sans chrono ni bonus de vitesse.' },
+  { value: 'battle_pure', icon: Swords, title: 'Temps réel avec chrono', detail: 'Vitesse, séries et classement sans pouvoirs.' },
+  { value: 'battle', icon: Zap, title: 'Temps réel chrono + pouvoirs', detail: 'Battle intense avec Double score, Bouclier et Gel express.' },
 ];
 const powerLabels: Record<LivePower, string> = { double: 'Double score', shield: 'Bouclier de série', freeze: 'Gel express' };
 
-function Toggle({ label, checked, onChange, disabled = false }: { label: string; checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
-  return <label className={cn('flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-[var(--quizo-border)] px-3 py-2.5 text-sm', disabled && 'cursor-not-allowed opacity-45')}>
-    <span>{label}</span><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} className="h-4 w-4 accent-orange-500" />
+function Toggle({ label, detail, checked, onChange, disabled = false }: { label: string; detail?: string; checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
+  return <label className={cn('flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] px-3 py-2.5 text-sm transition hover:border-orange-400/35', disabled && 'cursor-not-allowed opacity-45')}>
+    <span><span className="block font-bold text-[var(--quizo-heading)]">{label}</span>{detail && <span className="mt-0.5 block text-xs text-[var(--quizo-muted)]">{detail}</span>}</span>
+    <input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} className="h-4 w-4 shrink-0 accent-orange-500" />
   </label>;
+}
+
+function modeConfig(mode: LiveMode): LiveCompetitionConfig {
+  if (mode === 'battle') return { ...DEFAULT_LIVE_COMPETITION_CONFIG, mode, timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, powers: ['double', 'shield', 'freeze'], duels: true, animationIntensity: 'intense' };
+  if (mode === 'battle_pure') return { ...DEFAULT_LIVE_COMPETITION_CONFIG, mode, timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, powers: [], duels: false, animationIntensity: 'intense' };
+  return { ...DEFAULT_LIVE_COMPETITION_CONFIG, mode: 'classic', timerMode: 'host', timePerQuestion: null, speedBonus: false, streakBonus: true, powers: [], duels: false, animationIntensity: 'standard' };
 }
 
 export function LiveCompetitionLauncher({ quizId, disabled = false }: { quizId: string; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
-  const [config, setConfig] = useState<LiveCompetitionConfig>(DEFAULT_LIVE_COMPETITION_CONFIG);
+  const [config, setConfig] = useState<LiveCompetitionConfig>(() => modeConfig('classic'));
+  const [created, setCreated] = useState<{ sessionId: string; code: string } | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const navigate = useNavigate();
   const battle = config.mode === 'battle';
+  const timed = config.timerMode === 'countdown';
   const update = <K extends keyof LiveCompetitionConfig>(key: K, value: LiveCompetitionConfig[K]) => setConfig(previous => ({ ...previous, [key]: value }));
-  const togglePower = (power: LivePower) => update('powers', config.powers.includes(power) ? config.powers.filter(item => item !== power) : [...config.powers, power]);
+  const joinUrl = created ? `${window.location.origin}/join/${created.code}` : '';
+  useEffect(() => { if (!joinUrl) { setQrDataUrl(''); return; } void toDataURL(joinUrl, { width: 320, margin: 1, color: { dark: '#ffedd5', light: '#00000000' } }).then(setQrDataUrl).catch(() => setQrDataUrl('')); }, [joinUrl]);
+  const headline = useMemo(() => modes.find(item => item.value === config.mode)?.title || 'Temps réel', [config.mode]);
+  const selectMode = (mode: LiveMode) => setConfig(modeConfig(mode));
+  const copy = async (value: string) => { try { await navigator.clipboard.writeText(value); toast.success('Copié dans le presse-papiers.'); } catch { toast.error('Copie impossible.'); } };
   async function launch() {
     setBusy(true);
-    try {
-      const result = await liveRequest<{ sessionId: string }>({ operation: 'create', quizId, commandId: crypto.randomUUID(), config });
-      setOpen(false); navigate(`/session/${result.sessionId}`);
-    } catch (error) { toast.error(error instanceof Error ? error.message : 'Création de la compétition impossible.'); }
+    try { const result = await liveRequest<{ sessionId: string; code: string }>({ operation: 'create', quizId, commandId: crypto.randomUUID(), config }); setCreated(result); setStep(4); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Création de la compétition impossible.'); }
     finally { setBusy(false); }
   }
-  return <Dialog open={open} onOpenChange={setOpen}>
-    <DialogTrigger asChild><Button disabled={disabled} className="quizo-copper-button"><Swords className="mr-2 h-4 w-4" />Lancer en live</Button></DialogTrigger>
-    <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto border-[var(--quizo-border)] bg-[var(--quizo-surface)] text-[var(--quizo-heading)]">
-      <DialogHeader><DialogTitle className="text-2xl font-black">Configurer la compétition</DialogTitle><DialogDescription>Le moteur serveur verrouille le chrono, les scores, le classement et les pouvoirs.</DialogDescription></DialogHeader>
-      <div className="space-y-5 py-2">
-        <div className="grid gap-3 md:grid-cols-3">{modes.map(({ value, icon: Icon, detail }) => <button key={value} type="button" onClick={() => update('mode', value)} className={cn('rounded-2xl border p-4 text-left transition', config.mode === value ? 'border-orange-400 bg-orange-500/10 ring-1 ring-orange-400' : 'border-[var(--quizo-border)] hover:border-orange-400/50')}><Icon className="mb-3 h-5 w-5 text-orange-400" /><p className="font-black">{liveModeLabel(value)}</p><p className="mt-1 text-xs leading-5 text-[var(--quizo-muted)]">{detail}</p></button>)}</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="rounded-xl border border-[var(--quizo-border)] p-3 text-sm"><span className="mb-2 block font-semibold">Temps / question</span><select value={config.timePerQuestion ?? ''} onChange={event => update('timePerQuestion', event.target.value ? Number(event.target.value) : null)} className="w-full bg-transparent"><option value="">Selon le quiz</option>{[10, 15, 20, 30, 45, 60, 90].map(value => <option key={value} value={value}>{value} secondes</option>)}</select></label>
-          <label className="rounded-xl border border-[var(--quizo-border)] p-3 text-sm"><span className="mb-2 block font-semibold">Classement</span><select value={config.leaderboardFrequency} onChange={event => update('leaderboardFrequency', event.target.value as LiveCompetitionConfig['leaderboardFrequency'])} className="w-full bg-transparent"><option value="each_round">Après chaque manche</option><option value="final_only">Final seulement</option></select></label>
-          <label className="rounded-xl border border-[var(--quizo-border)] p-3 text-sm"><span className="mb-2 block font-semibold">Animations</span><select value={config.animationIntensity} onChange={event => update('animationIntensity', event.target.value as LiveCompetitionConfig['animationIntensity'])} className="w-full bg-transparent"><option value="calm">Calmes</option><option value="standard">Standard</option><option value="intense">Intenses</option></select></label>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"><Toggle label="Bonus vitesse" checked={config.speedBonus} onChange={value => update('speedBonus', value)} /><Toggle label="Bonus de série" checked={config.streakBonus} onChange={value => update('streakBonus', value)} /><Toggle label="Question suivante auto" checked={config.autoNext} onChange={value => update('autoNext', value)} /><Toggle label="Sons de jeu" checked={config.sounds} onChange={value => update('sounds', value)} /></div>
-        {battle && <section className="space-y-3 rounded-2xl border border-orange-400/25 bg-orange-500/5 p-4"><div className="flex items-center gap-2"><Shield className="h-5 w-5 text-orange-300" /><h3 className="font-black">Pouvoirs Battle</h3></div><div className="grid gap-2 sm:grid-cols-3">{(Object.keys(powerLabels) as LivePower[]).map(power => <Toggle key={power} label={powerLabels[power]} checked={config.powers.includes(power)} onChange={() => togglePower(power)} />)}</div><Toggle label="Autoriser les duels (Gel express)" checked={config.duels} disabled={!config.powers.includes('freeze')} onChange={value => update('duels', value)} /></section>}
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/15 p-3 text-xs text-[var(--quizo-muted)]"><span>Flux : Lobby → Countdown → Questions → Results → Leaderboard → Podium → Awards → Analytics</span><span>Score de jeu ≠ réussite pédagogique</span></div>
-        <Button className="quizo-copper-button w-full" disabled={busy} onClick={() => void launch()}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Swords className="mr-2 h-4 w-4" />}Créer le lobby {liveModeLabel(config.mode)}</Button>
-      </div>
+  function close(next: boolean) { setOpen(next); if (!next) window.setTimeout(() => { setStep(1); setCreated(null); }, 180); }
+  return <Dialog open={open} onOpenChange={close}>
+    <DialogTrigger asChild><Button disabled={disabled} className="quizo-copper-button"><Trophy className="mr-2 h-4 w-4" />Créer une compétition</Button></DialogTrigger>
+    <DialogContent className="max-h-[94vh] max-w-4xl overflow-y-auto border-orange-400/25 bg-[var(--quizo-surface)] text-[var(--quizo-heading)]">
+      <DialogHeader><DialogTitle className="text-2xl font-black sm:text-3xl">Configurer la compétition</DialogTitle><DialogDescription>Le serveur verrouille le chrono, les scores, le classement et les pouvoirs.</DialogDescription></DialogHeader>
+      <ol className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px] font-bold uppercase tracking-wider text-[var(--quizo-muted)]">{['Format', 'Règles', 'Résumé'].map((label, index) => <li key={label} className={cn('rounded-lg border px-2 py-2', step >= index + 1 && step < 4 ? 'border-orange-400/45 bg-orange-500/10 text-orange-200' : 'border-[var(--quizo-border)]')}>{index + 1}. {label}</li>)}</ol>
+      {step === 1 && <section className="space-y-5 py-4"><div className="rounded-2xl border border-orange-400/20 bg-gradient-to-br from-orange-500/10 to-transparent p-4"><p className="quizo-label">LIVE ARENA</p><p className="mt-1 text-sm text-[var(--quizo-muted)]">Choisissez le niveau d’intensité. Le format asynchrone reste disponible dans les paramètres classiques du quiz.</p></div><div className="grid gap-3 md:grid-cols-3">{modes.map(({ value, icon: Icon, title, detail }) => <button key={value} type="button" onClick={() => selectMode(value)} className={cn('group relative min-h-48 rounded-2xl border p-5 text-left transition duration-300 hover:-translate-y-1', config.mode === value ? 'border-orange-400 bg-orange-500/10 shadow-[0_14px_45px_rgba(249,115,22,.18)]' : 'border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] hover:border-orange-400/45')}><Icon className="mb-5 h-7 w-7 text-orange-300" /><p className="font-black text-lg">{title}</p><p className="mt-2 text-sm leading-6 text-[var(--quizo-muted)]">{detail}</p>{config.mode === value && <Check className="absolute right-4 top-4 h-5 w-5 rounded-full bg-orange-400 p-1 text-black" />}</button>)}</div></section>}
+      {step === 2 && <section className="space-y-4 py-4"><div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orange-400/20 bg-orange-500/10 p-3"><span className="font-black">{headline}</span><span className="text-xs text-[var(--quizo-muted)]">Les options impossibles sont sécurisées automatiquement.</span></div>{timed ? <label className="block rounded-xl border border-[var(--quizo-border)] p-3 text-sm"><span className="mb-2 block font-bold">Temps par question</span><select value={config.timePerQuestion || 20} onChange={event => update('timePerQuestion', Number(event.target.value))} className="w-full rounded-lg border border-[var(--quizo-border)] bg-[var(--quizo-input-bg)] px-3 py-2">{[10, 15, 20, 30, 45, 60, 90].map(value => <option key={value} value={value}>{value} secondes</option>)}</select></label> : <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm"><strong>Rythme animateur.</strong> Aucun compte à rebours ni bonus vitesse ; vous révélez la réponse lorsque la salle est prête.</div>}<div className="grid gap-2 sm:grid-cols-2"><Toggle label="Bonus vitesse" detail={timed ? 'Jusqu’à +50 % pour une réponse rapide.' : 'Indisponible sans chrono.'} checked={config.speedBonus} disabled={!timed} onChange={value => update('speedBonus', value)} /><Toggle label="Bonus de série" detail="Jusqu’à +30 % après trois bonnes réponses." checked={config.streakBonus} onChange={value => update('streakBonus', value)} /><Toggle label="Classement après chaque manche" detail="Sinon, uniquement au résultat final." checked={config.leaderboardFrequency === 'each_round'} onChange={value => update('leaderboardFrequency', value ? 'each_round' : 'final_only')} /><Toggle label="Question suivante auto" detail="Le serveur valide toujours la transition." checked={config.autoNext} onChange={value => update('autoNext', value)} /><Toggle label="Sons de jeu" detail="Chaque joueur peut couper le son localement." checked={config.sounds} onChange={value => update('sounds', value)} /><label className="rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] px-3 py-2.5 text-sm"><span className="mb-1 block font-bold">Intensité des animations</span><select value={config.animationIntensity} onChange={event => update('animationIntensity', event.target.value as LiveCompetitionConfig['animationIntensity'])} className="w-full bg-transparent text-sm"><option value="calm">Calme</option><option value="standard">Standard</option><option value="intense">Intense</option></select></label></div>{battle && <section className="space-y-3 rounded-2xl border border-orange-400/30 bg-orange-500/5 p-4"><div className="flex items-center gap-2"><Shield className="h-5 w-5 text-orange-300" /><h3 className="font-black">Pouvoirs Battle</h3></div><div className="grid gap-2 sm:grid-cols-3">{(Object.keys(powerLabels) as LivePower[]).map(power => <Toggle key={power} label={powerLabels[power]} checked={config.powers.includes(power)} onChange={() => update('powers', config.powers.includes(power) ? config.powers.filter(item => item !== power) : [...config.powers, power])} />)}</div><Toggle label="Autoriser les duels" detail="Gel express : choisir un adversaire, jamais soi-même." checked={config.duels} disabled={!config.powers.includes('freeze')} onChange={value => update('duels', value)} /></section>}</section>}
+      {step === 3 && <section className="space-y-4 py-4"><div className="rounded-2xl border border-orange-400/35 bg-gradient-to-br from-orange-500/15 to-transparent p-5"><p className="quizo-label">PRÊT À LANCER</p><h3 className="mt-2 text-2xl font-black">{headline}</h3><p className="mt-2 text-sm text-[var(--quizo-muted)]">Lobby → Décompte → Questions → Révélation → Classement → Podium → Awards → Analytics</p></div><div className="grid gap-3 sm:grid-cols-3"><div className="quizo-panel-subtle p-4"><p className="text-xs text-[var(--quizo-muted)]">Score de jeu</p><p className="mt-1 font-black">Base + vitesse + série</p></div><div className="quizo-panel-subtle p-4"><p className="text-xs text-[var(--quizo-muted)]">Réussite pédagogique</p><p className="mt-1 font-black">Bonnes réponses pondérées</p></div><div className="quizo-panel-subtle p-4"><p className="text-xs text-[var(--quizo-muted)]">Rythme</p><p className="mt-1 font-black">{timed ? `${config.timePerQuestion} s / question` : 'Contrôlé par l’animateur'}</p></div></div><p className="rounded-xl border border-[var(--quizo-border)] p-3 text-sm text-[var(--quizo-muted)]">Une réponse est verrouillée par question. Les choix individuels et la bonne réponse restent privés jusqu’à la révélation.</p></section>}
+      {step === 4 && created && <section className="space-y-5 py-5 text-center"><div className="mx-auto grid h-32 w-32 place-items-center rounded-2xl border border-orange-400/25 bg-black/35 p-2">{qrDataUrl ? <img src={qrDataUrl} alt="QR code pour rejoindre la compétition" className="h-full w-full" /> : <QrCode className="h-9 w-9 text-orange-300" />}</div><div><p className="quizo-label">LOBBY CRÉÉ</p><h3 className="mt-2 text-3xl font-black tracking-[.18em] text-orange-200">{created.code}</h3><p className="mt-2 text-sm text-[var(--quizo-muted)]">Partagez ce code, le QR code ou le lien avant de rejoindre votre console.</p></div><div className="flex flex-col gap-2 sm:flex-row"><Button variant="outline" className="flex-1 quizo-outline-button" onClick={() => void copy(created.code)}><Copy className="mr-2 h-4 w-4" />Copier le code</Button><Button variant="outline" className="flex-1 quizo-outline-button" onClick={() => void copy(joinUrl)}><Copy className="mr-2 h-4 w-4" />Copier le lien</Button></div><Button className="w-full quizo-copper-button" onClick={() => { setOpen(false); navigate(`/session/${created.sessionId}`); }}>Ouvrir le lobby animateur <ChevronRight className="ml-2 h-4 w-4" /></Button></section>}
+      {step < 4 && <div className="flex items-center justify-between gap-3 border-t border-[var(--quizo-border)] pt-4"><Button variant="outline" className="quizo-outline-button" disabled={step === 1} onClick={() => setStep(value => (value - 1) as Step)}><ChevronLeft className="mr-1 h-4 w-4" />Retour</Button>{step < 3 ? <Button className="quizo-copper-button" onClick={() => setStep(value => (value + 1) as Step)}>Continuer<ChevronRight className="ml-1 h-4 w-4" /></Button> : <Button className="quizo-copper-button" disabled={busy} onClick={() => void launch()}>{busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}Créer le lobby</Button>}</div>}
+      <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-[var(--quizo-muted)]"><Volume2 className="h-3.5 w-3.5" />Les effets restent courts et respectent la préférence de mouvement réduit.</p>
     </DialogContent>
   </Dialog>;
 }

@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 
 import { AppShell } from '@/components/layout/AppShell';
+import { LiveCompetitionLauncher } from '@/components/live/LiveCompetitionLauncher';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StateCard } from '@/components/ui/StateCard';
 import { PremiumPanel } from '@/components/ui/premium';
@@ -383,10 +384,10 @@ const ManualQuizBuilder = () => {
         const capabilities = await liveCapabilities();
         if (!capabilities.ready) throw new Error('Le moteur live sécurisé n’est pas encore activé. Configurez FIREBASE_SERVICE_ACCOUNT_JSON et ENABLE_LIVE_V2 sur Vercel.');
         const config: LiveCompetitionConfig = competitionMode === 'realtime_battle'
-          ? { mode: 'battle', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: ['double', 'shield', 'freeze'], duels: true }
+          ? { mode: 'battle', timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: ['double', 'shield', 'freeze'], duels: true }
           : competitionMode === 'realtime_timed'
-            ? { mode: 'battle_pure', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: [], duels: false }
-            : { mode: 'classic', timePerQuestion: 60, speedBonus: false, streakBonus: false, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'standard', powers: [], duels: false };
+            ? { mode: 'battle_pure', timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'intense', powers: [], duels: false }
+            : { mode: 'classic', timerMode: 'host', timePerQuestion: null, speedBonus: false, streakBonus: false, leaderboardFrequency: 'each_round', autoNext: false, sounds: true, animationIntensity: 'standard', powers: [], duels: false };
         liveCreationId.current ||= crypto.randomUUID();
         const session = await liveRequest<{ sessionId: string }>({ operation: 'create', quizId: id, commandId: liveCreationId.current, config });
         setShowCompetitionDialog(false);
@@ -534,10 +535,11 @@ const ManualQuizBuilder = () => {
               <Settings className="mr-2 h-4 w-4" />
               Paramètres
             </Button>
-            <Button variant="outline" className="quizo-outline-button" onClick={() => setShowCompetitionDialog(true)}>
+            <Button variant="outline" className="quizo-outline-button" onClick={() => { setCompetitionMode('async'); setShowCompetitionDialog(true); }}>
               <CalendarClock className="mr-2 h-4 w-4" />
-              Compétition
+              Asynchrone
             </Button>
+            <LiveCompetitionLauncher quizId={id} />
             <Button className="quizo-copper-button" onClick={() => navigate(`/quiz-preview/${id}`)}>
               <Play className="mr-2 h-4 w-4" />
               Tester

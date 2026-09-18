@@ -263,6 +263,87 @@
     border-color: var(--quizo-border);
   }
 
+  .live-arena-page {
+    padding-bottom: 6.5rem;
+  }
+
+  .live-event-ribbon {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    border: 1px solid rgba(251, 146, 60, .36);
+    border-radius: 1rem;
+    padding: .8rem 1rem;
+    background: linear-gradient(90deg, rgba(249, 115, 22, .15), rgba(251, 191, 36, .07), transparent);
+    box-shadow: 0 0 28px rgba(249, 115, 22, .09);
+    color: var(--quizo-heading);
+    font-weight: 800;
+  }
+
+  .live-lobby-hero {
+    position: relative;
+    min-height: 22rem;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(251, 146, 60, .28);
+    border-radius: 1.5rem;
+    padding: 2rem 1rem;
+    text-align: center;
+    background: radial-gradient(circle at 28% 22%, rgba(251, 146, 60, .16), transparent 42%), linear-gradient(145deg, rgba(22, 18, 14, .95), rgba(12, 12, 12, .86));
+  }
+
+  .live-countdown {
+    display: grid;
+    width: min(11rem, 42vw);
+    aspect-ratio: 1;
+    place-items: center;
+    margin: 3rem auto;
+    border: 4px solid #fb923c;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 13px rgba(249, 115, 22, .1), 0 0 46px rgba(249, 115, 22, .36);
+    color: #ffedd5;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    font-weight: 900;
+    animation: live-countdown-pulse .9s ease-in-out infinite alternate;
+  }
+
+  .live-control-dock {
+    position: fixed;
+    z-index: 30;
+    bottom: 1rem;
+    left: clamp(1rem, 2.25vw, 3.5rem);
+    right: clamp(1rem, 2.25vw, 3.5rem);
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .8rem;
+    border: 1px solid var(--quizo-border);
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--quizo-header) 94%, transparent);
+    box-shadow: 0 18px 55px rgba(0, 0, 0, .35);
+    backdrop-filter: blur(18px);
+  }
+
+  .live-projector {
+    min-height: 100vh;
+    padding: clamp(1rem, 3vw, 3rem);
+  }
+
+  @keyframes live-countdown-pulse {
+    to { transform: scale(1.04); box-shadow: 0 0 0 20px rgba(249, 115, 22, .04), 0 0 58px rgba(249, 115, 22, .52); }
+  }
+
+  @media (max-width: 640px) {
+    .live-control-dock { flex-direction: column-reverse; }
+    .live-control-dock > div { justify-content: center; }
+    .live-arena-page { padding-bottom: 9.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-countdown { animation: none; }
+  }
+
   html:not(.dark) .quizo-app-bg .text-white,
   html:not(.dark) .quizo-app-bg .text-\[\#e5e2e1\],
   html:not(.dark) .quizo-app-bg .text-\[\#d8d2ce\] {
