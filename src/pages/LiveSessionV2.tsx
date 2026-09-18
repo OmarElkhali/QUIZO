@@ -136,7 +136,7 @@ export default function LiveSessionV2({ display = false }: { display?: boolean }
   const remaining = view ? Math.max(0, Math.ceil((view.deadlineAt - now) / 1000)) : 0;
   const countdown = view?.openedAt ? Math.max(0, Math.ceil((view.openedAt - now) / 1000)) : 0;
   const playerReceipt = player?.receipt;
-  const selected = pending?.questionId === view?.question?.id
+  const selected = pending && pending.questionId === view?.question?.id
     ? pending.selectedOptionId
     : playerReceipt?.questionId && playerReceipt.questionId === view?.question?.id
       ? playerReceipt.selectedOptionId
