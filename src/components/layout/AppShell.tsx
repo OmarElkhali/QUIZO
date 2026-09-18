@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   BadgeEuro,
-  BookOpen,
   History,
   Home,
   LogOut,
@@ -22,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthDialog } from '@/components/AuthDialog';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Footer } from './Footer';
 
 interface AppShellProps {
   children: ReactNode;
@@ -89,11 +89,11 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
       <div className="pointer-events-none fixed inset-0 quizo-grid-overlay opacity-60" />
 
-      <div className="relative min-h-screen">
+      <div className="relative flex min-h-screen flex-col">
         <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
           <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-20">
             <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
-              <BookOpen className="h-6 w-6 text-orange-500" />
+              <img src="/quizo-logo.png" alt="" aria-hidden="true" className="h-9 w-9 rounded-lg object-contain" />
               <span className="quizo-brand-text text-xl font-black tracking-tighter sm:text-2xl">QUIZO</span>
             </button>
 
@@ -162,7 +162,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
             <aside className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col border-r border-[var(--quizo-border)] overflow-y-auto">
               <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="h-6 w-6 text-orange-500" />
+                  <img src="/quizo-logo.png" alt="" aria-hidden="true" className="h-9 w-9 rounded-lg object-contain" />
                   <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
                 </div>
                 <Button type="button" variant="ghost" size="icon" className="text-[var(--quizo-text)]" onClick={() => setMobileOpen(false)}>
@@ -234,7 +234,8 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           </div>
         )}
 
-        <main className="quizo-page-frame min-h-[calc(100vh-4rem)] py-5 sm:min-h-[calc(100vh-5rem)] sm:py-8">{children}</main>
+        <main className="quizo-page-frame min-h-[calc(100vh-4rem)] flex-1 py-5 sm:min-h-[calc(100vh-5rem)] sm:py-8">{children}</main>
+        <Footer />
       </div>
 
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />

@@ -7,7 +7,7 @@ import {
   doc, 
   setDoc,
   updateDoc, 
-  deleteDoc, 
+  writeBatch,
   query, 
   where, 
   serverTimestamp,
@@ -508,7 +508,17 @@ export const deleteQuiz = async (quizId: string): Promise<void> => {
       throw new Error('Vous n\'êtes pas autorisé à supprimer ce quiz');
     }
     
-    await deleteDoc(docRef);
+    const batch = writeBatch(db);
+    const shareCode = typeof quizData.shareCode === 'string' ? quizData.shareCode.trim().toUpperCase() : '';
+    if (shareCode) {
+      const shareCodeRef = doc(db, 'shareCodes', shareCode);
+      const shareCodeSnapshot = await getDoc(shareCodeRef);
+      if (shareCodeSnapshot.exists() && shareCodeSnapshot.data()?.targetId === quizId) {
+        batch.delete(shareCodeRef);
+      }
+    }
+    batch.delete(docRef);
+    await batch.commit();
     
     console.log('Quiz supprimé avec succès de la base de données');
   } catch (error) {

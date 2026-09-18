@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { AuthDialog } from './AuthDialog';
 import { LanguageSelector } from './LanguageSelector';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Menu, X, User, History, LogOut, Settings, Plus, BookOpen } from 'lucide-react';
+import { Menu, X, User, History, LogOut, Settings, Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -69,7 +69,7 @@ export const Navbar = () => {
       <div className="quizo-page-frame flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight hover-scale">
-            <BookOpen className="h-6 w-6 text-primary" />
+            <img src="/quizo-logo.png" alt="" aria-hidden="true" className="h-9 w-9 rounded-lg object-contain" />
             <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">QUIZO</span>
           </Link>
           <ThemeToggle />

@@ -13,6 +13,7 @@ import {
   Search,
   Share2,
   Sparkles,
+  Trash2,
   Users2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -28,6 +29,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { DeleteQuizDialog } from '@/components/DeleteQuizDialog';
 import { useAuth } from '@/context/AuthContext';
 import QuizContext from '@/context/QuizContext';
 import { useQuiz } from '@/hooks/useQuiz';
@@ -48,6 +50,7 @@ const difficultyLabels: Record<string, string> = {
 const QuizHistoryCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
   const navigate = useNavigate();
   const completionRate = quiz.completionRate || 0;
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <motion.article
@@ -68,15 +71,28 @@ const QuizHistoryCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
             </Badge>
           )}
         </div>
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 text-[var(--quizo-muted)] hover:bg-orange-500/10 hover:text-[#d97706]"
-          onClick={() => navigate(`/quiz-preview/${quiz.id}`)}
-        >
-          <ArrowUpRight className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-[var(--quizo-muted)] hover:bg-red-500/10 hover:text-red-400"
+            aria-label={`Supprimer ${quiz.title}`}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-[var(--quizo-muted)] hover:bg-orange-500/10 hover:text-[#d97706]"
+            aria-label={`Ouvrir ${quiz.title}`}
+            onClick={() => navigate(`/quiz-preview/${quiz.id}`)}
+          >
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <h2 className="line-clamp-2 text-xl font-bold tracking-tight text-[var(--quizo-heading)]">{quiz.title}</h2>
@@ -117,6 +133,7 @@ const QuizHistoryCard = ({ quiz, index }: { quiz: Quiz; index: number }) => {
           <ArrowUpRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
+      <DeleteQuizDialog quizId={quiz.id} open={deleteOpen} onOpenChange={setDeleteOpen} />
     </motion.article>
   );
 };
