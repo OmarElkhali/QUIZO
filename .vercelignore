@@ -1,0 +1,16 @@
+.git
+.firebase
+.github
+.vscode
+.test-build
+.tmp-python-deps
+dist
+node_modules
+test-results
+tests
+python_api
+scripts
+supabase
+*.zip
+*.log
+playwright-report
