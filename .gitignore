@@ -66,3 +66,5 @@ Thumbs.db
 .test-build/
 .tmp-python-deps/
 *.zip
+
+.vercel

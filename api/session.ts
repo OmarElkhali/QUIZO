@@ -23,9 +23,10 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
     catch { return send(401, { code: 'INVALID_TOKEN', error: 'Session expirée. Reconnectez-vous.' }); }
     const input = body as Record<string, unknown>;
     const permitted: Record<string, string[]> = {
-      create: ['operation', 'quizId', 'commandId'], join: ['operation', 'code', 'name'],
+      create: ['operation', 'quizId', 'commandId', 'config'], join: ['operation', 'code', 'name'],
       answer: ['operation', 'sessionId', 'questionId', 'selectedOptionId', 'submissionId'],
       command: ['operation', 'sessionId', 'action', 'revision', 'commandId'],
+      power: ['operation', 'sessionId', 'power', 'targetUid'],
     };
     const keys = permitted[String(input.operation)];
     if (!keys || Object.keys(input).some(key => !keys.includes(key))) return send(400, { code: 'INVALID_FIELDS', error: 'Champs non autorisés.' });
@@ -46,6 +47,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
       case 'join': return send(200, await engine.join(uid, input));
       case 'answer': return send(200, await engine.answer(uid, input));
       case 'command': return send(200, await engine.command(uid, input));
+      case 'power': return send(200, await engine.power(uid, input));
       default: return send(400, { code: 'INVALID_OPERATION', error: 'Opération inconnue.' });
     }
   } catch (error) {

@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useQuiz } from '@/hooks/useQuiz';
 import { PremiumMetric, PremiumPanel } from '@/components/ui/premium';
 import { QuizPractice } from '@/components/live/QuizPractice';
+import { LiveCompetitionLauncher } from '@/components/live/LiveCompetitionLauncher';
 import { validateQuizQuestions, type QuizQuestionInput } from '@/domain/quizRules';
 
 const QuizPreview = () => {
@@ -145,6 +146,7 @@ const QuizPreview = () => {
               Tester sans enregistrer
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+            <LiveCompetitionLauncher quizId={quiz.id} />
           </div>
         </PremiumPanel>
 
