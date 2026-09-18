@@ -48,6 +48,40 @@ class ApiSecurityContractTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["explanation"], "La première réponse respecte la règle.")
 
+    def test_answer_explanation_accepts_a_bounded_personalization_request(self):
+        request_payload = {
+            "question": "Quelle réponse est correcte ?",
+            "selectedOptionId": "b",
+            "explanationRequest": "Explique avec un exemple simple.",
+            "options": [
+                {"id": "a", "text": "La réponse correcte", "isCorrect": True},
+                {"id": "b", "text": "Une réponse incorrecte", "isCorrect": False},
+            ],
+        }
+        provider_payload = '{"explanation":"Exemple simple.","keyPoint":"Retenir la règle."}'
+        with patch.object(backend, "verify_firebase_id_token", return_value={"uid": "test-user"}), \
+             patch.object(backend, "generate_with_provider", return_value=provider_payload) as provider:
+            response = self.client.post(
+                "/api/explain-answer",
+                headers={"Authorization": "Bearer test-token"},
+                json=request_payload,
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Explique avec un exemple simple.", provider.call_args.args[1])
+
+    def test_answer_explanation_rejects_an_oversized_personalization_request(self):
+        payload = {
+            "question": "Question ?",
+            "explanationRequest": "x" * 601,
+            "options": [
+                {"id": "a", "text": "Bonne", "isCorrect": True},
+                {"id": "b", "text": "Mauvaise", "isCorrect": False},
+            ],
+        }
+        with patch.object(backend, "verify_firebase_id_token", return_value={"uid": "test-user"}):
+            response = self.client.post("/api/explain-answer", headers={"Authorization": "Bearer test-token"}, json=payload)
+        self.assertEqual(response.status_code, 400)
+
     def test_authenticated_payload_limits_run_before_provider_call(self):
         with patch.object(backend, "verify_firebase_id_token", return_value={"uid": "test-user"}):
             response = self.client.post(

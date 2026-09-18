@@ -22,6 +22,7 @@ const getErrorMessage = (error: unknown): string => {
 export const requestAnswerExplanation = async (
   question: QuizQuestionInput,
   selectedOptionId?: string,
+  explanationRequest = '',
 ): Promise<AnswerExplanation> => {
   const user = auth.currentUser;
   if (!user) throw new Error('Connectez-vous pour demander une explication à l’IA.');
@@ -32,6 +33,7 @@ export const requestAnswerExplanation = async (
       options: question.options,
       selectedOptionId,
       existingExplanation: question.explanation || '',
+      explanationRequest: explanationRequest.trim(),
     }, {
       headers: {
         'Content-Type': 'application/json',

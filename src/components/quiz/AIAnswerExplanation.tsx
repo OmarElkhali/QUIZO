@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bot, Lightbulb, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import type { QuizQuestionInput } from '@/domain/quizRules';
 import { requestAnswerExplanation, type AnswerExplanation } from '@/services/answerExplanationService';
 
@@ -13,12 +14,13 @@ export function AIAnswerExplanation({ question, selectedOptionId }: Props) {
   const [result, setResult] = useState<AnswerExplanation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [explanationRequest, setExplanationRequest] = useState('');
 
   const explain = async () => {
     setLoading(true);
     setError(null);
     try {
-      setResult(await requestAnswerExplanation(question, selectedOptionId));
+      setResult(await requestAnswerExplanation(question, selectedOptionId, explanationRequest));
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Explication indisponible.');
     } finally {
@@ -37,6 +39,20 @@ export function AIAnswerExplanation({ question, selectedOptionId }: Props) {
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : result ? <RefreshCw className="mr-2 h-4 w-4" /> : <Bot className="mr-2 h-4 w-4" />}
           {loading ? 'Analyse…' : result ? 'Regénérer' : 'Demander à l’IA'}
         </Button>
+      </div>
+      <div className="mt-4">
+        <label htmlFor={`explanation-request-${question.id}`} className="text-sm font-semibold text-violet-100">Personnaliser l’explication <span className="font-normal text-[var(--quizo-muted)]">(facultatif)</span></label>
+        <Textarea
+          id={`explanation-request-${question.id}`}
+          value={explanationRequest}
+          onChange={(event) => setExplanationRequest(event.target.value.slice(0, 600))}
+          maxLength={600}
+          rows={3}
+          disabled={loading}
+          className="mt-2 min-h-[74px] border-violet-300/20 bg-black/20 text-sm"
+          placeholder="Ex. Explique comme à un débutant, avec un exemple concret, ou dis-moi pourquoi mon choix est faux."
+        />
+        <p className="mt-1 text-right text-[11px] text-[var(--quizo-muted)]">{explanationRequest.length}/600</p>
       </div>
       {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
       {result && (
