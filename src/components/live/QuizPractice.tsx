@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Award, CheckCircle2, RotateCcw, Sparkles, XCircle } from 'lucide-react';
+import { Award, Brain, CheckCircle2, RotateCcw, Sparkles, Target, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { calculatePersonalScore, randomizeQuestionOptionOrder, type QuizQuestionInput } from '@/domain/quizRules';
 import { QuestionStage } from './QuestionStage';
@@ -11,11 +11,16 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
   const [selected, setSelected] = useState<string | undefined>();
   const [revealed, setRevealed] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [reviewingMistakes, setReviewingMistakes] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string | undefined>>({});
   const question = presentedQuestions[index];
   const personalScore = useMemo(() => calculatePersonalScore(presentedQuestions, answers), [answers, presentedQuestions]);
   const points = personalScore.points;
   const selectedIsCorrect = question?.options.some((option) => option.id === selected && option.isCorrect) || false;
+  const missedQuestions = useMemo(
+    () => presentedQuestions.filter((item) => !item.options.some((option) => option.id === answers[item.id] && option.isCorrect)),
+    [answers, presentedQuestions],
+  );
 
   const answer = (optionId: string) => {
     if (revealed || !question) return;
@@ -40,7 +45,19 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
     setRevealed(false);
     setAnswers({});
     setFinished(false);
+    setReviewingMistakes(false);
     setPresentedQuestions(randomizeQuestionOptionOrder(questions));
+  };
+
+  const reviewMistakes = () => {
+    if (!missedQuestions.length) return;
+    setPresentedQuestions(randomizeQuestionOptionOrder(missedQuestions));
+    setIndex(0);
+    setSelected(undefined);
+    setRevealed(false);
+    setAnswers({});
+    setFinished(false);
+    setReviewingMistakes(true);
   };
 
   if (!question) return <p>Ajoutez des questions avant de tester.</p>;
@@ -50,16 +67,18 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
     <section className="w-full space-y-5 rounded-2xl border border-[var(--quizo-border)] p-3 sm:space-y-6 sm:rounded-3xl sm:p-6 lg:p-8 2xl:p-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
+          {reviewingMistakes && <p className="mb-1 inline-flex rounded-full border border-sky-300/25 bg-sky-500/10 px-2.5 py-1 text-xs font-bold text-sky-200">Révision ciblée</p>}
           <p className="text-sm text-[var(--quizo-muted)]">Quiz personnel · aucune statistique enregistrée</p>
           <p className="mt-1 text-xs text-[var(--quizo-muted)]">Barème simple : 1 bonne réponse = 1 point. Aucun bonus de vitesse.</p>
         </div>
         <Button variant="outline" onClick={onClose}>Quitter le test</Button>
       </div>
 
-      <div className="sticky top-16 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-xl sm:top-20 sm:grid-cols-3">
+      <div className="sticky top-16 z-20 grid gap-2 rounded-2xl border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-xl sm:top-20 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl bg-orange-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Score personnel</p><p className="text-xl font-black">{points} / {presentedQuestions.length}</p></div>
         <div className="rounded-xl bg-emerald-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Réussite</p><p className="text-xl font-black">{successRate} %</p></div>
         <div className="rounded-xl bg-violet-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">Barème</p><p className="text-xl font-black">1 pt / question</p></div>
+        <div className="rounded-xl bg-sky-500/10 p-3"><p className="text-xs text-[var(--quizo-muted)]">À revoir</p><p className="text-xl font-black">{missedQuestions.length}</p></div>
       </div>
 
       {finished ? (
@@ -78,10 +97,20 @@ export function QuizPractice({ questions, onClose }: { questions: QuizQuestionIn
                 <p className="inline-flex items-center gap-2 rounded-full border border-orange-300/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-orange-200"><Sparkles className="h-3.5 w-3.5" />Quiz terminé</p>
                 <h2 className="text-3xl font-black sm:text-4xl">Correction complète</h2>
                 <p className="max-w-2xl text-sm leading-6 text-[var(--quizo-muted)]">Toutes les questions, vos choix et les bonnes réponses sont réunis ci-dessous. L’explication IA reste optionnelle et se lance uniquement sur la question qui vous intéresse.</p>
-                <Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Recommencer</Button>
+                <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
+                  <Button onClick={restart}><RotateCcw className="mr-2 h-4 w-4" />Tout recommencer</Button>
+                  {missedQuestions.length > 0 && <Button variant="outline" onClick={reviewMistakes}><Target className="mr-2 h-4 w-4" />Réviser {missedQuestions.length} erreur{missedQuestions.length > 1 ? 's' : ''}</Button>}
+                </div>
               </div>
             </div>
           </div>
+
+          {missedQuestions.length > 0 && (
+            <aside className="rounded-2xl border border-sky-300/20 bg-sky-500/[0.07] p-5 sm:p-6" aria-label="Plan de révision">
+              <p className="flex items-center gap-2 font-bold text-sky-100"><Brain className="h-5 w-5 text-sky-300" />Plan de révision gratuit</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--quizo-muted)]">Refaites uniquement les {missedQuestions.length} notion{missedQuestions.length > 1 ? 's' : ''} non maîtrisée{missedQuestions.length > 1 ? 's' : ''}, puis consultez l’explication du quiz ou l’IA seulement si nécessaire.</p>
+            </aside>
+          )}
 
           <div className="space-y-5 text-left">
             {presentedQuestions.map((reviewQuestion, reviewIndex) => {
