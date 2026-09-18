@@ -9,9 +9,12 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
   const send = (status: number, value: unknown) => { res.statusCode = status; res.end(JSON.stringify(value)); };
-  if (req.method === 'GET') return send(200, { ready: process.env.ENABLE_LIVE_V2 === 'true' && !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, version: 2, serverNow: Date.now() });
+  // Environment variables entered through terminals can retain whitespace. Normalize the flag
+  // so an intended `true` remains enabled without relaxing the server-side default (disabled).
+  const liveEnabled = process.env.ENABLE_LIVE_V2?.trim().toLowerCase() === 'true';
+  if (req.method === 'GET') return send(200, { ready: liveEnabled && !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON, version: 2, serverNow: Date.now() });
   if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return send(405, { error: 'Méthode non autorisée.' }); }
-  if (process.env.ENABLE_LIVE_V2 !== 'true') return send(503, { code: 'LIVE_NOT_READY', error: 'Le nouveau moteur live est en cours de préparation.' });
+  if (!liveEnabled) return send(503, { code: 'LIVE_NOT_READY', error: 'Le nouveau moteur live est en cours de préparation.' });
   try {
     const authorization = req.headers.authorization;
     if (!authorization?.startsWith('Bearer ')) return send(401, { code: 'AUTH_REQUIRED', error: 'Authentification requise.' });
