@@ -10,7 +10,7 @@ test-results
 tests
 python_api
 scripts
-supabase
+/supabase
 *.zip
 *.log
 playwright-report
