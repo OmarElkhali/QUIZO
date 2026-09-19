@@ -35,6 +35,8 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 app = Flask(__name__)
 MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "10"))
 MAX_AI_QUESTIONS_PER_QUIZ = int(os.getenv("MAX_AI_QUESTIONS_PER_QUIZ", "20"))
+MAX_EXTRACTED_TEXT_CHARS = int(os.getenv("MAX_EXTRACTED_TEXT_CHARS", "50000"))
+MAX_PDF_PAGES = int(os.getenv("MAX_PDF_PAGES", "100"))
 ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".txt"}
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
@@ -85,7 +87,7 @@ limiter = Limiter(
 # --- CORS ---
 configured_origins = os.getenv(
     "CORS_ORIGINS",
-    "https://quizo-tau.vercel.app",
+    "https://quizo.me,https://www.quizo.me",
 ).split(",")
 local_dev_origins = [
     "http://localhost:5173",
@@ -96,7 +98,14 @@ local_dev_origins = [
     "https://quizo-ruddy.vercel.app",
     "https://quizo.vercel.app",
 ]
-raw_origins = [origin.strip() for origin in [*configured_origins, *local_dev_origins] if origin.strip()]
+is_development = os.getenv("FLASK_ENV", "production").lower() == "development"
+raw_origins = [origin.strip() for origin in configured_origins if origin.strip()]
+if is_development:
+    raw_origins.extend(local_dev_origins)
+# A wildcard would allow any website to call costly authenticated endpoints from
+# a victim browser. In production it is ignored in favour of Quizo's domains.
+if "*" in raw_origins and not is_development:
+    raw_origins = [origin for origin in raw_origins if origin != "*"]
 ALLOWED_ORIGINS = "*" if "*" in raw_origins else list(dict.fromkeys(raw_origins))
 
 CORS(app, resources={
@@ -228,6 +237,14 @@ def assert_allowed_upload(file):
     return safe_name, extension
 
 
+def assert_extracted_text_size(text):
+    if len(text) > MAX_EXTRACTED_TEXT_CHARS:
+        raise ValueError(
+            f"Le document contient trop de texte après extraction (maximum {MAX_EXTRACTED_TEXT_CHARS:,} caractères)."
+        )
+    return text
+
+
 def extract_text_from_file(file):
     """Extrait le texte des fichiers PDF/DOCX/TXT"""
     filename, extension = assert_allowed_upload(file)
@@ -237,10 +254,12 @@ def extract_text_from_file(file):
         if extension == '.pdf':
             logger.info(f"Extraction du texte du PDF: {filename}")
             pdf_reader = PdfReader(io.BytesIO(file.read()))
+            if len(pdf_reader.pages) > MAX_PDF_PAGES:
+                raise ValueError(f"Le PDF dépasse la limite de {MAX_PDF_PAGES} pages.")
             logger.debug(f"PDF chargé avec {len(pdf_reader.pages)} pages")
             text = '\n'.join([page.extract_text() for page in pdf_reader.pages])
             logger.debug(f"Extraction PDF terminée: {len(text)} caractères extraits")
-            return text if text.strip() else "Aucun texte détecté dans le PDF"
+            return assert_extracted_text_size(text if text.strip() else "Aucun texte détecté dans le PDF")
         
         elif extension == '.docx':
             logger.info(f"Extraction du texte du document Word: {filename}")
@@ -248,13 +267,13 @@ def extract_text_from_file(file):
             logger.debug(f"Document Word chargé avec {len(doc.paragraphs)} paragraphes")
             text = '\n'.join([para.text for para in doc.paragraphs if para.text])
             logger.debug(f"Extraction Word terminée: {len(text)} caractères extraits")
-            return text
+            return assert_extracted_text_size(text)
         
         elif extension == '.txt':
             logger.info(f"Extraction du texte brut: {filename}")
             text = file.read().decode('utf-8', errors='ignore')
             logger.debug(f"Extraction TXT terminée: {len(text)} caractères extraits")
-            return text
+            return assert_extracted_text_size(text)
             
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction du texte: {str(e)}")
@@ -295,13 +314,11 @@ def handle_text_extraction():
         logger.error(f"Erreur de format de fichier: {str(e)}")
         return jsonify({
             'error': f'Format de fichier non supporté ou fichier corrompu: {str(e)}',
-            'details': str(e)
         }), 422
     except Exception as e:
         logger.error(f"Erreur inattendue lors de l'extraction: {str(e)}", exc_info=True)
         return jsonify({
             'error': 'Impossible d\'extraire le texte du fichier. Veuillez vérifier que le fichier est valide.',
-            'details': str(e)
         }), 500
 
 

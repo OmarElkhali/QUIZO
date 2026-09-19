@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Mail, Key, Github, User, Loader2 } from 'lucide-react';
+import { Mail, Key, Github, User, Loader2, Globe2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
 
@@ -16,7 +16,7 @@ interface AuthDialogProps {
 }
 
 export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
-  const { signIn, signUp, signInWithGoogle, isLoading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithGithub, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -56,6 +56,15 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const handleGoogleAuth = async () => {
     try {
       await signInWithGoogle();
+      onOpenChange(false);
+    } catch (error) {
+      // Error is handled in the auth context
+    }
+  };
+
+  const handleGithubAuth = async () => {
+    try {
+      await signInWithGithub();
       onOpenChange(false);
     } catch (error) {
       // Error is handled in the auth context
@@ -146,8 +155,17 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               onClick={handleGoogleAuth}
               disabled={isLoading}
             >
-              <Github className="mr-2 h-4 w-4" />
+              <Globe2 className="mr-2 h-4 w-4" />
               Google
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full hover-scale"
+              onClick={handleGithubAuth}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              Continuer avec GitHub
             </Button>
           </TabsContent>
           
@@ -184,6 +202,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                     disabled={isLoading}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">10 caractères minimum, avec majuscule, minuscule et chiffre.</p>
               </div>
               
               <div className="space-y-2">
@@ -235,8 +254,17 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               onClick={handleGoogleAuth}
               disabled={isLoading}
             >
-              <Github className="mr-2 h-4 w-4" />
+              <Globe2 className="mr-2 h-4 w-4" />
               Google
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full hover-scale"
+              onClick={handleGithubAuth}
+              disabled={isLoading}
+            >
+              <Github className="mr-2 h-4 w-4" />
+              S’inscrire avec GitHub
             </Button>
           </TabsContent>
         </Tabs>

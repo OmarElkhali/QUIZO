@@ -1,0 +1,15 @@
+# Secrets and local credentials must never be embedded in a backend image.
+.env
+.env.*
+service-account*.json
+*serviceAccountKey*.json
+*firebase-adminsdk*.json
+
+# Local tooling and non-runtime artifacts.
+.venv/
+__pycache__/
+*.py[cod]
+test_*.py
+simulate_multiplayer.py
+start_backend.bat
+README.md

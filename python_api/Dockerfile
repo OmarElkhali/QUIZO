@@ -10,4 +10,7 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# The AI providers are network-bound. One gthread worker keeps the free/small
+# instance footprint while accepting a small, controlled number of concurrent
+# requests instead of serialising every generation behind a single request.
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-5000} --worker-class gthread --threads ${GUNICORN_THREADS:-4} --timeout ${GUNICORN_TIMEOUT:-300} --graceful-timeout 30 --access-logfile - --error-logfile - app:app"]
