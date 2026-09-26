@@ -77,7 +77,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
             )
           }
         >
-          <item.icon className="h-4 w-4" />
+          <item.icon aria-hidden="true" className="h-4 w-4" />
           <span>{t(item.key)}</span>
         </NavLink>
       ))}
@@ -85,15 +85,15 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
   );
 
   return (
-    <div className="quizo-app-bg min-h-screen">
+    <div className="quizo-app-bg min-h-[100dvh]">
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
       <div className="pointer-events-none fixed inset-0 quizo-grid-overlay opacity-60" />
 
-      <div className="relative flex min-h-screen flex-col">
+      <div className="relative flex min-h-[100dvh] flex-col">
         <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
           <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-20">
             <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
-              <img src="/quizo-logo.png" alt="" aria-hidden="true" className="h-9 w-9 rounded-lg object-contain" />
+              <img src="/quizo-logo.png" alt="" aria-hidden="true" width="36" height="36" className="h-9 w-9 rounded-lg object-contain" />
               <span className="quizo-brand-text text-xl font-black tracking-tighter sm:text-2xl">QUIZO</span>
             </button>
 
@@ -107,6 +107,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="Rechercher"
                 className="hidden text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] sm:inline-flex"
               >
                 <Search className="h-4 w-4" />
@@ -127,6 +128,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                     type="button"
                     variant="ghost"
                     size="icon"
+                    aria-label="Se déconnecter"
                     className="hidden text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] sm:inline-flex"
                     onClick={handleSignOut}
                   >
@@ -142,6 +144,9 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="Ouvrir le menu"
+                aria-expanded={mobileOpen}
+                aria-controls="quizo-mobile-menu"
                 className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] 2xl:hidden"
                 onClick={() => setMobileOpen(true)}
               >
@@ -159,13 +164,13 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
               className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
               onClick={() => setMobileOpen(false)}
             />
-            <aside className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col border-r border-[var(--quizo-border)] overflow-y-auto">
+            <aside id="quizo-mobile-menu" aria-label="Navigation mobile" className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col overscroll-contain border-r border-[var(--quizo-border)] overflow-y-auto">
               <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
                 <div className="flex items-center gap-3">
-                  <img src="/quizo-logo.png" alt="" aria-hidden="true" className="h-9 w-9 rounded-lg object-contain" />
+                  <img src="/quizo-logo.png" alt="" aria-hidden="true" width="36" height="36" className="h-9 w-9 rounded-lg object-contain" />
                   <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
                 </div>
-                <Button type="button" variant="ghost" size="icon" className="text-[var(--quizo-text)]" onClick={() => setMobileOpen(false)}>
+                <Button type="button" variant="ghost" size="icon" aria-label="Fermer le menu" className="text-[var(--quizo-text)]" onClick={() => setMobileOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>

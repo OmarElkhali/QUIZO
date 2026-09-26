@@ -130,7 +130,7 @@ export default {
 				shimmer: 'shimmer 2s linear infinite'
 			},
 			fontFamily: {
-				sans: ['Inter var', 'sans-serif'],
+				sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
 			},
 			backdropFilter: {
 				'none': 'none',

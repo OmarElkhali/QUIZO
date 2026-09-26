@@ -36,13 +36,14 @@ export const LanguageSelector = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-2 px-2 hover:bg-white/5 text-[#d8d2ce] hover:text-white transition-all duration-300">
-          <Globe className="h-4 w-4 text-[#ffb77d]" />
+        <Button variant="ghost" size="sm" aria-label="Choisir la langue" className="gap-2 px-2 text-[#d8d2ce] transition-[background-color,color] duration-300 hover:bg-white/5 hover:text-white">
+          <Globe aria-hidden="true" className="h-4 w-4 text-[#ffb77d]" />
           <img
             src={`https://flagcdn.com/w40/${currentLanguage.countryCode}.png`}
             srcSet={`https://flagcdn.com/w80/${currentLanguage.countryCode}.png 2x`}
             width="18"
             height="13"
+            onError={(event) => { event.currentTarget.style.display = 'none'; }}
             alt={currentLanguage.name}
             className="rounded-[2px] shadow-sm object-cover border border-white/10 shrink-0"
           />
@@ -67,6 +68,7 @@ export const LanguageSelector = () => {
               srcSet={`https://flagcdn.com/w80/${language.countryCode}.png 2x`}
               width="18"
               height="13"
+              onError={(event) => { event.currentTarget.style.display = 'none'; }}
               alt={language.name}
               className="rounded-[2px] shadow-sm object-cover border border-white/10 shrink-0"
             />
