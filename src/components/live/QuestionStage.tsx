@@ -24,15 +24,6 @@ interface Props {
   onAnswer?: (optionId: string) => void;
 }
 
-const identities = [
-  { symbol: '▲', color: 'border-rose-400/40 bg-rose-500/10 hover:bg-rose-500/15' },
-  { symbol: '◆', color: 'border-sky-400/40 bg-sky-500/10 hover:bg-sky-500/15' },
-  { symbol: '●', color: 'border-amber-400/40 bg-amber-500/10 hover:bg-amber-500/15' },
-  { symbol: '■', color: 'border-emerald-400/40 bg-emerald-500/10 hover:bg-emerald-500/15' },
-  { symbol: '★', color: 'border-violet-400/40 bg-violet-500/10 hover:bg-violet-500/15' },
-  { symbol: '⬟', color: 'border-cyan-400/40 bg-cyan-500/10 hover:bg-cyan-500/15' },
-];
-
 export function QuestionStage({ question, index, total, remaining, timerTotal, selected, correctOptionId, disabled, compact = false, onAnswer }: Props) {
   const reducedMotion = useReducedMotion();
   const answerHandler = useRef(onAnswer);
@@ -74,7 +65,7 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
   }, [orderedOptions, disabled]);
 
   return (
-    <motion.section key={question.id} initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, ease: 'easeOut' }} className="space-y-6" aria-labelledby={`question-${question.id}`}>
+    <motion.section key={question.id} initial={reducedMotion ? false : { opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 170, damping: 24 }} className="space-y-5 sm:space-y-8" aria-labelledby={`question-${question.id}`}>
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--quizo-muted)]">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] px-3 py-1.5 font-semibold">Question {index + 1} / {total}</span>
@@ -87,24 +78,23 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
         <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ scaleX: questionProgress / 100 }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full origin-left rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
       </div>
       {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><motion.div initial={false} animate={{ scaleX: timerProgress / 100 }} transition={{ duration: reducedMotion ? 0 : 0.3 }} className={cn('h-full origin-left rounded-full transition-colors', urgent ? 'bg-red-400' : 'bg-orange-400')} /></div>}
-      <h2 id={`question-${question.id}`} className={cn('live-question-heading break-words font-black tracking-tight text-[var(--quizo-heading)]', compact ? 'text-lg sm:text-xl xl:text-2xl 2xl:text-3xl' : 'text-xl sm:text-2xl xl:text-3xl')}>{question.text}</h2>
+      <h2 id={`question-${question.id}`} className={cn('max-w-[38ch] break-words text-balance font-bold leading-[1.12] tracking-[-.045em] text-[var(--quizo-heading)]', compact ? 'text-[clamp(1.65rem,2.5vw,2.8rem)]' : 'text-[clamp(1.65rem,3vw,3.4rem)]')}>{question.text}</h2>
       <div role="group" aria-label="Réponses possibles" className="live-answer-grid grid gap-3 md:grid-cols-2 xl:gap-4">
         {orderedOptions.map((option, optionIndex) => {
-          const identity = identities[optionIndex % identities.length];
           const correct = option.id === correctOptionId;
           const chosen = option.id === selected;
           const incorrectChoice = Boolean(chosen && correctOptionId && !correct);
-          return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
+          return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen} data-result={correct ? 'correct' : incorrectChoice ? 'incorrect' : undefined}
             initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26, delay: optionIndex * 0.045 }}
             whileHover={reducedMotion || disabled ? undefined : { y: -2 }} whileTap={reducedMotion || disabled ? undefined : { scale: 0.985 }}
-            className={cn('live-answer-option group flex items-center gap-3 rounded-xl border-2 p-3 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:min-h-20 sm:rounded-2xl sm:p-3.5 xl:p-4', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/15 font-black text-orange-200 sm:h-10 sm:w-10 sm:rounded-xl" aria-hidden="true">{String.fromCharCode(65 + optionIndex)}</span>
-            <span className="min-w-0 flex-1 break-words text-[13px] font-semibold leading-relaxed sm:text-sm xl:text-[15px]">{option.text}</span>
+            className={cn('quizo-answer-choice group flex items-center gap-3 p-4 text-start text-[var(--quizo-heading)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:gap-5 sm:p-5', !disabled && 'cursor-pointer', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-400/25 bg-orange-500/10 text-lg font-bold text-orange-300 sm:h-12 sm:w-12" aria-hidden="true">{String.fromCharCode(65 + optionIndex)}</span>
+            <span className="min-w-0 flex-1 break-words text-base font-medium leading-relaxed">{option.text}</span>
             {correct ? <Check className="h-6 w-6 shrink-0 text-emerald-300" aria-label="Bonne réponse" /> : chosen ? <Circle className="h-5 w-5 shrink-0 fill-current text-orange-300" aria-label="Votre choix" /> : null}
           </motion.button>;
         })}
       </div>
-      {!disabled && onAnswer && <p className="text-center text-xs text-[var(--quizo-muted)]">Astuce : utilisez les touches A à {String.fromCharCode(64 + orderedOptions.length)} pour répondre.</p>}
+      {!disabled && onAnswer && <p className="hidden text-center text-xs text-[var(--quizo-muted)] sm:block">Astuce : utilisez les touches A à {String.fromCharCode(64 + orderedOptions.length)} pour répondre.</p>}
     </motion.section>
   );
 }

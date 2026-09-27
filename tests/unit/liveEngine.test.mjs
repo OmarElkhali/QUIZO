@@ -16,6 +16,14 @@ let now = 100000;
 const engine = new LiveEngine(db, () => now);
 const postCommand = (sessionId, action, revision, commandId) => engine.command('host', { sessionId, action, revision, commandId });
 
+test('older AI quizzes without weights start with one point per question', async () => {
+  const legacyQuestions = questions.map(({ points, ...question }) => question);
+  await db.doc('quizzes/legacy-ai').set({ creatorId: 'host', title: 'Legacy AI quiz', questions: legacyQuestions });
+  const { sessionId } = await engine.create('host', { quizId: 'legacy-ai', commandId: 'legacy-ai-create', config: { mode: 'classic', timerMode: 'host' } });
+  assert.equal((await db.doc(`liveSessionsV2/${sessionId}`).get()).data().possibleWeight, legacyQuestions.length);
+  assert.deepEqual((await db.doc(`quizVersionsV2/${sessionId}`).get()).data().questions.map(question => question.points), [1, 1]);
+});
+
 test('multiplayer lifecycle, retries, timeout, privacy, host concurrency, immutable snapshot', async () => {
   await db.doc('quizzes/demo').set({ creatorId: 'host', title: 'Fixture', questions });
   const liveConfig = { mode: 'battle_pure', timerMode: 'countdown', timePerQuestion: 20, speedBonus: true, streakBonus: true, leaderboardFrequency: 'each_round', autoNext: false, sounds: false, animationIntensity: 'standard', powers: [], duels: false };

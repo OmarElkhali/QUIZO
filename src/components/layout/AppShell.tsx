@@ -102,8 +102,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
 
             <div className="flex items-center gap-2">
               {actions}
-              <LanguageSelector />
-              <ThemeToggle />
+              <div className="hidden items-center gap-2 sm:flex"><LanguageSelector /><ThemeToggle /></div>
               {user ? (
                 <div className="flex items-center gap-2">
                   <div className="hidden text-right xl:block">
@@ -227,7 +226,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           )}
         </AnimatePresence>
 
-        <motion.main id="main-content" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="quizo-page-frame min-h-[calc(100vh-4rem)] flex-1 py-8 sm:min-h-[calc(100vh-4.5rem)] sm:py-12">{children}</motion.main>
+        <motion.main id="main-content" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="quizo-page-frame min-h-[calc(100dvh-4rem)] flex-1 py-5 sm:min-h-[calc(100dvh-4.5rem)] sm:py-10">{children}</motion.main>
         <Footer />
       </div>
 

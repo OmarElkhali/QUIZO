@@ -89,7 +89,7 @@ export class LiveEngine {
       requireValue(quiz.creatorId === uid || quiz.ownerId === uid, 403, 'OWNER_REQUIRED', 'Seul le créateur peut lancer ce quiz.');
       requireValue(Array.isArray(quiz.questions), 400, 'INVALID_QUIZ', 'Questions invalides.');
       const questions: QuizQuestionInput[] = quiz.questions.map((q: QuizQuestionInput) => ({
-        id: id(q.id), text: text(q.text, 3000), points: q.points, timeLimit: config.timePerQuestion ?? q.timeLimit ?? 20,
+        id: id(q.id), text: text(q.text, 3000), points: q.points ?? 1, timeLimit: config.timePerQuestion ?? q.timeLimit ?? 20,
         explanation: typeof q.explanation === 'string' ? q.explanation.slice(0, 5000) : '',
         options: Array.isArray(q.options) ? q.options.map(o => ({ id: id(o.id), text: text(o.text, 1000), isCorrect: o.isCorrect === true })) : [],
       }));

@@ -266,8 +266,7 @@ const QuizSession = () => {
           </div>
         </div>
 
-        <section className="quizo-panel relative overflow-hidden p-5 sm:p-8 lg:p-12">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent" />
+        <section className="quizo-play-surface relative overflow-hidden rounded-[1.25rem] border border-[var(--quizo-border)] p-5 sm:p-8 lg:p-12">
           <div className="relative space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               {timeLeft !== null ? <p className={cn('rounded-full border px-4 py-2 font-mono text-sm font-bold', timeLeft <= 60 ? 'border-red-400/40 bg-red-500/10 text-red-200' : 'border-white/10 bg-white/[0.04] text-[#ffb77d]')}>Temps global · {formatTime(timeLeft)}</p> : <span />}
@@ -289,7 +288,7 @@ const QuizSession = () => {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-9 w-9 border border-white/[0.07] bg-white/[0.045] text-[#dbc2b0] hover:bg-white/[0.08]',
+                  'h-11 w-11 border border-white/[0.07] bg-white/[0.045] text-[#dbc2b0] hover:bg-white/[0.08]',
                   index === currentQuestionIndex && 'border-orange-300/50 bg-orange-500/15 text-[#ffb77d]',
                   answers[question.id] && index !== currentQuestionIndex && 'border-emerald-400/35 text-emerald-300',
                   markedForReview.has(question.id) && 'border-amber-400/50'
@@ -305,7 +304,7 @@ const QuizSession = () => {
         </aside>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/[0.06] bg-[#070707]/90 p-4 backdrop-blur-xl md:p-6">
+      <footer className="quizo-bottom-dock fixed bottom-0 left-0 right-0 z-20 border-t border-white/[0.06] bg-[#070707]/90 p-4 backdrop-blur-xl md:p-6">
         <div className="quizo-page-frame flex items-center justify-between gap-3 sm:gap-4">
           <Button
             variant="outline"

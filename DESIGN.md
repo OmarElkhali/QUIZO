@@ -4,7 +4,7 @@ This document is the source of truth for visual changes. It follows the `DESIGN.
 
 ## Direction
 
-Quizo is a dark, focused learning arena for students and facilitators. The interface should feel energetic during a live round and calm during review. Prefer clear hierarchy over decoration, and reserve animation for feedback, progress, and state changes.
+Quizo is a dark learning arena for students and facilitators. The dashboard should feel energetic, the question view focused, and the correction calm. Use broad typography and purposeful motion to guide attention without delaying an answer.
 
 ## Tokens
 
@@ -27,19 +27,20 @@ Quizo is a dark, focused learning arena for students and facilitators. The inter
 
 ## Layout
 
-- Desktop live views use a 12-column grid with a generous main arena and a compact context rail.
-- Tablet views collapse to two columns; mobile is one column with a fixed action dock.
+- The page frame uses the available desktop width with fluid gutters; only reading text gets a narrower measure.
+- Desktop live and quiz views give the question a broad main arena and use a compact context rail when needed.
+- Tablet views collapse to two columns; mobile is one column with a safe-area-aware action dock.
 - Answers are always a compact 2×2 grid on desktop and a single stack on narrow screens.
 - Keep the question readable before showing secondary analytics.
 - Do not introduce nested cards merely to group content. Use spacing and dividers first. The home dashboard uses rows for recent quizzes and a separate action rail.
 
 ## Motion
 
-- Motion intensity is standard for product surfaces and intense only for competition feedback.
+- Heroes, question changes, answers, and results may use large but short entrance transitions. Never keep the user waiting for motion to finish before they can answer.
 - Animate `transform` and `opacity`, never layout dimensions.
 - Every animation communicates progress, correctness, score, rank, or a transition.
 - Use spring entrances for sections and cards, stagger related items by 50–80 ms, and keep hover feedback brief. The home quiz preview may respond to a mouse pointer; touch interaction stays still.
-- Respect `prefers-reduced-motion` and keep a local mute control for game sounds.
+- Respect `prefers-reduced-motion`, avoid decorative continuous loops, and keep a local mute control for game sounds.
 
 ## Interaction and accessibility
 

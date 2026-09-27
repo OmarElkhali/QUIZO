@@ -131,7 +131,7 @@ export const mapManualQuiz = (id: string, data: Record<string, unknown>): Manual
   id,
   title: String(data.title || 'Quiz sans titre'),
   description: String(data.description || ''),
-  questions: Array.isArray(data.questions) ? (data.questions as ManualQuestion[]) : [],
+  questions: Array.isArray(data.questions) ? (data.questions as ManualQuestion[]).map(question => ({ ...question, points: question.points ?? 1 })) : [],
   createdAt: toIso(data.createdAt),
   creatorId: String(data.creatorId || data.ownerId || data.userId || ''),
   isPublic: Boolean(data.isPublic),

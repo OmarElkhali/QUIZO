@@ -29,19 +29,21 @@ export function AIAnswerExplanation({ question, selectedOptionId }: Props) {
   };
 
   return (
-    <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/[0.07] p-4">
+    <div className="mt-4 rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="flex items-center gap-2 font-semibold text-violet-100"><Bot className="h-4 w-4" />Explication IA à la demande</p>
+          <p className="flex items-center gap-2 font-semibold text-[var(--quizo-heading)]"><Bot className="h-4 w-4 text-orange-400" />Explication IA à la demande</p>
           <p className="mt-1 text-xs text-[var(--quizo-muted)]">L’API n’est appelée que si vous cliquez.</p>
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={() => void explain()} disabled={loading}>
+        <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={() => void explain()} disabled={loading}>
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : result ? <RefreshCw className="mr-2 h-4 w-4" /> : <Bot className="mr-2 h-4 w-4" />}
           {loading ? 'Analyse…' : result ? 'Regénérer' : 'Demander à l’IA'}
         </Button>
       </div>
-      <div className="mt-4">
-        <label htmlFor={`explanation-request-${question.id}`} className="text-sm font-semibold text-violet-100">Personnaliser l’explication <span className="font-normal text-[var(--quizo-muted)]">(facultatif)</span></label>
+      <details className="group mt-4 border-t border-[var(--quizo-border)] pt-3">
+        <summary className="cursor-pointer text-sm font-semibold text-orange-400 hover:text-orange-300">Personnaliser la demande (facultatif)</summary>
+        <div className="mt-3">
+        <label htmlFor={`explanation-request-${question.id}`} className="sr-only">Personnaliser l’explication</label>
         <Textarea
           id={`explanation-request-${question.id}`}
           value={explanationRequest}
@@ -49,11 +51,12 @@ export function AIAnswerExplanation({ question, selectedOptionId }: Props) {
           maxLength={600}
           rows={3}
           disabled={loading}
-          className="mt-2 min-h-[74px] border-violet-300/20 bg-black/20 text-sm"
+          className="mt-2 min-h-[74px] border-[var(--quizo-border)] bg-[var(--quizo-input-bg)] text-sm"
           placeholder="Ex. Explique comme à un débutant, avec un exemple concret, ou dis-moi pourquoi mon choix est faux."
         />
         <p className="mt-1 text-right text-[11px] text-[var(--quizo-muted)]">{explanationRequest.length}/600</p>
-      </div>
+        </div>
+      </details>
       {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
       {result && (
         <div aria-live="polite" className="mt-4 space-y-3 text-sm leading-6 text-[var(--quizo-text)]">

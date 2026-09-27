@@ -94,13 +94,14 @@ export const QuizAnswerCard = ({ selected, children, className }: QuizAnswerCard
     animate={reduced ? undefined : { scale: selected ? 1.015 : 1 }}
     transition={{ type: 'spring', stiffness: 360, damping: 24 }}
     className={cn(
-      'flex min-h-[72px] items-center gap-4 rounded-xl border p-5 text-left transition-[background-color,border-color] duration-200',
+      'flex min-h-[96px] items-center gap-4 rounded-2xl border p-5 text-left transition-[background-color,border-color,box-shadow] duration-200 sm:gap-5 sm:p-6',
       selected
-        ? 'border-orange-500 bg-orange-500/10 text-[var(--quizo-heading)]'
+        ? 'border-orange-400 bg-orange-500/10 text-[var(--quizo-heading)] shadow-[0_12px_28px_rgba(249,115,22,.1)]'
         : 'border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] text-[var(--quizo-text)] hover:border-orange-300/35 hover:bg-[var(--quizo-surface-hover)]',
       className
     )}
   >
+    <span className={cn('min-w-0 flex-1 break-words text-base leading-6', selected && 'font-semibold')}>{children}</span>
     <span
       className={cn(
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition',
@@ -109,7 +110,6 @@ export const QuizAnswerCard = ({ selected, children, className }: QuizAnswerCard
     >
       <span className={cn('h-2 w-2 rounded-full transition', selected ? 'bg-orange-500' : 'bg-transparent')} />
     </span>
-    <span className={cn('text-base leading-6', selected && 'font-semibold')}>{children}</span>
   </motion.div>;
 };
 
