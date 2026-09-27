@@ -224,9 +224,9 @@
   "dashboardHome": {
     "workspace": "Espace de travail",
     "titleUser": "Tableau de bord",
-    "titleGuest": "QUIZO, studio moderne de quiz",
+    "titleGuest": "Le quiz qui donne envie d’apprendre.",
     "descUser": "Gérez votre contenu pédagogique et analysez les performances de vos cohortes.",
-    "descGuest": "Créez des quiz à partir de cours, lancez des compétitions live et suivez les résultats dans une interface SaaS premium.",
+    "descGuest": "Transformez vos cours en questions, partagez une partie et suivez les résultats au même endroit.",
     "seeTariffs": "Voir les tarifs",
     "totalQuiz": "Total quiz",
     "questions": "Questions",

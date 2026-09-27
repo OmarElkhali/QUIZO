@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "next-themes"
+import { MotionConfig } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { QuizProvider } from '@/context/index';
 
@@ -44,7 +45,8 @@ const queryClient = new QueryClient()
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <MotionConfig reducedMotion="user">
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <BrowserRouter>
         <TooltipProvider>
           <QueryClientProvider client={queryClient}>
@@ -85,7 +87,8 @@ function App() {
         </TooltipProvider>
       </BrowserRouter>
       <Toaster />
-    </ThemeProvider>
+      </ThemeProvider>
+    </MotionConfig>
   );
 }
 

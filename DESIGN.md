@@ -8,17 +8,18 @@ Quizo is a dark, focused learning arena for students and facilitators. The inter
 
 ## Tokens
 
-- Canvas: `#070707` with charcoal surfaces (`#141414`, `#1b1b1b`).
-- Accent: warm orange (`#f97316`) with amber highlights (`#fbbf24`). Use one accent family per view.
+- Canvas: `#0d0e0c` with charcoal surfaces (`#1a1c18`, `#22241f`). Light mode uses `#f7f5f0` and warm white surfaces.
+- Accent: warm orange (`#f97316`). Use it for primary actions, selection, and progress.
 - Text: off-white for headings, muted warm gray for supporting copy.
 - Semantic colors: emerald for correct/online, red for incorrect/offline. Never use them as decoration.
 - Radius: 16px for panels, 12px for controls, full radius only for status indicators.
 - Borders: 1px translucent warm gray. Avoid stacking borders on every row.
-- Shadows: tinted toward orange only on active or primary surfaces.
+- Shadows: quiet and neutral on raised surfaces. Avoid glow on static cards and metrics.
 
 ## Typography
 
 - Use the system sans stack already shipped by the app. Do not add a remote font request.
+- Lead with medium or semibold headings; reserve very heavy weight for scores and live moments.
 - Headings use tight tracking and `text-wrap: balance`.
 - Body copy stays near 65 characters per line.
 - Scores, timers, and rankings use tabular numerals.
@@ -30,13 +31,14 @@ Quizo is a dark, focused learning arena for students and facilitators. The inter
 - Tablet views collapse to two columns; mobile is one column with a fixed action dock.
 - Answers are always a compact 2×2 grid on desktop and a single stack on narrow screens.
 - Keep the question readable before showing secondary analytics.
-- Do not introduce nested cards merely to group content. Use spacing and dividers first.
+- Do not introduce nested cards merely to group content. Use spacing and dividers first. The home dashboard uses rows for recent quizzes and a separate action rail.
 
 ## Motion
 
 - Motion intensity is standard for product surfaces and intense only for competition feedback.
 - Animate `transform` and `opacity`, never layout dimensions.
 - Every animation communicates progress, correctness, score, rank, or a transition.
+- Use spring entrances for sections and cards, stagger related items by 50–80 ms, and keep hover feedback brief. The home quiz preview may respond to a mouse pointer; touch interaction stays still.
 - Respect `prefers-reduced-motion` and keep a local mute control for game sounds.
 
 ## Interaction and accessibility

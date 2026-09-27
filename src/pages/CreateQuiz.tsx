@@ -1,17 +1,20 @@
-import { Link, Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BookOpen, FileUp, PenLine, Sparkles, Users } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StateCard } from '@/components/ui/StateCard';
 import { Button } from '@/components/ui/button';
 import { QuizForm } from '@/components/QuizForm';
-import { ActionCard, PremiumPanel } from '@/components/ui/premium';
+import { PremiumPanel } from '@/components/ui/premium';
 import { useAuth } from '@/context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { AuthDialog } from '@/components/AuthDialog';
 
 const CreateQuiz = () => {
   const { t } = useTranslation();
   const { user, isLoading: authLoading } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
 
   if (authLoading) {
     return (
@@ -22,7 +25,7 @@ const CreateQuiz = () => {
   }
 
   if (!user) {
-    return <Navigate to="/" />;
+    return <AppShell><StateCard state="empty" title="Connectez-vous pour créer un quiz" description="Votre espace de création sera disponible après la connexion." action={<Button className="quizo-copper-button" onClick={() => setAuthOpen(true)}>Se connecter</Button>} /><AuthDialog open={authOpen} onOpenChange={setAuthOpen} /></AppShell>;
   }
 
   return (
@@ -41,15 +44,11 @@ const CreateQuiz = () => {
         }
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <ActionCard title={t('nav.createQuizAI')} description="PDF, DOCX, TXT" icon={Sparkles} accent className="min-h-0" />
-        <Link to="/create-manual-quiz">
-          <ActionCard title={t('nav.createQuizManual')} description="Control editor" icon={PenLine} className="min-h-0" />
-        </Link>
-        <Link to="/join">
-          <ActionCard title={t('nav.joinByCode')} description="Join" icon={Users} className="min-h-0" />
-        </Link>
-      </div>
+      <nav aria-label="Parcours de création" className="mb-7 flex flex-wrap gap-2 border-b border-[var(--quizo-border)] pb-4 text-sm">
+        <span aria-current="page" className="inline-flex items-center gap-2 rounded-lg bg-orange-500/10 px-4 py-2 font-semibold text-orange-500"><Sparkles className="h-4 w-4" />{t('nav.createQuizAI')}</span>
+        <Link to="/create-manual-quiz" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)]"><PenLine className="h-4 w-4" />{t('nav.createQuizManual')}</Link>
+        <Link to="/join" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)]"><Users className="h-4 w-4" />{t('nav.joinByCode')}</Link>
+      </nav>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <PremiumPanel className="p-4 sm:p-6">
@@ -57,16 +56,16 @@ const CreateQuiz = () => {
         </PremiumPanel>
         <aside className="space-y-4">
           <PremiumPanel className="p-6">
-            <FileUp className="mb-5 h-7 w-7 text-[#ffb77d]" />
-            <h2 className="text-xl font-bold text-white">{t('createQuiz.configTitle')}</h2>
-            <p className="mt-3 text-sm leading-6 text-[#a79d96]">
+            <FileUp className="mb-5 h-7 w-7 text-orange-500" />
+            <h2 className="text-xl font-semibold text-[var(--quizo-heading)]">{t('createQuiz.configTitle')}</h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--quizo-muted)]">
               {t('createQuiz.configDesc')}
             </p>
           </PremiumPanel>
           <PremiumPanel className="p-6">
-            <BookOpen className="mb-5 h-7 w-7 text-[#ffb77d]" />
-            <h2 className="text-xl font-bold text-white">{t('createQuiz.modelsTitle')}</h2>
-            <p className="mt-3 text-sm leading-6 text-[#a79d96]">
+            <BookOpen className="mb-5 h-7 w-7 text-orange-500" />
+            <h2 className="text-xl font-semibold text-[var(--quizo-heading)]">{t('createQuiz.modelsTitle')}</h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--quizo-muted)]">
               {t('createQuiz.modelsDesc')}
             </p>
             <Button asChild variant="outline" className="mt-6 w-full quizo-outline-button">

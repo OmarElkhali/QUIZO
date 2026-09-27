@@ -1,5 +1,13 @@
 
 import { useEffect, useState } from 'react';
+import type { MotionProps } from 'framer-motion';
+
+export const revealMotion = (reduced: boolean, delay = 0): MotionProps => ({
+  initial: reduced ? false : { opacity: 0, y: 20 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.12 },
+  transition: { type: 'spring', stiffness: 180, damping: 26, delay },
+});
 
 export const useInView = (ref: React.RefObject<HTMLElement>, options = {}) => {
   const [isInView, setIsInView] = useState(false);

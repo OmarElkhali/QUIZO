@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { randomizeQuestionOptionOrder, remainingSeconds } from '@/domain/quizRules';
 import { QuestionStage } from '@/components/live/QuestionStage';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface QuizSessionLocationState {
   participantId?: string;
@@ -31,6 +32,7 @@ const formatTime = (seconds: number): string => {
 };
 
 const QuizSession = () => {
+  const reduced = useReducedMotion();
   const { quizId, attemptId } = useParams<{ quizId: string; attemptId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -260,7 +262,7 @@ const QuizSession = () => {
             <span className="quizo-label text-[#ffb77d]">{Math.round(progress)} % complété</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={answeredCount} aria-valuemin={0} aria-valuemax={quiz.questions.length}>
-            <div className="h-full bg-[#ffb77d] shadow-[0_0_12px_rgba(255,183,125,0.9)]" style={{ width: `${progress}%` }} />
+            <motion.div initial={false} animate={{ scaleX: progress / 100 }} transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 190, damping: 30 }} className="h-full origin-left bg-[#ffb77d] shadow-[0_0_12px_rgba(255,183,125,0.9)]" />
           </div>
         </div>
 

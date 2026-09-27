@@ -1,24 +1,13 @@
 import { Link } from 'react-router-dom';
-import { ExternalLink, Github, Heart, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 export function Footer() {
-  return (
-    <footer className="relative z-10 mt-16 overflow-hidden border-t border-orange-400/15 bg-[var(--quizo-header)]/95">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/70 to-transparent" />
-      <div className="pointer-events-none absolute -right-24 -top-28 h-64 w-64 rounded-full bg-orange-500/10 blur-3xl" />
-      <div className="quizo-page-frame relative grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.9fr]">
-        <section aria-labelledby="footer-brand">
-          <div className="flex items-center gap-3">
-            <img src="/quizo-logo.png" alt="QUIZO" width="48" height="48" className="h-12 w-12 rounded-2xl object-contain ring-1 ring-orange-400/25" />
-            <div><h2 id="footer-brand" className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</h2><p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-300">Quiz intelligent & live</p></div>
-          </div>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--quizo-muted)]">Créez, jouez et analysez des quiz conçus pour apprendre vite, partager simplement et vivre la compétition en direct.</p>
-          <a href="https://github.com/OmarElkhali/QUIZO" target="_blank" rel="noreferrer" className="quizo-interactive mt-5 inline-flex items-center gap-2 text-sm font-bold text-[var(--quizo-heading)] hover:text-orange-300"><Github aria-hidden="true" className="h-4 w-4" />Projet créé par Omar Elkhali <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" /></a>
-        </section>
-        <section aria-labelledby="footer-explore"><h2 id="footer-explore" className="text-sm font-black uppercase tracking-[0.16em] text-[var(--quizo-heading)]">Explorer</h2><nav className="mt-4 grid gap-3 text-sm text-[var(--quizo-muted)]"><Link to="/create-quiz" className="quizo-interactive hover:text-orange-300">Créer avec l’IA</Link><Link to="/create-manual-quiz" className="quizo-interactive hover:text-orange-300">Créer manuellement</Link><Link to="/join" className="quizo-interactive hover:text-orange-300">Rejoindre une partie</Link><Link to="/history" className="quizo-interactive hover:text-orange-300">Mes quiz</Link></nav></section>
-        <section aria-labelledby="footer-trust"><h2 id="footer-trust" className="text-sm font-black uppercase tracking-[0.16em] text-[var(--quizo-heading)]">Confiance</h2><div className="mt-4 space-y-3 text-sm text-[var(--quizo-muted)]"><p className="flex items-center gap-2"><ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-300" />Connexion HTTPS sécurisée</p><p className="flex items-center gap-2"><Sparkles aria-hidden="true" className="h-4 w-4 text-orange-300" />IA à la demande, contrôlée</p><div className="flex flex-wrap gap-x-4 gap-y-2 pt-1"><Link to="/privacy-policy" className="quizo-interactive hover:text-orange-300">Confidentialité</Link><Link to="/terms-of-service" className="quizo-interactive hover:text-orange-300">Conditions</Link><Link to="/contact" className="quizo-interactive hover:text-orange-300">Contact</Link></div></div></section>
-      </div>
-      <div className="border-t border-[var(--quizo-border)]"><div className="quizo-page-frame flex flex-wrap items-center justify-between gap-3 py-4 text-xs text-[var(--quizo-muted)]"><span>© {new Date().getFullYear()} QUIZO · Tous droits réservés.</span><span className="inline-flex items-center gap-1">Conçu avec <Heart aria-hidden="true" className="h-3.5 w-3.5 fill-orange-400 text-orange-400" /> par <strong className="text-[var(--quizo-heading)]">Omar Elkhali</strong></span></div></div>
-    </footer>
-  );
+  return <footer className="relative z-10 mt-16 border-t border-[var(--quizo-border)] bg-[var(--quizo-bg)]">
+    <div className="quizo-page-frame grid gap-10 py-10 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div><p className="text-2xl font-bold tracking-tight text-[var(--quizo-heading)]">QUIZO<span className="text-orange-500">.</span></p><p className="mt-3 max-w-sm text-sm leading-6 text-[var(--quizo-muted)]">Créez, jouez et analysez des quiz conçus pour apprendre ensemble.</p><a href="https://github.com/OmarElkhali/QUIZO" target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-1 text-sm text-[var(--quizo-text)] hover:text-orange-400">Un projet d’Omar Elkhali <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></a></div>
+      <nav aria-label="Explorer" className="flex flex-col items-start gap-3 text-sm text-[var(--quizo-muted)]"><p className="mb-1 font-semibold text-[var(--quizo-heading)]">Explorer</p><Link to="/create-quiz" className="hover:text-orange-400">Créer avec l’IA</Link><Link to="/create-manual-quiz" className="hover:text-orange-400">Créer manuellement</Link><Link to="/join" className="hover:text-orange-400">Rejoindre une partie</Link><Link to="/history" className="hover:text-orange-400">Mes quiz</Link></nav>
+      <nav aria-label="Informations" className="flex flex-col items-start gap-3 text-sm text-[var(--quizo-muted)]"><p className="mb-1 font-semibold text-[var(--quizo-heading)]">Informations</p><Link to="/pricing" className="hover:text-orange-400">Tarifs</Link><Link to="/privacy-policy" className="hover:text-orange-400">Confidentialité</Link><Link to="/terms-of-service" className="hover:text-orange-400">Conditions</Link><Link to="/contact" className="hover:text-orange-400">Contact</Link></nav>
+    </div>
+    <div className="border-t border-[var(--quizo-border)]"><div className="quizo-page-frame py-4 text-xs text-[var(--quizo-muted)]">© {new Date().getFullYear()} QUIZO</div></div>
+  </footer>;
 }

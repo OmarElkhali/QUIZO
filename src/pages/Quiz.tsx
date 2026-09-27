@@ -12,6 +12,7 @@ import { QuizAnswerCard } from '@/components/ui/premium';
 import { StateCard } from '@/components/ui/StateCard';
 import { AppShell } from '@/components/layout/AppShell';
 import { randomizeQuestionOptionOrder } from '@/domain/quizRules';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 interface QuizQuestion {
   id: string;
@@ -38,6 +39,7 @@ const Quiz = () => {
   const { submitQuizAnswers, getQuiz } = useQuiz();
   const { user, isLoading: isAuthLoading } = useAuth();
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -173,7 +175,7 @@ const Quiz = () => {
       toast.error(t('errors.generic'));
       setIsSubmitting(false);
     }
-  }, [isSubmitting, quiz, id, answers, submitQuizAnswers, navigate]);
+  }, [isSubmitting, quiz, id, answers, submitQuizAnswers, navigate, t]);
 
   useEffect(() => {
     if (timeLeft === 0 && quiz && !isSubmitting && !isLoading) {
@@ -215,69 +217,69 @@ const Quiz = () => {
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   return (
-    <div className="dark quizo-app-bg min-h-screen">
-      <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-      <header className="quizo-page-frame relative z-10 flex min-h-16 items-center justify-between gap-3 py-3 sm:min-h-20">
+    <div className="dark quizo-app-bg min-h-[100dvh]">
+      <header className="quizo-page-frame relative z-10 flex min-h-16 items-center justify-between gap-3 border-b border-[var(--quizo-border)] py-3 sm:min-h-20">
         <div className="flex items-center gap-5">
-          <Button variant="ghost" size="icon" className="text-[#dbc2b0] hover:bg-white/[0.055] hover:text-white" onClick={() => navigate(`/quiz-preview/${id}`)}>
+          <Button variant="ghost" size="icon" aria-label="Quitter le quiz" className="text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)]" onClick={() => navigate(`/quiz-preview/${id}`)}>
             <X className="h-5 w-5" />
           </Button>
-          <span className="text-sm font-semibold tracking-wide text-[#dbc2b0]">{quiz.title}</span>
+          <span className="line-clamp-1 text-sm font-semibold text-[var(--quizo-heading)]">{quiz.title}</span>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.055] px-5 py-2 text-[#ffb77d]">
+        <div className={`quizo-tabular flex items-center gap-2 rounded-lg border border-[var(--quizo-border)] bg-[var(--quizo-surface)] px-4 py-2 ${timeLeft < 30 ? 'text-red-400' : 'text-orange-400'}`}>
           <Clock className="h-4 w-4" />
           <span className="font-mono text-sm font-bold tracking-widest">{formatTime(timeLeft)}</span>
         </div>
       </header>
 
-      <main className="quizo-page-frame relative z-10 flex w-full flex-col pb-32 pt-5 sm:pt-8">
+      <main className="quizo-page-frame relative z-10 flex w-full max-w-5xl flex-col pb-32 pt-8 sm:pt-12">
         <div className="mb-10">
           <div className="mb-4 flex items-center justify-between">
             <span className="quizo-label">{t('quiz.question')} {currentQuestionIndex + 1} {t('quiz.of')} {quiz.questions.length}</span>
-            <span className="quizo-label text-[#ffb77d]">{Math.round(progress)}%</span>
+            <span className="quizo-label quizo-tabular">{Math.round(progress)}%</span>
           </div>
-          <div className="h-px overflow-hidden rounded-full bg-white/10">
-            <div className="h-full bg-[#ffb77d] shadow-[0_0_12px_rgba(255,183,125,0.9)]" style={{ width: `${progress}%` }} />
+          <div className="h-1 overflow-hidden rounded-full bg-[var(--quizo-surface-soft)]">
+            <motion.div className="h-full origin-left bg-orange-500" initial={false} animate={{ scaleX: progress / 100 }} transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 190, damping: 30 }} />
           </div>
         </div>
 
-        <section className="quizo-panel relative overflow-hidden p-6 sm:p-10 lg:p-14">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-orange-500/8 via-transparent to-transparent" />
-          <div className="relative">
-            <h1 className="max-w-4xl text-3xl font-black leading-tight tracking-tight text-white sm:text-5xl">
-              <span className="mr-3 font-light text-[#ffb77d]/70">Q{currentQuestionIndex + 1}.</span>
+        <section className="quizo-panel p-6 sm:p-10 lg:p-12">
+          <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={currentQuestion.id} initial={reduced ? false : { opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={reduced ? undefined : { opacity: 0, x: -20 }} transition={{ duration: 0.22, ease: 'easeOut' }}>
+            <h1 className="max-w-4xl text-balance text-2xl font-semibold leading-tight tracking-tight text-[var(--quizo-heading)] sm:text-4xl">
+              <span className="mr-3 text-orange-400">Q{currentQuestionIndex + 1}.</span>
               {currentQuestion.text}
             </h1>
-            <RadioGroup value={answers[currentQuestion.id] || ''} onValueChange={(value) => handleSelectAnswer(currentQuestion.id, value)} className="mt-10 space-y-4">
+            <RadioGroup value={answers[currentQuestion.id] || ''} onValueChange={(value) => handleSelectAnswer(currentQuestion.id, value)} className="mt-10 grid gap-3 md:grid-cols-2">
               {currentQuestion.options.map((option) => (
-                <Label key={option.id} htmlFor={`option-${currentQuestion.id}-${option.id}`} className="block cursor-pointer">
+                <Label key={option.id} htmlFor={`option-${currentQuestion.id}-${option.id}`} className="block cursor-pointer rounded-xl focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-orange-400">
                   <RadioGroupItem value={option.id} id={`option-${currentQuestion.id}-${option.id}`} className="sr-only" />
                   <QuizAnswerCard selected={answers[currentQuestion.id] === option.id}>{option.text}</QuizAnswerCard>
                 </Label>
               ))}
             </RadioGroup>
-          </div>
+          </motion.div>
+          </AnimatePresence>
         </section>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#070707] via-[#070707]/90 to-transparent p-5 md:p-8">
-        <div className="quizo-page-frame flex items-center justify-between gap-3 sm:gap-4">
+      <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-[var(--quizo-border)] bg-[var(--quizo-header)] p-4 backdrop-blur-xl md:p-5">
+        <div className="quizo-page-frame flex max-w-5xl items-center justify-between gap-3 sm:gap-4">
           <Button
             variant="outline"
             onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
             disabled={currentQuestionIndex === 0 || isSubmitting}
-            className="rounded-full px-6 quizo-outline-button"
+            className="px-5 quizo-outline-button"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t('quiz.previous')}
           </Button>
           {currentQuestionIndex === quiz.questions.length - 1 ? (
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="rounded-full bg-emerald-500 px-8 text-[#061a11] hover:bg-emerald-400">
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="quizo-copper-button px-7">
               {isSubmitting ? t('common.loading') : t('common.finish')}
               <Check className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))} disabled={isSubmitting} className="rounded-full px-8 quizo-copper-button">
+            <Button onClick={() => setCurrentQuestionIndex(prev => Math.min(quiz.questions.length - 1, prev + 1))} disabled={isSubmitting} className="px-7 quizo-copper-button">
               {t('quiz.next')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

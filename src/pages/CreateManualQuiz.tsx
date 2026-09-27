@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, PenLine, Sparkles, Users } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { createManualQuiz } from '@/services/manualQuizService';
-import { ActionCard, PremiumPanel } from '@/components/ui/premium';
+import { PremiumPanel } from '@/components/ui/premium';
+import { AuthDialog } from '@/components/AuthDialog';
 
 const CreateManualQuiz = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -20,6 +21,7 @@ const CreateManualQuiz = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   if (authLoading) {
     return (
@@ -30,7 +32,7 @@ const CreateManualQuiz = () => {
   }
 
   if (!user) {
-    return <Navigate to="/" />;
+    return <AppShell><StateCard state="empty" title="Connectez-vous pour créer un quiz" description="Votre espace de création sera disponible après la connexion." action={<Button className="quizo-copper-button" onClick={() => setAuthOpen(true)}>Se connecter</Button>} /><AuthDialog open={authOpen} onOpenChange={setAuthOpen} /></AppShell>;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,21 +65,17 @@ const CreateManualQuiz = () => {
         description="Préparez une base solide, puis ajoutez vos questions, options et explications dans le builder."
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <Link to="/create-quiz">
-          <ActionCard title="Quiz IA" description="Génération depuis un fichier." icon={Sparkles} className="min-h-0" />
-        </Link>
-        <ActionCard title="Quiz manuel" description="Contrôle complet des questions." icon={PenLine} accent className="min-h-0" />
-        <Link to="/join">
-          <ActionCard title="Rejoindre" description="Participer avec un code." icon={Users} className="min-h-0" />
-        </Link>
-      </div>
+      <nav aria-label="Parcours de création" className="mb-7 flex flex-wrap gap-2 border-b border-[var(--quizo-border)] pb-4 text-sm">
+        <Link to="/create-quiz" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)]"><Sparkles className="h-4 w-4" />Quiz IA</Link>
+        <span aria-current="page" className="inline-flex items-center gap-2 rounded-lg bg-orange-500/10 px-4 py-2 font-semibold text-orange-500"><PenLine className="h-4 w-4" />Quiz manuel</span>
+        <Link to="/join" className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)]"><Users className="h-4 w-4" />Rejoindre</Link>
+      </nav>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <PremiumPanel className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-[#e5e2e1]">Titre du quiz</Label>
+              <Label htmlFor="title" className="text-[var(--quizo-heading)]">Titre du quiz</Label>
               <Input
                 id="title"
                 placeholder="Ex. Réseaux TCP/IP - Chapitre 1"
@@ -89,7 +87,7 @@ const CreateManualQuiz = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-[#e5e2e1]">Description optionnelle</Label>
+              <Label htmlFor="description" className="text-[var(--quizo-heading)]">Description optionnelle</Label>
               <Textarea
                 id="description"
                 placeholder="Décrivez l’objectif, le niveau ou le chapitre du quiz..."
@@ -106,9 +104,9 @@ const CreateManualQuiz = () => {
         </PremiumPanel>
 
         <PremiumPanel className="p-6">
-          <BookOpen className="mb-5 h-7 w-7 text-[#ffb77d]" />
-          <h2 className="text-xl font-bold text-white">Structure recommandée</h2>
-          <p className="mt-3 text-sm leading-6 text-[#a79d96]">
+          <BookOpen className="mb-5 h-7 w-7 text-orange-500" />
+          <h2 className="text-xl font-semibold text-[var(--quizo-heading)]">Structure recommandée</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--quizo-muted)]">
             Commencez par un titre précis. Vous pourrez ensuite ajouter des questions, créer un code de partage et lancer une compétition.
           </p>
         </PremiumPanel>

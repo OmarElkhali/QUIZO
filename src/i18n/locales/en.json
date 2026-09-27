@@ -224,9 +224,9 @@
   "dashboardHome": {
     "workspace": "Workspace",
     "titleUser": "Dashboard",
-    "titleGuest": "QUIZO, modern quiz studio",
+    "titleGuest": "A quiz that makes you want to learn.",
     "descUser": "Manage your educational content and analyze cohort performance.",
-    "descGuest": "Create quizzes from courses, launch live competitions and track results in a premium SaaS interface.",
+    "descGuest": "Turn your lessons into questions, share a live round, and follow results in one place.",
     "seeTariffs": "View pricing",
     "totalQuiz": "Total quizzes",
     "questions": "Questions",

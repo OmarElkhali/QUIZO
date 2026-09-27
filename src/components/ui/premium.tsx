@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, useReducedMotion } from 'framer-motion';
+import { revealMotion } from '@/utils/animations';
 
 interface PremiumPanelProps {
   children: ReactNode;
@@ -8,9 +10,10 @@ interface PremiumPanelProps {
   interactive?: boolean;
 }
 
-export const PremiumPanel = ({ children, className, interactive = false }: PremiumPanelProps) => (
-  <div className={cn('quizo-panel', interactive && 'quizo-panel-hover', className)}>{children}</div>
-);
+export const PremiumPanel = ({ children, className, interactive = false }: PremiumPanelProps) => {
+  const reduced = useReducedMotion();
+  return <motion.div {...revealMotion(!!reduced)} whileHover={interactive && !reduced ? { y: -3 } : undefined} className={cn('quizo-panel', interactive && 'quizo-panel-hover', className)}>{children}</motion.div>;
+};
 
 interface ActionCardProps {
   title: string;
@@ -21,27 +24,30 @@ interface ActionCardProps {
   className?: string;
 }
 
-export const ActionCard = ({ title, description, icon: Icon, accent = false, children, className }: ActionCardProps) => (
-  <div
+export const ActionCard = ({ title, description, icon: Icon, accent = false, children, className }: ActionCardProps) => {
+  const reduced = useReducedMotion();
+  return <motion.div
+    {...revealMotion(!!reduced)}
+    whileHover={reduced ? undefined : { y: -4, scale: 1.01 }}
     className={cn(
-      'quizo-panel quizo-panel-hover flex h-full flex-col p-4 sm:p-6',
-      accent && 'border-orange-400/35 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.16),transparent_34%),rgba(217,119,6,0.06)]',
+      'quizo-panel quizo-panel-hover flex h-full flex-col p-5 sm:p-7',
+      accent && 'border-orange-500/45',
       className
     )}
   >
     <div
       className={cn(
-        'mb-6 flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] text-[#ffb77d]',
-        accent && 'border-orange-400/30 bg-orange-500/15 shadow-[0_0_28px_rgba(217,119,6,0.18)]'
+        'mb-6 flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--quizo-surface-soft)] text-orange-500',
+        accent && 'bg-orange-500/10'
       )}
     >
       <Icon className="h-6 w-6" />
     </div>
-    <h3 className="break-words text-xl font-bold tracking-tight text-[var(--quizo-heading)] sm:text-2xl">{title}</h3>
+    <h3 className="break-words text-xl font-semibold tracking-tight text-[var(--quizo-heading)] sm:text-2xl">{title}</h3>
     <p className="mt-3 flex-1 text-sm leading-6 text-[var(--quizo-muted)]">{description}</p>
     {children && <div className="mt-6 border-t border-[var(--quizo-border)] pt-5">{children}</div>}
-  </div>
-);
+  </motion.div>;
+};
 
 interface PremiumMetricProps {
   label: string;
@@ -50,21 +56,15 @@ interface PremiumMetricProps {
   icon?: LucideIcon;
   tone?: 'default' | 'copper' | 'green' | 'blue' | 'violet';
   className?: string;
+  delay?: number;
 }
 
-const toneClasses: Record<NonNullable<PremiumMetricProps['tone']>, string> = {
-  default: 'text-[#ffb77d] bg-white/[0.06]',
-  copper: 'text-[#ffb77d] bg-orange-500/15',
-  green: 'text-emerald-300 bg-emerald-500/12',
-  blue: 'text-sky-300 bg-sky-500/12',
-  violet: 'text-violet-300 bg-violet-500/12',
-};
-
-export const PremiumMetric = ({ label, value, detail, icon: Icon, tone = 'default', className }: PremiumMetricProps) => (
-  <div className={cn('quizo-panel-subtle quizo-panel-hover p-4 sm:p-6', className)}>
-    <div className="mb-8 flex items-center justify-between gap-3">
+export const PremiumMetric = ({ label, value, detail, icon: Icon, className, delay = 0 }: PremiumMetricProps) => {
+  const reduced = useReducedMotion();
+  return <motion.div {...revealMotion(!!reduced, delay)} className={cn('quizo-panel-subtle p-5 sm:p-6', className)}>
+    <div className="mb-7 flex items-start justify-between gap-3">
       {Icon ? (
-        <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--quizo-border)]', toneClasses[tone])}>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
           <Icon className="h-5 w-5" />
         </div>
       ) : (
@@ -77,9 +77,9 @@ export const PremiumMetric = ({ label, value, detail, icon: Icon, tone = 'defaul
       )}
     </div>
     <p className="quizo-label">{label}</p>
-    <div className="mt-2 text-3xl font-extrabold tracking-tight text-[var(--quizo-heading)]">{value}</div>
-  </div>
-);
+    <div className="quizo-tabular mt-2 text-3xl font-semibold tracking-tight text-[var(--quizo-heading)]">{value}</div>
+  </motion.div>;
+};
 
 interface QuizAnswerCardProps {
   selected: boolean;
@@ -87,12 +87,16 @@ interface QuizAnswerCardProps {
   className?: string;
 }
 
-export const QuizAnswerCard = ({ selected, children, className }: QuizAnswerCardProps) => (
-  <div
+export const QuizAnswerCard = ({ selected, children, className }: QuizAnswerCardProps) => {
+  const reduced = useReducedMotion();
+  return <motion.div
+    initial={false}
+    animate={reduced ? undefined : { scale: selected ? 1.015 : 1 }}
+    transition={{ type: 'spring', stiffness: 360, damping: 24 }}
     className={cn(
-      'flex min-h-[72px] items-center gap-4 rounded-2xl border p-5 text-left transition duration-300',
+      'flex min-h-[72px] items-center gap-4 rounded-xl border p-5 text-left transition-[background-color,border-color] duration-200',
       selected
-        ? 'border-orange-300/55 bg-orange-500/12 text-[var(--quizo-heading)] shadow-[0_0_30px_rgba(255,183,125,0.12),inset_0_0_20px_rgba(255,183,125,0.05)]'
+        ? 'border-orange-500 bg-orange-500/10 text-[var(--quizo-heading)]'
         : 'border-[var(--quizo-border)] bg-[var(--quizo-surface-soft)] text-[var(--quizo-text)] hover:border-orange-300/35 hover:bg-[var(--quizo-surface-hover)]',
       className
     )}
@@ -100,14 +104,14 @@ export const QuizAnswerCard = ({ selected, children, className }: QuizAnswerCard
     <span
       className={cn(
         'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition',
-        selected ? 'border-orange-200 shadow-[0_0_12px_rgba(255,183,125,0.45)]' : 'border-[#8d8178]'
+        selected ? 'border-orange-500' : 'border-[var(--quizo-muted)]'
       )}
     >
-      <span className={cn('h-2 w-2 rounded-full transition', selected ? 'bg-orange-200' : 'bg-transparent')} />
+      <span className={cn('h-2 w-2 rounded-full transition', selected ? 'bg-orange-500' : 'bg-transparent')} />
     </span>
     <span className={cn('text-base leading-6', selected && 'font-semibold')}>{children}</span>
-  </div>
-);
+  </motion.div>;
+};
 
 interface PodiumItem {
   id: string;
@@ -122,6 +126,7 @@ interface LeaderboardPodiumProps {
 
 export const LeaderboardPodium = ({ participants }: LeaderboardPodiumProps) => {
   const ordered = [participants[1], participants[0], participants[2]].filter(Boolean);
+  const reduced = useReducedMotion();
 
   return (
     <div className="grid gap-5 md:grid-cols-3 md:items-end">
@@ -129,8 +134,12 @@ export const LeaderboardPodium = ({ participants }: LeaderboardPodiumProps) => {
         const rank = participants.findIndex((item) => item.id === participant.id) + 1;
         const isWinner = rank === 1;
         return (
-          <div
+          <motion.div
             key={participant.id}
+            layout={!reduced}
+            initial={reduced ? false : { opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 23, delay: (rank - 1) * 0.08 }}
             className={cn(
               'quizo-panel flex flex-col items-center justify-end p-6 text-center',
               isWinner ? 'min-h-[300px] border-orange-400/45 bg-orange-500/10' : 'min-h-[250px]'
@@ -145,7 +154,7 @@ export const LeaderboardPodium = ({ participants }: LeaderboardPodiumProps) => {
               {Math.round(participant.score).toLocaleString('fr-FR')}
             </p>
             {participant.time && <p className="mt-3 rounded-full bg-black/35 px-3 py-1 text-xs font-semibold text-[#c9ad96]">{participant.time}</p>}
-          </div>
+          </motion.div>
         );
       })}
     </div>

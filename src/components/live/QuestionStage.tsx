@@ -84,9 +84,9 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
       </div>
       <div className="space-y-2" role="progressbar" aria-label="Progression du quiz" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index + 1}>
         <div className="flex justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--quizo-muted)]"><span>Progression</span><span>{Math.round(questionProgress)} %</span></div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ width: `${questionProgress}%` }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
+        <div className="h-2 overflow-hidden rounded-full bg-white/10"><motion.div initial={false} animate={{ scaleX: questionProgress / 100 }} transition={{ duration: reducedMotion ? 0 : 0.35, ease: 'easeOut' }} className="h-full origin-left rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_0_16px_rgba(251,146,60,.45)]" /></div>
       </div>
-      {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><div className={cn('h-full rounded-full transition-[width,background-color] duration-300', urgent ? 'bg-red-400' : 'bg-orange-400')} style={{ width: `${timerProgress}%` }} /></div>}
+      {timerProgress !== null && <div className="h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true"><motion.div initial={false} animate={{ scaleX: timerProgress / 100 }} transition={{ duration: reducedMotion ? 0 : 0.3 }} className={cn('h-full origin-left rounded-full transition-colors', urgent ? 'bg-red-400' : 'bg-orange-400')} /></div>}
       <h2 id={`question-${question.id}`} className={cn('live-question-heading break-words font-black tracking-tight text-[var(--quizo-heading)]', compact ? 'text-lg sm:text-xl xl:text-2xl 2xl:text-3xl' : 'text-xl sm:text-2xl xl:text-3xl')}>{question.text}</h2>
       <div role="group" aria-label="Réponses possibles" className="live-answer-grid grid gap-3 md:grid-cols-2 xl:gap-4">
         {orderedOptions.map((option, optionIndex) => {
@@ -95,6 +95,7 @@ export function QuestionStage({ question, index, total, remaining, timerTotal, s
           const chosen = option.id === selected;
           const incorrectChoice = Boolean(chosen && correctOptionId && !correct);
           return <motion.button key={option.id} type="button" disabled={disabled || !onAnswer} onClick={() => onAnswer?.(option.id)} aria-pressed={chosen}
+            initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26, delay: optionIndex * 0.045 }}
             whileHover={reducedMotion || disabled ? undefined : { y: -2 }} whileTap={reducedMotion || disabled ? undefined : { scale: 0.985 }}
             className={cn('live-answer-option group flex items-center gap-3 rounded-xl border-2 p-3 text-start text-[var(--quizo-heading)] shadow-sm transition-[border-color,background-color,box-shadow] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-400 disabled:cursor-default sm:min-h-20 sm:rounded-2xl sm:p-3.5 xl:p-4', identity.color, !disabled && 'cursor-pointer', chosen && !correctOptionId && 'border-orange-300 ring-2 ring-orange-400/50 shadow-[0_0_24px_rgba(251,146,60,.15)]', correct && 'border-emerald-300 bg-emerald-500/15 ring-2 ring-emerald-400/50', incorrectChoice && 'border-red-300 bg-red-500/15 ring-2 ring-red-400/50')}>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/15 font-black text-orange-200 sm:h-10 sm:w-10 sm:rounded-xl" aria-hidden="true">{String.fromCharCode(65 + optionIndex)}</span>

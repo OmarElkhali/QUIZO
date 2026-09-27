@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Mail, Key, Github, User, Loader2, Globe2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 interface AuthDialogProps {
   open: boolean;
@@ -73,9 +74,9 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="glass-card sm:max-w-md">
+      <DialogContent className="quizo-panel border-[var(--quizo-border)] bg-[var(--quizo-surface)] sm:max-w-md">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-2xl">Bienvenue à ESTS6QUIZ</DialogTitle>
+          <DialogTitle className="text-2xl font-semibold text-[var(--quizo-heading)]">Bienvenue sur QUIZO</DialogTitle>
           <DialogDescription>
             Connectez-vous pour créer et partager des quiz générés par l'IA
           </DialogDescription>
@@ -96,9 +97,11 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="vous@exemple.com"
-                    className="pl-10"
+                    className="quizo-input pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
@@ -112,9 +115,11 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                   <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="quizo-input pl-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
@@ -124,13 +129,13 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               
               <Button 
                 type="submit" 
-                className="w-full btn-shine" 
+                className="w-full quizo-copper-button"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion en cours...
+                    Connexion en cours…
                   </>
                 ) : (
                   'Se connecter avec email'
@@ -143,7 +148,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+                <span className="bg-[var(--quizo-surface)] px-2 text-muted-foreground">
                   Ou continuer avec
                 </span>
               </div>
@@ -151,7 +156,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             
             <Button 
               variant="outline" 
-              className="w-full hover-scale" 
+              className="w-full quizo-outline-button"
               onClick={handleGoogleAuth}
               disabled={isLoading}
             >
@@ -160,7 +165,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             </Button>
             <Button
               variant="outline"
-              className="w-full hover-scale"
+              className="w-full quizo-outline-button"
               onClick={handleGithubAuth}
               disabled={isLoading}
             >
@@ -178,9 +183,11 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                   <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="signup-name"
+                    name="name"
                     type="text"
+                    autoComplete="name"
                     placeholder="Votre nom"
-                    className="pl-10"
+                    className="quizo-input pl-10"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={isLoading}
@@ -194,15 +201,16 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                   <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="signup-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="vous@exemple.com"
-                    className="pl-10"
+                    className="quizo-input pl-10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">10 caractères minimum, avec majuscule, minuscule et chiffre.</p>
               </div>
               
               <div className="space-y-2">
@@ -211,25 +219,28 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                   <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="signup-password"
+                    name="password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="quizo-input pl-10"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
                   />
                 </div>
+                <p className="text-xs text-muted-foreground">10 caractères minimum, avec majuscule, minuscule et chiffre.</p>
               </div>
               
               <Button 
                 type="submit" 
-                className="w-full btn-shine" 
+                className="w-full quizo-copper-button"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Création en cours...
+                    Création en cours…
                   </>
                 ) : (
                   'Créer un compte'
@@ -242,7 +253,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+                <span className="bg-[var(--quizo-surface)] px-2 text-muted-foreground">
                   Ou continuer avec
                 </span>
               </div>
@@ -250,7 +261,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             
             <Button 
               variant="outline" 
-              className="w-full hover-scale" 
+              className="w-full quizo-outline-button"
               onClick={handleGoogleAuth}
               disabled={isLoading}
             >
@@ -259,7 +270,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             </Button>
             <Button
               variant="outline"
-              className="w-full hover-scale"
+              className="w-full quizo-outline-button"
               onClick={handleGithubAuth}
               disabled={isLoading}
             >
@@ -269,8 +280,8 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           </TabsContent>
         </Tabs>
         
-        <DialogFooter className="text-xs text-muted-foreground">
-          En continuant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.
+        <DialogFooter className="text-xs leading-5 text-muted-foreground">
+          <p>En continuant, vous acceptez nos <Link to="/terms-of-service" className="underline underline-offset-2 hover:text-orange-400">conditions d’utilisation</Link> et notre <Link to="/privacy-policy" className="underline underline-offset-2 hover:text-orange-400">politique de confidentialité</Link>.</p>
         </DialogFooter>
       </DialogContent>
     </Dialog>

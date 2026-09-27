@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Minus, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -5,6 +6,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
 import { PremiumPanel } from '@/components/ui/premium';
 import { PricingCard } from '@/components/pricing/PricingCard';
+import { AuthDialog } from '@/components/AuthDialog';
+import { useAuth } from '@/context/AuthContext';
 
 const freeFeatures = [
   '5 générations IA / jour',
@@ -45,11 +48,14 @@ const renderCell = (value: string | boolean) => {
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+  const startFree = () => user ? navigate('/create-quiz') : setAuthOpen(true);
 
   return (
     <AppShell
       actions={
-        <Button type="button" className="hidden quizo-copper-button sm:inline-flex" onClick={() => navigate('/create-quiz')}>
+        <Button type="button" className="hidden quizo-copper-button sm:inline-flex" onClick={startFree}>
           <Sparkles className="mr-2 h-4 w-4" />
           Essayer
         </Button>
@@ -73,7 +79,7 @@ const Pricing = () => {
             price="0€/mois"
             features={freeFeatures}
             cta="Commencer gratuitement"
-            onClick={() => navigate('/create-quiz')}
+            onClick={startFree}
           />
           <PricingCard
             name="Pro"
@@ -89,7 +95,7 @@ const Pricing = () => {
         <PremiumPanel className="mt-8 overflow-hidden">
           <div className="border-b border-[var(--quizo-border)] p-6">
             <p className="quizo-label">Comparaison</p>
-            <h2 className="mt-2 text-2xl font-bold text-[var(--quizo-heading)]">Free beta vs Pro</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-[var(--quizo-heading)]">Gratuit et Pro</h2>
           </div>
 
           <div className="overflow-x-auto">
@@ -118,6 +124,7 @@ const Pricing = () => {
           Paiement sécurisé par Lemon Squeezy · 50 MAD facturés annuellement pour le plan Pro
         </p>
       </section>
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </AppShell>
   );
 };

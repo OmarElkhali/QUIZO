@@ -8,8 +8,6 @@ import {
   LogOut,
   Menu,
   PenLine,
-  Search,
-  ShieldCheck,
   Sparkles,
   Users,
   X,
@@ -21,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthDialog } from '@/components/AuthDialog';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Footer } from './Footer';
 
 interface AppShellProps {
@@ -54,6 +53,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
   const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const reduced = useReducedMotion();
 
   const handleSignOut = async () => {
     await signOut();
@@ -86,15 +86,16 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
 
   return (
     <div className="quizo-app-bg min-h-[100dvh]">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-orange-500 focus:px-4 focus:py-2 focus:text-[#231307]">
+        Aller au contenu
+      </a>
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
-      <div className="pointer-events-none fixed inset-0 quizo-grid-overlay opacity-60" />
 
       <div className="relative flex min-h-[100dvh] flex-col">
         <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
-          <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-20">
+          <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-[72px]">
             <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
-              <img src="/quizo-logo.png" alt="" aria-hidden="true" width="36" height="36" className="h-9 w-9 rounded-lg object-contain" />
-              <span className="quizo-brand-text text-xl font-black tracking-tighter sm:text-2xl">QUIZO</span>
+              <span className="quizo-brand-text text-xl font-bold tracking-tight sm:text-2xl">QUIZO<span className="text-orange-500">.</span></span>
             </button>
 
             {navLinks()}
@@ -103,15 +104,6 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
               {actions}
               <LanguageSelector />
               <ThemeToggle />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Rechercher"
-                className="hidden text-[var(--quizo-muted)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] sm:inline-flex"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
               {user ? (
                 <div className="flex items-center gap-2">
                   <div className="hidden text-right xl:block">
@@ -156,19 +148,23 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           </div>
         </header>
 
-        {mobileOpen && (
-          <div className="fixed inset-0 z-50 2xl:hidden">
-            <button
+        <AnimatePresence>
+          {mobileOpen && (
+          <motion.div key="mobile-menu" className="fixed inset-0 z-50 2xl:hidden" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <motion.button
               type="button"
               aria-label={t('common.close')}
               className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
               onClick={() => setMobileOpen(false)}
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
             />
-            <aside id="quizo-mobile-menu" aria-label="Navigation mobile" className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col overscroll-contain border-r border-[var(--quizo-border)] overflow-y-auto">
+            <motion.aside id="quizo-mobile-menu" aria-label="Navigation mobile" className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col overscroll-contain border-r border-[var(--quizo-border)] overflow-y-auto" initial={reduced ? false : { x: -32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}>
               <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
                 <div className="flex items-center gap-3">
-                  <img src="/quizo-logo.png" alt="" aria-hidden="true" width="36" height="36" className="h-9 w-9 rounded-lg object-contain" />
-                  <span className="quizo-brand-text text-2xl font-black tracking-tighter">QUIZO</span>
+                  <span className="quizo-brand-text text-2xl font-bold tracking-tight">QUIZO<span className="text-orange-500">.</span></span>
                 </div>
                 <Button type="button" variant="ghost" size="icon" aria-label="Fermer le menu" className="text-[var(--quizo-text)]" onClick={() => setMobileOpen(false)}>
                   <X className="h-5 w-5" />
@@ -225,21 +221,13 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                   </Button>
                 )}
 
-                <div className="rounded-xl border border-orange-400/20 bg-orange-500/10 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#d97706] dark:text-[#ffb77d]">
-                    <ShieldCheck className="h-4 w-4" />
-                    Bêta gratuite
-                  </div>
-                  <p className="text-xs leading-5 text-[var(--quizo-muted)]">
-                    Quotas protégés, compétitions live et génération IA fiable pour vos cours.
-                  </p>
-                </div>
               </div>
-            </aside>
-          </div>
-        )}
+            </motion.aside>
+          </motion.div>
+          )}
+        </AnimatePresence>
 
-        <main className="quizo-page-frame min-h-[calc(100vh-4rem)] flex-1 py-5 sm:min-h-[calc(100vh-5rem)] sm:py-8">{children}</main>
+        <motion.main id="main-content" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="quizo-page-frame min-h-[calc(100vh-4rem)] flex-1 py-8 sm:min-h-[calc(100vh-4.5rem)] sm:py-12">{children}</motion.main>
         <Footer />
       </div>
 
