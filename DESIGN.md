@@ -28,6 +28,8 @@ Quizo is a dark learning arena for students and facilitators. The dashboard shou
 ## Layout
 
 - The page frame uses the available desktop width with fluid gutters; only reading text gets a narrower measure.
+- On the dashboard, show recent quizzes and their next action in the first viewport. Keep the heading compact and place aggregate counts after the work list.
+- Use web glass as a restrained material for the floating navigation and one action rail. Quiz rows and reading surfaces stay matte; provide a solid fallback when transparency is reduced or unavailable.
 - Desktop live and quiz views give the question a broad main arena and use a compact context rail when needed.
 - Tablet views collapse to two columns; mobile is one column with a safe-area-aware action dock.
 - Answers are always a compact 2×2 grid on desktop and a single stack on narrow screens.

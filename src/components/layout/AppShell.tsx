@@ -94,7 +94,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
       <div className="pointer-events-none fixed inset-0 quizo-ambient" />
 
       <div className="relative flex min-h-[100dvh] flex-col">
-        <header className="sticky top-0 z-40 border-b border-[var(--quizo-border)] bg-[var(--quizo-header)] backdrop-blur-2xl">
+        <header className="quizo-app-header sticky top-0 z-40 px-2 pt-2 sm:px-3 sm:pt-3">
           <div className="quizo-page-frame flex h-16 items-center justify-between gap-3 sm:h-[72px]">
             <button type="button" className="flex items-center gap-3" onClick={() => navigate('/')}>
               <span className="quizo-brand-text text-xl font-bold tracking-tight sm:text-2xl">QUIZO<span className="text-orange-500">.</span></span>

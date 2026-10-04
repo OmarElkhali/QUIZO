@@ -76,6 +76,25 @@ Avant de tester : définir les événements `signup_complete`, `quiz_created`, `
 
 **À faire revoir par un professionnel :** identité et coordonnées de l'éditeur, exactitude des adresses `@quizo.com`, traitement des supports importés et des réponses d'élèves, sous-traitants IA, durée de conservation, suppression, modalités du plan payant, rétractation/remboursements applicables et cohérence avec le checkout. Le dépôt ne prouve pas que les boîtes légales existent ni que les droits Pro annoncés sont appliqués. Ce diagnostic produit n'est pas une validation juridique.
 
+## Revue du tableau de bord avec les 12 rôles
+
+| Rôle | Décision appliquée à l'interface |
+| --- | --- |
+| Business Strategist | Montrer la bibliothèque de quiz avant les compteurs : le travail à reprendre prime sur les chiffres. |
+| Pricing Analyst | Garder le plan Pro indisponible hors du tableau de bord tant que les droits ne sont pas livrés. |
+| Trend Researcher | Mettre en avant le parcours réel cours → questions vérifiées → partie, plutôt que la seule mention de l'IA. |
+| Instagram Curator | Garder un écran compréhensible en capture sans décors qui masquent les actions. |
+| LinkedIn Content Creator | Utiliser des libellés précis que l'enseignant peut décrire à un collègue. |
+| Growth Hacker | Rendre l'action de créer un quiz visible et les quiz récents accessibles sans défilement initial. |
+| Outbound Strategist | Montrer le fonctionnement du produit sans données ou succès fictifs pendant une démonstration. |
+| Proposal Strategist | Rendre les étapes créer, ouvrir et rejoindre faciles à montrer lors d'un pilote. |
+| Financial Analyst | Réduire les compteurs à deux faits calculés localement ; supprimer « Participations », qui ne mesurait pas réellement les participations. |
+| Customer Service | Prévoir des états de chargement, de recherche sans résultat et de bibliothèque vide explicites. |
+| Feedback Synthesizer | Ajouter une recherche par titre, description ou code pour retrouver un quiz parmi une bibliothèque fournie. |
+| Legal Document Review | Ne pas afficher d'identité ou de résultats d'élèves dans le tableau de bord agrégé. |
+
+Le « verre » inspiré d'Apple est une approximation CSS réservée à la navigation et au rail d'actions, avec un fond opaque de secours. Les contenus de lecture restent mats et contrastés, conformément à `DESIGN.md`.
+
 ## Ordre de travail proposé
 
 1. **Cette semaine :** corriger le contact fictif ; vérifier les boîtes de contact ; définir les cinq événements du tunnel ; spécifier les droits Pro avant toute remise en vente.
