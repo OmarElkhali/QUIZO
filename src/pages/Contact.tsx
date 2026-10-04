@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { Mail, Send } from 'lucide-react';
-import { toast } from 'sonner';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -10,22 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { PremiumPanel } from '@/components/ui/premium';
 
 const Contact = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    window.setTimeout(() => {
-      toast.success('Votre message a été envoyé avec succès !');
-      setName('');
-      setEmail('');
-      setMessage('');
-      setIsSubmitting(false);
-    }, 900);
+    const fields = new FormData(e.currentTarget);
+    const subject = encodeURIComponent('Support QUIZO');
+    const body = encodeURIComponent(`Nom : ${fields.get('name')}\nEmail : ${fields.get('email')}\n\n${fields.get('message')}`);
+    window.location.href = `mailto:omarelkhali@gmail.com?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -33,55 +21,44 @@ const Contact = () => {
       <PageHeader
         eyebrow="Support"
         title="Contactez-nous"
-        description="Vous avez des questions, des suggestions ou besoin d’assistance ? Notre équipe vous répondra dans les plus brefs délais."
+        description="Une question, une suggestion ou besoin d’aide ? Préparez votre message et envoyez-le depuis votre messagerie."
       />
 
       <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <PremiumPanel className="p-6">
           <Mail className="mb-5 h-7 w-7 text-[#ffb77d]" />
-          <h2 className="text-2xl font-bold text-white">Support QUIZO</h2>
-          <p className="mt-3 text-sm leading-6 text-[#a79d96]">
-            Pour les problèmes de génération IA, de partage, de realtime ou de déploiement, ajoutez le plus de contexte possible dans votre message.
+          <h2 className="text-2xl font-bold text-[var(--quizo-heading)]">Support QUIZO</h2>
+          <p className="mt-3 text-sm leading-6 text-[var(--quizo-muted)]">
+            Pour un problème de création, de partage ou de partie en direct, décrivez ce qui s’est passé et le message affiché.
           </p>
-          <div className="mt-8 space-y-4 text-sm text-[#d8d2ce]">
+          <div className="mt-8 space-y-4 text-sm text-[var(--quizo-text)]">
             <p>
               <span className="quizo-label block">Email</span>
-              omarelkali@gmail.com
+              <a href="mailto:omarelkhali@gmail.com" className="hover:text-orange-400">omarelkhali@gmail.com</a>
             </p>
-            <p>
-              <span className="quizo-label block">Disponibilité</span>
-              Lundi - Vendredi: 9h00 - 18h00
-            </p>
+            <p>Votre messagerie vous permettra de vérifier le contenu avant l’envoi.</p>
           </div>
         </PremiumPanel>
 
         <PremiumPanel className="p-6">
-          <h3 className="mb-6 text-2xl font-bold text-white">Envoyer un message</h3>
+          <h3 className="mb-2 text-2xl font-bold text-[var(--quizo-heading)]">Préparer un message</h3>
+          <p className="mb-6 text-sm text-[var(--quizo-muted)]">Après avoir rempli le formulaire, confirmez l’envoi dans votre application de messagerie.</p>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-[#e5e2e1]">Nom</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Votre nom" className="quizo-input" required />
+              <Label htmlFor="name">Nom</Label>
+              <Input id="name" name="name" placeholder="Votre nom" className="quizo-input" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[#e5e2e1]">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" className="quizo-input" required />
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="votre@email.com" className="quizo-input" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="message" className="text-[#e5e2e1]">Message</Label>
-              <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Votre message" rows={6} className="quizo-input" required />
+              <Label htmlFor="message">Message</Label>
+              <Textarea id="message" name="message" placeholder="Votre message" rows={6} className="quizo-input" required />
             </div>
-            <Button type="submit" className="w-full quizo-copper-button" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Envoyer le message
-                </>
-              )}
+            <Button type="submit" className="w-full quizo-copper-button">
+              <Send className="mr-2 h-4 w-4" />
+              Ouvrir ma messagerie
             </Button>
           </form>
         </PremiumPanel>
