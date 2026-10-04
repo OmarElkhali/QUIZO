@@ -5,7 +5,7 @@ Date de l'audit : 4 octobre 2026. Ce document applique les 12 rôles présentés
 ## Point de départ vérifié
 
 - QUIZO permet de créer des quiz manuels ou à partir d'un document, de rejoindre une partie par code et d'animer des compétitions en direct (`README.md`, `src/App.tsx`). Le parcours principal est en français, avec d'autres traductions.
-- Le site affiche une offre Gratuit et une offre Pro à **50 MAD/an** (`src/pages/Pricing.tsx`). La page annonce des quotas et avantages Pro, mais l'audit du code n'a trouvé ni gestion d'abonnement, ni webhook Lemon Squeezy, ni contrôle des droits Pro. **À vérifier avant de promettre ces avantages ou d'acquérir des clients payants.**
+- L'ancienne page affichait une offre Pro à **50 MAD/an** et renvoyait vers Lemon Squeezy. L'audit du code n'a trouvé ni gestion d'abonnement, ni webhook, ni contrôle des droits Pro ; le propriétaire a confirmé que l'offre n'est pas opérationnelle. Le paiement et les promesses Pro ont donc été retirés de la page Tarifs. Le prix précédent reste une hypothèse interne, pas une offre disponible.
 - Firebase Analytics est initialisé en production (`src/lib/firebase.ts`), mais aucun événement de conversion produit n'a été trouvé dans le frontend. Il n'y a donc pas de taux de conversion vérifié dans ce dossier.
 - Le formulaire de contact affichait un succès après un délai local sans transmettre le message (`src/pages/Contact.tsx`). Son remplacement par l'ouverture explicite de la messagerie est une première correction ; il faudra mesurer si les demandes arrivent réellement.
 - Les pages de confidentialité et de conditions indiquent `privacy@quizo.com` et `terms@quizo.com`. La propriété et la réception de ces boîtes ne sont pas établies par le dépôt. Leur contenu et les engagements commerciaux nécessitent une revue humaine.
@@ -24,7 +24,7 @@ Les offres concurrentes montrent que « PDF vers quiz » est déjà proposé par
 
 ### 2. Pricing Analyst - offre et prix
 
-**Livrable :** vérifier d'abord que le checkout, l'activation Pro, les quotas et l'assistance annoncés fonctionnent. Puis comparer trois offres à proposer en entretien : gratuit avec limites vérifiées ; licence enseignant annuelle ; licence établissement sur devis. Pour chaque offre, calculer `marge brute = prix encaissé - frais de paiement - coût IA - hébergement marginal - support`. Tester l'intérêt pour 50 MAD/an sans le présenter comme prix validé par le marché. Ne publier aucun nouveau tarif avant d'avoir mesuré les coûts et clarifié les droits livrés après paiement.
+**Livrable :** comparer trois offres à proposer en entretien : gratuit avec limites vérifiées ; licence enseignant annuelle ; licence établissement sur devis. Pour chaque offre, calculer `marge brute = prix encaissé - frais de paiement - coût IA - hébergement marginal - support`. Tester l'intérêt pour 50 MAD/an sans le présenter comme prix validé par le marché. Avant toute remise en vente, implémenter et vérifier le checkout, l'activation Pro, les quotas et l'assistance annoncés.
 
 ### 3. Trend Researcher - veille utile
 
@@ -78,10 +78,10 @@ Avant de tester : définir les événements `signup_complete`, `quiz_created`, `
 
 ## Ordre de travail proposé
 
-1. **Cette semaine :** corriger le contact fictif ; vérifier les boîtes de contact et le parcours Pro de bout en bout ; définir les cinq événements du tunnel.
+1. **Cette semaine :** corriger le contact fictif ; vérifier les boîtes de contact ; définir les cinq événements du tunnel ; spécifier les droits Pro avant toute remise en vente.
 2. **Deux semaines :** faire 8 entretiens, un essai complet en classe, mesurer le temps de création et les erreurs rencontrées ; seulement ensuite choisir le message principal.
 3. **Après validation :** publier les contenus avec preuves réelles, lancer une campagne de 20 contacts ciblés et tester l'offre pilote.
 
-**Décisions réservées au propriétaire :** adresse de support, activation ou suspension du checkout Pro, tarifs, budget marketing, accès aux données utilisateurs, publication des contenus et envoi de messages à des prospects.
+**Décisions réservées au propriétaire :** adresse de support, futurs tarifs Pro, budget marketing, accès aux données utilisateurs, publication des contenus et envoi de messages à des prospects.
 
 Sources : PDF fourni par l'utilisateur ; [dépôt Agency Agents](https://github.com/msitarzewski/agency-agents) (méthode des rôles) ; pages officielles Kahoot! et Wooclap liées plus haut. Les instructions d'installation et exemples du PDF n'ont pas été exécutés.
