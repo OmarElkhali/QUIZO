@@ -6,6 +6,14 @@
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
   "regions": ["cdg1"],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://quizo.me/:path*",
+      "has": [{ "type": "host", "value": "www.quizo.me" }],
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:route(health|status|providers|extract-text|generate|manual-assistant|explain-answer)",

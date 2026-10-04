@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -19,7 +19,8 @@ import { useAuth } from '@/context/AuthContext';
 import { AuthDialog } from '@/components/AuthDialog';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Footer } from './Footer';
 
 interface AppShellProps {
@@ -53,6 +54,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
   const { t } = useTranslation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const reduced = useReducedMotion();
 
   const handleSignOut = async () => {
@@ -61,7 +63,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
   };
 
   const navLinks = (mobile = false) => (
-    <nav className={cn(mobile ? 'space-y-1 p-4' : 'hidden min-w-0 items-center gap-0.5 2xl:flex')}>
+    <nav className={cn(mobile ? 'space-y-1 p-4' : 'hidden min-w-0 items-center gap-0.5 xl:flex')}>
       {navigation.map((item) => (
         <NavLink
           key={item.href}
@@ -70,7 +72,7 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           onClick={() => setMobileOpen(false)}
           className={({ isActive }) =>
             cn(
-              'group flex items-center gap-2 whitespace-nowrap rounded-lg px-2.5 py-2 text-xs font-semibold tracking-wide text-[var(--quizo-muted)] transition min-[1750px]:px-3 min-[1750px]:text-sm',
+              'group flex items-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-xs font-semibold text-[var(--quizo-muted)] transition 2xl:px-3 2xl:text-sm',
               'hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60',
               isActive && 'border border-orange-400/20 bg-orange-500/10 text-[#d97706]',
               mobile && 'w-full px-3 py-3'
@@ -133,12 +135,13 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
               )}
               <Button
                 type="button"
+                ref={menuButtonRef}
                 variant="ghost"
                 size="icon"
                 aria-label="Ouvrir le menu"
                 aria-expanded={mobileOpen}
                 aria-controls="quizo-mobile-menu"
-                className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] 2xl:hidden"
+                className="text-[var(--quizo-text)] hover:bg-[var(--quizo-surface-soft)] hover:text-[var(--quizo-heading)] xl:hidden"
                 onClick={() => setMobileOpen(true)}
               >
                 <Menu className="h-5 w-5" />
@@ -147,20 +150,9 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
           </div>
         </header>
 
-        <AnimatePresence>
-          {mobileOpen && (
-          <motion.div key="mobile-menu" className="fixed inset-0 z-50 2xl:hidden" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-            <motion.button
-              type="button"
-              aria-label={t('common.close')}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
-              onClick={() => setMobileOpen(false)}
-              initial={reduced ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            />
-            <motion.aside id="quizo-mobile-menu" aria-label="Navigation mobile" className="quizo-app-bg relative flex h-full w-80 max-w-[86vw] flex-col overscroll-contain border-r border-[var(--quizo-border)] overflow-y-auto" initial={reduced ? false : { x: -32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} transition={{ type: 'spring', stiffness: 320, damping: 34 }}>
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" id="quizo-mobile-menu" aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); menuButtonRef.current?.focus(); }} className="quizo-app-bg !fixed !left-0 !top-0 flex h-full !w-80 max-w-[86vw] flex-col overflow-y-auto overscroll-contain !border-r !border-[var(--quizo-border)] !p-0 [&>button]:hidden">
+              <SheetTitle className="sr-only">Navigation mobile</SheetTitle>
               <div className="flex h-20 items-center justify-between border-b border-[var(--quizo-border)] px-5">
                 <div className="flex items-center gap-3">
                   <span className="quizo-brand-text text-2xl font-bold tracking-tight">QUIZO<span className="text-orange-500">.</span></span>
@@ -221,10 +213,8 @@ export const AppShell = ({ children, actions }: AppShellProps) => {
                 )}
 
               </div>
-            </motion.aside>
-          </motion.div>
-          )}
-        </AnimatePresence>
+          </SheetContent>
+        </Sheet>
 
         <motion.main id="main-content" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="quizo-page-frame min-h-[calc(100dvh-4rem)] flex-1 py-5 sm:min-h-[calc(100dvh-4.5rem)] sm:py-10">{children}</motion.main>
         <Footer />
