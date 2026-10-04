@@ -8,6 +8,12 @@
   "regions": ["cdg1"],
   "redirects": [
     {
+      "source": "/",
+      "destination": "https://quizo.me/",
+      "has": [{ "type": "host", "value": "www.quizo.me" }],
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "destination": "https://quizo.me/:path*",
       "has": [{ "type": "host", "value": "www.quizo.me" }],
